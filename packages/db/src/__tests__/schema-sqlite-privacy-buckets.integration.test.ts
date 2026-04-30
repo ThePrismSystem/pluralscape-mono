@@ -72,7 +72,9 @@ describe("SQLite privacy schema — buckets and bucket_content_tags", () => {
       const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
-      db.insert(buckets).values({ id, systemId, encryptedData: data, createdAt: now, updatedAt: now }).run();
+      db.insert(buckets)
+        .values({ id, systemId, encryptedData: data, createdAt: now, updatedAt: now })
+        .run();
 
       const rows = db.select().from(buckets).where(eq(buckets.id, id)).all();
       expect(rows).toHaveLength(1);
@@ -87,7 +89,9 @@ describe("SQLite privacy schema — buckets and bucket_content_tags", () => {
       const now = fixtureNow();
       const data = testBlobT2();
 
-      db.insert(buckets).values({ id, systemId, encryptedData: data, createdAt: now, updatedAt: now }).run();
+      db.insert(buckets)
+        .values({ id, systemId, encryptedData: data, createdAt: now, updatedAt: now })
+        .run();
 
       const rows = db.select().from(buckets).where(eq(buckets.id, id)).all();
       expect(rows).toHaveLength(1);
@@ -144,7 +148,15 @@ describe("SQLite privacy schema — buckets and bucket_content_tags", () => {
       const now = fixtureNow();
 
       db.insert(buckets)
-        .values({ id, systemId, encryptedData: testBlob(new Uint8Array([1])), createdAt: now, updatedAt: now, archived: true, archivedAt: now })
+        .values({
+          id,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+          archived: true,
+          archivedAt: now,
+        })
         .run();
 
       const rows = db.select().from(buckets).where(eq(buckets.id, id)).all();
@@ -186,7 +198,10 @@ describe("SQLite privacy schema — buckets and bucket_content_tags", () => {
       const id = insertBucket(systemId);
       const now = fixtureNow();
 
-      db.update(buckets).set({ archived: true, archivedAt: now, updatedAt: now }).where(eq(buckets.id, id)).run();
+      db.update(buckets)
+        .set({ archived: true, archivedAt: now, updatedAt: now })
+        .where(eq(buckets.id, id))
+        .run();
 
       const rows = db.select().from(buckets).where(eq(buckets.id, id)).all();
       expect(rows[0]?.archived).toBe(true);
@@ -199,10 +214,16 @@ describe("SQLite privacy schema — buckets and bucket_content_tags", () => {
       const id = insertBucket(systemId);
       const now = fixtureNow();
 
-      db.update(buckets).set({ archived: true, archivedAt: now, updatedAt: now }).where(eq(buckets.id, id)).run();
+      db.update(buckets)
+        .set({ archived: true, archivedAt: now, updatedAt: now })
+        .where(eq(buckets.id, id))
+        .run();
 
       const unarchiveNow = fixtureNow();
-      db.update(buckets).set({ archived: false, archivedAt: null, updatedAt: unarchiveNow }).where(eq(buckets.id, id)).run();
+      db.update(buckets)
+        .set({ archived: false, archivedAt: null, updatedAt: unarchiveNow })
+        .where(eq(buckets.id, id))
+        .run();
 
       const rows = db.select().from(buckets).where(eq(buckets.id, id)).all();
       expect(rows[0]?.archived).toBe(false);
@@ -219,9 +240,15 @@ describe("SQLite privacy schema — buckets and bucket_content_tags", () => {
       const bucketId = insertBucket(systemId);
       const entityId = crypto.randomUUID();
 
-      db.insert(bucketContentTags).values({ entityType: "member", entityId, bucketId, systemId }).run();
+      db.insert(bucketContentTags)
+        .values({ entityType: "member", entityId, bucketId, systemId })
+        .run();
 
-      const rows = db.select().from(bucketContentTags).where(eq(bucketContentTags.bucketId, bucketId)).all();
+      const rows = db
+        .select()
+        .from(bucketContentTags)
+        .where(eq(bucketContentTags.bucketId, bucketId))
+        .all();
       expect(rows).toHaveLength(1);
       expect(rows[0]?.entityType).toBe("member");
       expect(rows[0]?.entityId).toBe(entityId);
@@ -232,10 +259,21 @@ describe("SQLite privacy schema — buckets and bucket_content_tags", () => {
       const systemId = insertSystem(accountId);
       const bucketId = insertBucket(systemId);
 
-      db.insert(bucketContentTags).values({ entityType: "fronting-session", entityId: crypto.randomUUID(), bucketId, systemId }).run();
+      db.insert(bucketContentTags)
+        .values({
+          entityType: "fronting-session",
+          entityId: crypto.randomUUID(),
+          bucketId,
+          systemId,
+        })
+        .run();
 
       db.delete(buckets).where(eq(buckets.id, bucketId)).run();
-      const rows = db.select().from(bucketContentTags).where(eq(bucketContentTags.bucketId, bucketId)).all();
+      const rows = db
+        .select()
+        .from(bucketContentTags)
+        .where(eq(bucketContentTags.bucketId, bucketId))
+        .all();
       expect(rows).toHaveLength(0);
     });
 
@@ -245,7 +283,15 @@ describe("SQLite privacy schema — buckets and bucket_content_tags", () => {
       const bucketId = insertBucket(systemId);
 
       expect(() =>
-        db.insert(bucketContentTags).values({ entityType: "invalid-type" as "member", entityId: crypto.randomUUID(), bucketId, systemId }).run(),
+        db
+          .insert(bucketContentTags)
+          .values({
+            entityType: "invalid-type" as "member",
+            entityId: crypto.randomUUID(),
+            bucketId,
+            systemId,
+          })
+          .run(),
       ).toThrow();
     });
 
@@ -255,10 +301,15 @@ describe("SQLite privacy schema — buckets and bucket_content_tags", () => {
       const bucketId = insertBucket(systemId);
       const entityId = crypto.randomUUID();
 
-      db.insert(bucketContentTags).values({ entityType: "note", entityId, bucketId, systemId }).run();
+      db.insert(bucketContentTags)
+        .values({ entityType: "note", entityId, bucketId, systemId })
+        .run();
 
       expect(() =>
-        db.insert(bucketContentTags).values({ entityType: "note", entityId, bucketId, systemId }).run(),
+        db
+          .insert(bucketContentTags)
+          .values({ entityType: "note", entityId, bucketId, systemId })
+          .run(),
       ).toThrow();
     });
 
@@ -282,7 +333,15 @@ describe("SQLite privacy schema — buckets and bucket_content_tags", () => {
       const bucketId = insertBucket(systemId);
 
       expect(() =>
-        db.insert(bucketContentTags).values({ entityType: "session" as "member", entityId: crypto.randomUUID(), bucketId, systemId }).run(),
+        db
+          .insert(bucketContentTags)
+          .values({
+            entityType: "session" as "member",
+            entityId: crypto.randomUUID(),
+            bucketId,
+            systemId,
+          })
+          .run(),
       ).toThrow();
     });
   });

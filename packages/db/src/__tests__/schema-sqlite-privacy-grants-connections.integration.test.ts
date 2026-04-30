@@ -13,11 +13,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/sqlite/auth.js";
-import {
-  buckets,
-  friendConnections,
-  keyGrants,
-} from "../schema/sqlite/privacy.js";
+import { buckets, friendConnections, keyGrants } from "../schema/sqlite/privacy.js";
 import { systems } from "../schema/sqlite/systems.js";
 
 import { fixtureNow } from "./fixtures/timestamps.js";
@@ -49,14 +45,21 @@ describe("SQLite privacy schema — key_grants and friend_connections", () => {
   function insertBucket(systemId: SystemId): BucketId {
     const id = brandId<BucketId>(crypto.randomUUID());
     const now = fixtureNow();
-    db.insert(buckets).values({ id, systemId, encryptedData: testBlob(), createdAt: now, updatedAt: now }).run();
+    db.insert(buckets)
+      .values({ id, systemId, encryptedData: testBlob(), createdAt: now, updatedAt: now })
+      .run();
     return id;
   }
 
-  function insertFriendConnection(accountId: AccountId, friendAccountId: AccountId): FriendConnectionId {
+  function insertFriendConnection(
+    accountId: AccountId,
+    friendAccountId: AccountId,
+  ): FriendConnectionId {
     const id = brandId<FriendConnectionId>(crypto.randomUUID());
     const now = fixtureNow();
-    db.insert(friendConnections).values({ id, accountId, friendAccountId, createdAt: now, updatedAt: now }).run();
+    db.insert(friendConnections)
+      .values({ id, accountId, friendAccountId, createdAt: now, updatedAt: now })
+      .run();
     return id;
   }
 
@@ -89,7 +92,15 @@ describe("SQLite privacy schema — key_grants and friend_connections", () => {
       const keyData = new Uint8Array([99, 88, 77, 66]);
 
       db.insert(keyGrants)
-        .values({ id, bucketId, systemId, friendAccountId, encryptedKey: keyData, keyVersion: 1, createdAt: now })
+        .values({
+          id,
+          bucketId,
+          systemId,
+          friendAccountId,
+          encryptedKey: keyData,
+          keyVersion: 1,
+          createdAt: now,
+        })
         .run();
 
       const rows = db.select().from(keyGrants).where(eq(keyGrants.id, id)).all();
@@ -110,7 +121,15 @@ describe("SQLite privacy schema — key_grants and friend_connections", () => {
       const now = fixtureNow();
 
       db.insert(keyGrants)
-        .values({ id, bucketId, systemId, friendAccountId, encryptedKey: new Uint8Array([1]), keyVersion: 1, createdAt: now })
+        .values({
+          id,
+          bucketId,
+          systemId,
+          friendAccountId,
+          encryptedKey: new Uint8Array([1]),
+          keyVersion: 1,
+          createdAt: now,
+        })
         .run();
 
       const rows = db.select().from(keyGrants).where(eq(keyGrants.id, id)).all();
@@ -127,7 +146,15 @@ describe("SQLite privacy schema — key_grants and friend_connections", () => {
       const now = fixtureNow();
 
       db.insert(keyGrants)
-        .values({ id: grantId, bucketId, systemId, friendAccountId, encryptedKey: new Uint8Array([1]), keyVersion: 1, createdAt: now })
+        .values({
+          id: grantId,
+          bucketId,
+          systemId,
+          friendAccountId,
+          encryptedKey: new Uint8Array([1]),
+          keyVersion: 1,
+          createdAt: now,
+        })
         .run();
 
       db.delete(buckets).where(eq(buckets.id, bucketId)).run();
@@ -168,11 +195,30 @@ describe("SQLite privacy schema — key_grants and friend_connections", () => {
       const now = fixtureNow();
 
       db.insert(keyGrants)
-        .values({ id: brandId<KeyGrantId>(crypto.randomUUID()), bucketId, systemId, friendAccountId, encryptedKey: new Uint8Array([1]), keyVersion: 1, createdAt: now })
+        .values({
+          id: brandId<KeyGrantId>(crypto.randomUUID()),
+          bucketId,
+          systemId,
+          friendAccountId,
+          encryptedKey: new Uint8Array([1]),
+          keyVersion: 1,
+          createdAt: now,
+        })
         .run();
 
       expect(() =>
-        db.insert(keyGrants).values({ id: brandId<KeyGrantId>(crypto.randomUUID()), bucketId, systemId, friendAccountId, encryptedKey: new Uint8Array([2]), keyVersion: 1, createdAt: now }).run(),
+        db
+          .insert(keyGrants)
+          .values({
+            id: brandId<KeyGrantId>(crypto.randomUUID()),
+            bucketId,
+            systemId,
+            friendAccountId,
+            encryptedKey: new Uint8Array([2]),
+            keyVersion: 1,
+            createdAt: now,
+          })
+          .run(),
       ).toThrow();
     });
 
@@ -210,7 +256,9 @@ describe("SQLite privacy schema — key_grants and friend_connections", () => {
       const id = brandId<FriendConnectionId>(crypto.randomUUID());
       const now = fixtureNow();
 
-      db.insert(friendConnections).values({ id, accountId, friendAccountId, createdAt: now, updatedAt: now }).run();
+      db.insert(friendConnections)
+        .values({ id, accountId, friendAccountId, createdAt: now, updatedAt: now })
+        .run();
 
       const rows = db.select().from(friendConnections).where(eq(friendConnections.id, id)).all();
       expect(rows).toHaveLength(1);
@@ -227,7 +275,17 @@ describe("SQLite privacy schema — key_grants and friend_connections", () => {
       const now = fixtureNow();
 
       expect(() =>
-        db.insert(friendConnections).values({ id: brandId<FriendConnectionId>(crypto.randomUUID()), accountId, friendAccountId, status: "invalid-status" as "pending", createdAt: now, updatedAt: now }).run(),
+        db
+          .insert(friendConnections)
+          .values({
+            id: brandId<FriendConnectionId>(crypto.randomUUID()),
+            accountId,
+            friendAccountId,
+            status: "invalid-status" as "pending",
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
       ).toThrow();
     });
 
@@ -239,7 +297,11 @@ describe("SQLite privacy schema — key_grants and friend_connections", () => {
       const connId = insertFriendConnection(accountId, friendAccountId);
 
       db.delete(accounts).where(eq(accounts.id, accountId)).run();
-      const rows = db.select().from(friendConnections).where(eq(friendConnections.id, connId)).all();
+      const rows = db
+        .select()
+        .from(friendConnections)
+        .where(eq(friendConnections.id, connId))
+        .all();
       expect(rows).toHaveLength(0);
     });
 
@@ -249,7 +311,16 @@ describe("SQLite privacy schema — key_grants and friend_connections", () => {
       const now = fixtureNow();
 
       expect(() =>
-        db.insert(friendConnections).values({ id: brandId<FriendConnectionId>(crypto.randomUUID()), accountId, friendAccountId: accountId, createdAt: now, updatedAt: now }).run(),
+        db
+          .insert(friendConnections)
+          .values({
+            id: brandId<FriendConnectionId>(crypto.randomUUID()),
+            accountId,
+            friendAccountId: accountId,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
       ).toThrow();
     });
 
@@ -263,7 +334,16 @@ describe("SQLite privacy schema — key_grants and friend_connections", () => {
       insertFriendConnection(accountId, friendAccountId);
 
       expect(() =>
-        db.insert(friendConnections).values({ id: brandId<FriendConnectionId>(crypto.randomUUID()), accountId, friendAccountId, createdAt: now, updatedAt: now }).run(),
+        db
+          .insert(friendConnections)
+          .values({
+            id: brandId<FriendConnectionId>(crypto.randomUUID()),
+            accountId,
+            friendAccountId,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
       ).toThrow();
     });
 
@@ -286,7 +366,17 @@ describe("SQLite privacy schema — key_grants and friend_connections", () => {
       const id = brandId<FriendConnectionId>(crypto.randomUUID());
       const now = fixtureNow();
 
-      db.insert(friendConnections).values({ id, accountId, friendAccountId, createdAt: now, updatedAt: now, archived: true, archivedAt: now }).run();
+      db.insert(friendConnections)
+        .values({
+          id,
+          accountId,
+          friendAccountId,
+          createdAt: now,
+          updatedAt: now,
+          archived: true,
+          archivedAt: now,
+        })
+        .run();
 
       const rows = db.select().from(friendConnections).where(eq(friendConnections.id, id)).all();
       expect(rows[0]?.archived).toBe(true);
@@ -333,7 +423,10 @@ describe("SQLite privacy schema — key_grants and friend_connections", () => {
       const id = insertFriendConnection(accountId, friendAccountId);
       const now = fixtureNow();
 
-      db.update(friendConnections).set({ archived: true, archivedAt: now, updatedAt: now }).where(eq(friendConnections.id, id)).run();
+      db.update(friendConnections)
+        .set({ archived: true, archivedAt: now, updatedAt: now })
+        .where(eq(friendConnections.id, id))
+        .run();
 
       const rows = db.select().from(friendConnections).where(eq(friendConnections.id, id)).all();
       expect(rows[0]?.archived).toBe(true);
@@ -347,8 +440,28 @@ describe("SQLite privacy schema — key_grants and friend_connections", () => {
       insertSystem(friendAccountId);
       const now = fixtureNow();
 
-      db.insert(friendConnections).values({ id: brandId<FriendConnectionId>(crypto.randomUUID()), accountId, friendAccountId, createdAt: now, updatedAt: now, archived: true, archivedAt: now }).run();
-      db.insert(friendConnections).values({ id: brandId<FriendConnectionId>(crypto.randomUUID()), accountId, friendAccountId, createdAt: now, updatedAt: now, archived: true, archivedAt: now }).run();
+      db.insert(friendConnections)
+        .values({
+          id: brandId<FriendConnectionId>(crypto.randomUUID()),
+          accountId,
+          friendAccountId,
+          createdAt: now,
+          updatedAt: now,
+          archived: true,
+          archivedAt: now,
+        })
+        .run();
+      db.insert(friendConnections)
+        .values({
+          id: brandId<FriendConnectionId>(crypto.randomUUID()),
+          accountId,
+          friendAccountId,
+          createdAt: now,
+          updatedAt: now,
+          archived: true,
+          archivedAt: now,
+        })
+        .run();
     });
 
     it("rejects duplicate (accountId, friendAccountId) when both rows are active", () => {
@@ -358,10 +471,27 @@ describe("SQLite privacy schema — key_grants and friend_connections", () => {
       insertSystem(friendAccountId);
       const now = fixtureNow();
 
-      db.insert(friendConnections).values({ id: brandId<FriendConnectionId>(crypto.randomUUID()), accountId, friendAccountId, createdAt: now, updatedAt: now }).run();
+      db.insert(friendConnections)
+        .values({
+          id: brandId<FriendConnectionId>(crypto.randomUUID()),
+          accountId,
+          friendAccountId,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
 
       expect(() =>
-        db.insert(friendConnections).values({ id: brandId<FriendConnectionId>(crypto.randomUUID()), accountId, friendAccountId, createdAt: now, updatedAt: now }).run(),
+        db
+          .insert(friendConnections)
+          .values({
+            id: brandId<FriendConnectionId>(crypto.randomUUID()),
+            accountId,
+            friendAccountId,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
       ).toThrow();
     });
   });

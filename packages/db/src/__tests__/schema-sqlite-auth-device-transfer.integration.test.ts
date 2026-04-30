@@ -19,12 +19,7 @@ import { accounts, deviceTransferRequests, sessions } from "../schema/sqlite/aut
 import { fixtureNow } from "./fixtures/timestamps.js";
 import { createSqliteAuthTables } from "./helpers/sqlite-helpers.js";
 
-import type {
-  AccountId,
-  DeviceTransferRequestId,
-  SessionId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { AccountId, DeviceTransferRequestId, SessionId, UnixMillis } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const ONE_HOUR_MS = 3_600_000;

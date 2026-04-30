@@ -141,7 +141,15 @@ describe("SQLite import-export schema — import_jobs", () => {
       ];
 
       db.insert(importJobs)
-        .values({ id, accountId, systemId, source: "pluralscape", errorLog: errors, createdAt: now, updatedAt: now })
+        .values({
+          id,
+          accountId,
+          systemId,
+          source: "pluralscape",
+          errorLog: errors,
+          createdAt: now,
+          updatedAt: now,
+        })
         .run();
 
       const rows = db.select().from(importJobs).where(eq(importJobs.id, id)).all();
@@ -217,7 +225,15 @@ describe("SQLite import-export schema — import_jobs", () => {
       const now = fixtureNow();
 
       db.insert(importJobs)
-        .values({ id, accountId, systemId, source: "pluralscape", progressPercent: 0, createdAt: now, updatedAt: now })
+        .values({
+          id,
+          accountId,
+          systemId,
+          source: "pluralscape",
+          progressPercent: 0,
+          createdAt: now,
+          updatedAt: now,
+        })
         .run();
 
       const rows = db.select().from(importJobs).where(eq(importJobs.id, id)).all();
@@ -231,7 +247,15 @@ describe("SQLite import-export schema — import_jobs", () => {
       const now = fixtureNow();
 
       db.insert(importJobs)
-        .values({ id, accountId, systemId, source: "pluralscape", progressPercent: 100, createdAt: now, updatedAt: now })
+        .values({
+          id,
+          accountId,
+          systemId,
+          source: "pluralscape",
+          progressPercent: 100,
+          createdAt: now,
+          updatedAt: now,
+        })
         .run();
 
       const rows = db.select().from(importJobs).where(eq(importJobs.id, id)).all();
@@ -266,7 +290,15 @@ describe("SQLite import-export schema — import_jobs", () => {
       const now = fixtureNow();
 
       db.insert(importJobs)
-        .values({ id, accountId, systemId, source: "pluralkit", status, createdAt: now, updatedAt: now })
+        .values({
+          id,
+          accountId,
+          systemId,
+          source: "pluralkit",
+          status,
+          createdAt: now,
+          updatedAt: now,
+        })
         .run();
 
       const rows = db.select().from(importJobs).where(eq(importJobs.id, id)).all();
@@ -302,7 +334,14 @@ describe("SQLite import-export schema — import_jobs", () => {
       const now = fixtureNow();
 
       db.insert(importJobs)
-        .values({ id, accountId, systemId, source: "simply-plural", createdAt: now, updatedAt: now })
+        .values({
+          id,
+          accountId,
+          systemId,
+          source: "simply-plural",
+          createdAt: now,
+          updatedAt: now,
+        })
         .run();
 
       db.delete(systems).where(eq(systems.id, systemId)).run();
@@ -323,7 +362,15 @@ describe("SQLite import-export schema — import_jobs", () => {
       }));
 
       db.insert(importJobs)
-        .values({ id, accountId, systemId, source: "simply-plural", errorLog: errors, createdAt: now, updatedAt: now })
+        .values({
+          id,
+          accountId,
+          systemId,
+          source: "simply-plural",
+          errorLog: errors,
+          createdAt: now,
+          updatedAt: now,
+        })
         .run();
 
       const rows = db.select().from(importJobs).where(eq(importJobs.id, id)).all();

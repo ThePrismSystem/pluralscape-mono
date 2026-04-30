@@ -13,10 +13,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/sqlite/auth.js";
-import {
-  systemStructureEntities,
-  systemStructureEntityTypes,
-} from "../schema/sqlite/structure.js";
+import { systemStructureEntities, systemStructureEntityTypes } from "../schema/sqlite/structure.js";
 import { systems } from "../schema/sqlite/systems.js";
 
 import { fixtureNow } from "./fixtures/timestamps.js";

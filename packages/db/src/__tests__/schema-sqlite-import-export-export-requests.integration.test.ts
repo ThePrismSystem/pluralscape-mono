@@ -257,7 +257,15 @@ describe("SQLite import-export schema — export_requests", () => {
       const now = fixtureNow();
 
       db.insert(exportRequests)
-        .values({ id, accountId, systemId, format: "json", blobId: null, createdAt: now, updatedAt: now })
+        .values({
+          id,
+          accountId,
+          systemId,
+          format: "json",
+          blobId: null,
+          createdAt: now,
+          updatedAt: now,
+        })
         .run();
 
       const rows = db.select().from(exportRequests).where(eq(exportRequests.id, id)).all();
