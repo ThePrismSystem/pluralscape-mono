@@ -10,6 +10,7 @@
  *                  row-transforms-structure-innerworld.test.ts,
  *                  row-transforms-documents.test.ts
  */
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -235,7 +236,7 @@ describe("rowToFieldValue", () => {
       updated_at: 1_700_000_000_000,
     };
 
-    const result = rowToFieldValue(row, "sys-1" as SystemId);
+    const result = rowToFieldValue(row, brandId<SystemId>("sys-1"));
 
     expect(result.id).toBe("fv-1");
     expect(result.fieldDefinitionId).toBe("fd-1");
@@ -259,7 +260,7 @@ describe("rowToFieldValue", () => {
       created_at: 1_700_000_000_000,
       updated_at: 1_700_000_000_000,
     };
-    expect(() => rowToFieldValue(row, "sys-1" as SystemId)).toThrow(RowTransformError);
+    expect(() => rowToFieldValue(row, brandId<SystemId>("sys-1"))).toThrow(RowTransformError);
   });
 
   it("throws RowTransformError when value column is null", () => {
@@ -273,7 +274,7 @@ describe("rowToFieldValue", () => {
       created_at: 1_700_000_000_000,
       updated_at: 1_700_000_000_000,
     };
-    expect(() => rowToFieldValue(row, "sys-1" as SystemId)).toThrow(RowTransformError);
+    expect(() => rowToFieldValue(row, brandId<SystemId>("sys-1"))).toThrow(RowTransformError);
   });
 });
 
