@@ -400,7 +400,21 @@ export const PROTECTED_ENDPOINTS: EndpointDescriptor[] = [
     method: "PUT",
     label: "PUT /v1/systems/:id/structure/entity-types/:entityTypeId",
     systemScoped: true,
-    resolve: systemCreateThenPut("structure/entity-types", createStructureEntityType),
+    resolve: async (
+      request: APIRequestContext,
+      headers: AuthHeaders,
+    ): Promise<{ url: string; body?: unknown }> => {
+      const systemId = await getSystemId(request, headers);
+      const entityType = await createStructureEntityType(request, headers, systemId);
+      return {
+        url: `/v1/systems/${systemId}/structure/entity-types/${entityType.id}`,
+        body: {
+          encryptedData: encryptForApi({ name: "Updated" }),
+          sortOrder: 0,
+          version: entityType.version,
+        },
+      };
+    },
   },
   {
     method: "DELETE",
@@ -421,7 +435,12 @@ export const PROTECTED_ENDPOINTS: EndpointDescriptor[] = [
       const entity = await createStructureEntity(request, headers, systemId, entityType.id);
       return {
         url: `/v1/systems/${systemId}/structure/entities/${entity.id}`,
-        body: { encryptedData: encryptForApi({ name: "Updated" }), version: entity.version },
+        body: {
+          encryptedData: encryptForApi({ name: "Updated" }),
+          parentEntityId: null,
+          sortOrder: 0,
+          version: entity.version,
+        },
       };
     },
   },
