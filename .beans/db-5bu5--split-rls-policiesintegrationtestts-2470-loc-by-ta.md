@@ -1,11 +1,11 @@
 ---
 # db-5bu5
 title: Split rls-policies.integration.test.ts (2,470 LOC) by table group
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T13:57:36Z
-updated_at: 2026-04-30T05:00:05Z
+updated_at: 2026-04-30T07:37:33Z
 parent: ps-36rg
 ---
 
@@ -36,3 +36,19 @@ The RLS migration covers 70 tables with five distinct scoping patterns: account 
 ## DRY pass
 
 While extracting helpers, scan sibling integration tests in packages/db for the same RLS-context boilerplate and consolidate when clear. Don't refactor any RLS policy. Per 2026-04-29 re-scope spec.
+
+## Summary of Changes
+
+Split rls-policies.integration.test.ts (2,473 LOC) into 7 focused files plus a shared helper:
+
+- rls-policy-generation.integration.test.ts — pure SQL generation unit tests (no PGlite)
+- rls-system-isolation.integration.test.ts — members, nomenclature_settings, bucket_rotation_items
+- rls-system-fk.integration.test.ts — sync_changes/snapshots/conflicts via FK join
+- rls-account-isolation.integration.test.ts — auth_keys, accounts (pk), biometric_tokens (fk), friend_connections (bidirectional)
+- rls-dual-tenant.integration.test.ts — api_keys, import_jobs, import_entity_refs
+- rls-systems-pk.integration.test.ts — systems table (PK + account ownership guard)
+- rls-audit-log.integration.test.ts — audit_log NULL-aware dual scope
+- rls-key-grants.integration.test.ts — asymmetric owner/friend read, write restricted to issuer
+- helpers/rls-test-helpers.ts — shared session GUC helpers, schema DDL builders, APP_ROLE constant
+
+Test count: 87 → 96. All files ≤500 LOC. Full db-integration suite: 1595/1595 passing.
