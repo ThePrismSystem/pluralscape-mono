@@ -33,6 +33,15 @@ function projectConfig(name: string, root: string) {
   };
 }
 
+/**
+ * Integration projects that share an external service (e.g. queue uses a
+ * single Valkey container) cannot run multiple test files in parallel
+ * against the same shared infrastructure without state collisions. Listed
+ * by project name so other integration projects keep their default
+ * file-level parallelism.
+ */
+const SHARED_INFRA_INTEGRATION_PROJECTS = new Set<string>(["queue"]);
+
 function integrationProjectConfig(name: string, root: string) {
   return {
     test: {
@@ -44,6 +53,7 @@ function integrationProjectConfig(name: string, root: string) {
       restoreMocks: true,
       testTimeout: 30000,
       hookTimeout: 30000,
+      ...(SHARED_INFRA_INTEGRATION_PROJECTS.has(name) ? { fileParallelism: false } : {}),
     },
   };
 }
