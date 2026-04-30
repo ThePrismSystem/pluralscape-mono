@@ -201,7 +201,7 @@ The full set of CI-enforced gates that defend the canonical chain:
 
 G12 is intentionally omitted — it does not apply to plaintext entities (it covered an encrypted-only invariant absorbed into G5).
 
-Drift on any gate fails CI. Allow-lists must remain literally empty (regression trap in `tooling/eslint-config/rules/__tests__/`).
+Drift on any gate fails CI. The G8 and G9 rules have no allow-list mechanism — adding exceptions requires modifying the rule source itself, which is reviewed at the same level as a feature change. Project-wide `@eslint-community/eslint-comments/no-use` applies uniformly, so `eslint-disable` comments cannot bypass the rules in any subtree.
 
 ## Consequences
 

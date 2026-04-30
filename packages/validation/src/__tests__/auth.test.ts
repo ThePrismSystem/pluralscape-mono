@@ -595,9 +595,8 @@ describe("UpdateAccountSettingsSchema", () => {
 });
 
 // ── Type-level parity for inferred request inputs ─────────────────────
-// Replaces the parity assertions previously held in
-// `packages/types/src/__tests__/auth.test.ts` against the hand-rolled
-// `LoginCredentials` interface (dropped in Task 21 of ps-6phh).
+// Guards the canonical chain after the hand-rolled `LoginCredentials`
+// interface was retired (G8 strict — see ADR-023).
 
 describe("LoginSchema (z.infer parity)", () => {
   type LoginCredentials = z.infer<typeof LoginSchema>;

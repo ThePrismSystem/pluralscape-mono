@@ -199,6 +199,8 @@ export const bucketRouter = router({
     .input(BucketIdSchema.and(UntagContentParamsSchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
+      // Strip systemId (carried on ctx) before forwarding the body — the
+      // service's body parameter is `{ entityType, entityId }` only.
       const { bucketId, systemId: _systemId, ...body } = input;
       void _systemId;
       await untagContent(ctx.db, ctx.systemId, bucketId, body, ctx.auth, audit);
@@ -280,7 +282,7 @@ export const bucketRouter = router({
         ctx.systemId,
         input.bucketId,
         input.rotationId,
-        { chunkSize: input.chunkSize },
+        input,
         ctx.auth,
       );
     }),
@@ -295,7 +297,7 @@ export const bucketRouter = router({
         ctx.systemId,
         input.bucketId,
         input.rotationId,
-        { items: input.items },
+        input,
         ctx.auth,
         audit,
       );

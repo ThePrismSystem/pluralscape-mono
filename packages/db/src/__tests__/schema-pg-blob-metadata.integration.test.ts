@@ -154,15 +154,18 @@ describe("PG blob_metadata schema", () => {
     const now = fixtureNow();
 
     // Intentionally testing CHECK constraint with invalid tier value;
-    // 3 is not a valid EncryptionTier (1 | 2). The single-step `as` mirrors
-    // the codebase pattern used in schema-pg-api-keys and others.
+    // 3 is not a valid EncryptionTier (1 | 2). The @ts-expect-error
+    // directive is load-bearing: if TS ever accepts `3` here, the test
+    // would silently turn into a no-op (the runtime CHECK could never
+    // fire if TS pre-validates the value).
     await expect(
+      // @ts-expect-error invalid encryptionTier value: testing runtime CHECK
       db.insert(blobMetadata).values({
         id: brandId<BlobId>(crypto.randomUUID()),
         systemId,
         storageKey: asInternalKey(`blobs/${crypto.randomUUID()}`),
         sizeBytes: 100,
-        encryptionTier: 3 as ServerInternal<EncryptionTier>,
+        encryptionTier: 3,
         purpose: "avatar",
         checksum: brandId<ChecksumHex>("a".repeat(64)),
         createdAt: now,
