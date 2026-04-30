@@ -122,9 +122,8 @@ vi.mock("expo-secure-store", () => {
 });
 
 // Must import AFTER all mocks
-const { useImportJob, useImportProgress, useImportSummary, useCancelImport } = await import(
-  "../import.hooks.js"
-);
+const { useImportJob, useImportProgress, useImportSummary, useCancelImport } =
+  await import("../import.hooks.js");
 const { IMPORT_PROGRESS_POLL_INTERVAL_MS } = await import("../import-sp-mobile.constants.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────

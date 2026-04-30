@@ -24,8 +24,6 @@ import type { MaterializerDb } from "@pluralscape/sync/materializer";
 import type { AccountId, SyncDocumentId, SystemId } from "@pluralscape/types";
 import type { ReactNode } from "react";
 
-// ── Branded type helpers ───────────────────────────────────────────
-
 const KDF_KEY_BYTES = 32;
 const SIGN_PUB_BYTES = 32;
 const SIGN_SEC_BYTES = 64;
@@ -180,15 +178,18 @@ const mockBucketKeyCache: BucketKeyCache = {
 const mockCreateBucketKeyCache = vi.fn((): BucketKeyCache => mockBucketKeyCache);
 
 const MockSqliteStorageAdapter = {
-  create: vi.fn((): Promise<unknown> => Promise.resolve({
-    loadSnapshot: vi.fn(),
-    saveSnapshot: vi.fn(),
-    loadChanges: vi.fn(),
-    appendChange: vi.fn(),
-    pruneChanges: vi.fn(),
-    listDocuments: vi.fn(() => []),
-    deleteDocument: vi.fn(),
-  })),
+  create: vi.fn(
+    (): Promise<unknown> =>
+      Promise.resolve({
+        loadSnapshot: vi.fn(),
+        saveSnapshot: vi.fn(),
+        loadChanges: vi.fn(),
+        appendChange: vi.fn(),
+        pruneChanges: vi.fn(),
+        listDocuments: vi.fn(() => []),
+        deleteDocument: vi.fn(),
+      }),
+  ),
 };
 
 const mockWsConnect = vi.fn();

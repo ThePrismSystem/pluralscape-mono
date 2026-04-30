@@ -26,7 +26,10 @@ type M<P, R> = MockMutation<ParamsOf<P>, ReturnOf<R>>;
 
 export interface MockTRPCClient extends TRPCClientSubset {
   readonly system: {
-    readonly get: Q<TRPCClientSubset["system"]["get"]["query"], TRPCClientSubset["system"]["get"]["query"]>;
+    readonly get: Q<
+      TRPCClientSubset["system"]["get"]["query"],
+      TRPCClientSubset["system"]["get"]["query"]
+    >;
     readonly update: M<
       TRPCClientSubset["system"]["update"]["mutate"],
       TRPCClientSubset["system"]["update"]["mutate"]

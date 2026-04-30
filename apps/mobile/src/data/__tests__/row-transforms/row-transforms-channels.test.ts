@@ -12,11 +12,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import {
-  rowToBoardMessage,
-  rowToChannel,
-  rowToMessage,
-} from "../../row-transforms/index.js";
+import { rowToBoardMessage, rowToChannel, rowToMessage } from "../../row-transforms/index.js";
 
 // ── rowToChannel ──────────────────────────────────────────────────────────────
 

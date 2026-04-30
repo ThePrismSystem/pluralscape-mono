@@ -188,15 +188,18 @@ const mockBucketKeyCache: BucketKeyCache = {
 const mockCreateBucketKeyCache = vi.fn((): BucketKeyCache => mockBucketKeyCache);
 
 const MockSqliteStorageAdapter = {
-  create: vi.fn((): Promise<unknown> => Promise.resolve({
-    loadSnapshot: vi.fn(),
-    saveSnapshot: vi.fn(),
-    loadChanges: vi.fn(),
-    appendChange: vi.fn(),
-    pruneChanges: vi.fn(),
-    listDocuments: vi.fn(() => []),
-    deleteDocument: vi.fn(),
-  })),
+  create: vi.fn(
+    (): Promise<unknown> =>
+      Promise.resolve({
+        loadSnapshot: vi.fn(),
+        saveSnapshot: vi.fn(),
+        loadChanges: vi.fn(),
+        appendChange: vi.fn(),
+        pruneChanges: vi.fn(),
+        listDocuments: vi.fn(() => []),
+        deleteDocument: vi.fn(),
+      }),
+  ),
 };
 
 const mockWsConnect = vi.fn();

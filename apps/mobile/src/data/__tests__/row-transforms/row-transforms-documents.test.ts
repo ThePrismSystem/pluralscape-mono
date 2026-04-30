@@ -12,11 +12,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import {
-  rowToJournalEntry,
-  rowToNote,
-  rowToWikiPage,
-} from "../../row-transforms/index.js";
+import { rowToJournalEntry, rowToNote, rowToWikiPage } from "../../row-transforms/index.js";
 
 // ── rowToNote ─────────────────────────────────────────────────────────────────
 

@@ -1,6 +1,6 @@
 ---
 # mobile-jxox
-title: 'T2 mobile test splits: row-transforms, factories, SyncProvider, opfs-worker, trpc-persister-api, import.hooks'
+title: "T2 mobile test splits: row-transforms, factories, SyncProvider, opfs-worker, trpc-persister-api, import.hooks"
 status: completed
 type: task
 priority: normal
@@ -8,9 +8,9 @@ created_at: 2026-04-30T05:02:07Z
 updated_at: 2026-04-30T12:33:20Z
 parent: ps-36rg
 blocked_by:
-    - sync-96hx
-    - db-5bu5
-    - ps-ga25
+  - sync-96hx
+  - db-5bu5
+  - ps-ga25
 ---
 
 Six files in apps/mobile.
@@ -32,6 +32,7 @@ Six files in apps/mobile.
 ## Summary of Changes
 
 Split all 6 oversized mobile test/helper files into smaller focused files by concern:
+
 - `factories.ts` → 6 factory subfiles under `factories/` + barrel `index.ts`; updated 23 consumer test files to new import path
 - `row-transforms.test.ts` → 5 files by entity group under `data/__tests__/row-transforms/`
 - `SyncProvider.test.tsx` → `SyncProvider-lifecycle.test.tsx` (auth + bootstrap errors) + `SyncProvider-pipeline.test.tsx` (pipeline init + materializer wiring); full `vi.mock` setup block duplicated in each

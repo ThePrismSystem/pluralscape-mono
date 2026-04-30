@@ -269,10 +269,7 @@ describe("OPFS worker dispatch", () => {
 
     mockColumnNames.mockReturnValue(["id", "name"]);
     mockRow.mockReturnValueOnce([1, "alice"]).mockReturnValueOnce([2, "bob"]);
-    mockStep
-      .mockResolvedValueOnce(100)
-      .mockResolvedValueOnce(100)
-      .mockResolvedValueOnce(101);
+    mockStep.mockResolvedValueOnce(100).mockResolvedValueOnce(100).mockResolvedValueOnce(101);
 
     const res = await dispatch({
       id: 3,

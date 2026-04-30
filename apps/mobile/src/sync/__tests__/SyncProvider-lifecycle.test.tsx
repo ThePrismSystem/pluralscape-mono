@@ -1,13 +1,4 @@
-/**
- * SyncProvider lifecycle tests — engine creation, disposal, auth transitions.
- *
- * Covers: useSync defaults, engine ctor with sqlite/indexeddb, profile selection,
- *         bootstrap gating by connection, dispose-on-unmount, dispose-on-logout,
- *         eventBus + DocumentKeyResolver wiring, useSync-outside-provider guard
- * Companion files: SyncProvider-bootstrap.test.tsx,
- *                  SyncProvider-pipeline.test.tsx,
- *                  SyncProvider-materializer.test.tsx
- */
+/** Lifecycle (creation, disposal, auth transitions); see SyncProvider-{bootstrap,pipeline,materializer}.test.tsx */
 // @vitest-environment happy-dom
 import { brandId } from "@pluralscape/types";
 import { renderHook, waitFor } from "@testing-library/react";
@@ -190,15 +181,18 @@ const mockBucketKeyCache: BucketKeyCache = {
 const mockCreateBucketKeyCache = vi.fn((): BucketKeyCache => mockBucketKeyCache);
 
 const MockSqliteStorageAdapter = {
-  create: vi.fn((): Promise<unknown> => Promise.resolve({
-    loadSnapshot: vi.fn(),
-    saveSnapshot: vi.fn(),
-    loadChanges: vi.fn(),
-    appendChange: vi.fn(),
-    pruneChanges: vi.fn(),
-    listDocuments: vi.fn(() => []),
-    deleteDocument: vi.fn(),
-  })),
+  create: vi.fn(
+    (): Promise<unknown> =>
+      Promise.resolve({
+        loadSnapshot: vi.fn(),
+        saveSnapshot: vi.fn(),
+        loadChanges: vi.fn(),
+        appendChange: vi.fn(),
+        pruneChanges: vi.fn(),
+        listDocuments: vi.fn(() => []),
+        deleteDocument: vi.fn(),
+      }),
+  ),
 };
 
 const mockWsConnect = vi.fn();
