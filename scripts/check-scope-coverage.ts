@@ -115,7 +115,7 @@ function parseAppRouterKeys(rootSource: string): Map<string, string> {
  * Extract procedure keys from the outermost `router({...})` export in source,
  * building dotted keys under `prefix`. Handles one level of nested sub-routers.
  */
-function extractProcedureKeys(source: string, prefix: string): string[] {
+function extractProcedureKeys(source: string, prefix: string, filePath: string): string[] {
   const keys: string[] = [];
 
   const exportRouterMatch = /export const \w+Router\s*=\s*router\(\{/.exec(source);
@@ -136,19 +136,90 @@ function extractProcedureKeys(source: string, prefix: string): string[] {
     i++;
   }
 
-  extractKeysFromBlock(content, prefix, keys);
+  extractKeysFromBlock(content, prefix, keys, source, filePath);
   return keys;
 }
 
 /**
- * Recursively extract dotted procedure keys from a router block string.
+ * Given a spread variable name and the source of the file that uses it, resolve
+ * and return the body of the exported object literal for that variable.
+ * Returns null if the import or export cannot be found.
  */
-function extractKeysFromBlock(block: string, prefix: string, keys: string[]): void {
+function resolveSpreadBody(
+  spreadName: string,
+  parentSource: string,
+  parentFilePath: string,
+): string | null {
+  // Find: import { ..., spreadName, ... } from "./<path>.js"
+  const importPattern = new RegExp(
+    `import\\s*\\{[^}]*\\b${spreadName}\\b[^}]*\\}\\s*from\\s*["'](\\.\\\/[^"']+)["']`,
+  );
+  const importMatch = importPattern.exec(parentSource);
+  if (!importMatch) return null;
+
+  const importPath = importMatch[1]!.replace(/\.js$/, ".ts");
+  const parentDir = dirname(parentFilePath);
+  const resolvedPath = resolve(parentDir, importPath);
+
+  let spreadSource: string;
+  try {
+    spreadSource = readFileSync(resolvedPath, "utf-8");
+  } catch {
+    return null;
+  }
+
+  // Find: export const spreadName = {
+  const exportPattern = new RegExp(`export const ${spreadName}\\s*=\\s*\\{`);
+  const exportMatch = exportPattern.exec(spreadSource);
+  if (!exportMatch) return null;
+
+  const startIdx = exportMatch.index + exportMatch[0].length;
+  let blockDepth = 1;
+  let j = startIdx;
+  let body = "";
+  while (j < spreadSource.length && blockDepth > 0) {
+    const ch = spreadSource[j]!;
+    if (ch === "{") blockDepth++;
+    else if (ch === "}") {
+      blockDepth--;
+      if (blockDepth === 0) break;
+    }
+    body += ch;
+    j++;
+  }
+  return body;
+}
+
+/**
+ * Recursively extract dotted procedure keys from a router block string.
+ * `parentSource` is the source of the file containing this block, used to
+ * resolve `...spread` imports.
+ * `parentFilePath` is the absolute path of that file, used to resolve relative imports.
+ */
+function extractKeysFromBlock(
+  block: string,
+  prefix: string,
+  keys: string[],
+  parentSource: string,
+  parentFilePath = "",
+): void {
   let i = 0;
   while (i < block.length) {
     // Skip whitespace and commas
     if (/[\s,]/.test(block[i]!)) {
       i++;
+      continue;
+    }
+
+    // Handle spread syntax: ...someProcedures
+    const spreadMatch = /^\.\.\.(\w+)\s*,?/.exec(block.slice(i));
+    if (spreadMatch) {
+      const spreadName = spreadMatch[1]!;
+      i += spreadMatch[0].length;
+      const spreadBody = resolveSpreadBody(spreadName, parentSource, parentFilePath);
+      if (spreadBody !== null) {
+        extractKeysFromBlock(spreadBody, prefix, keys, parentSource, parentFilePath);
+      }
       continue;
     }
 
@@ -197,7 +268,7 @@ function extractKeysFromBlock(block: string, prefix: string, keys: string[]): vo
         }
         i++;
       }
-      extractKeysFromBlock(nestedContent, fullKey, keys);
+      extractKeysFromBlock(nestedContent, fullKey, keys, parentSource, parentFilePath);
     } else {
       // Leaf procedure — record the key and skip to next top-level entry
       keys.push(fullKey);
@@ -248,7 +319,7 @@ for (const [routerKey, varName] of appRouterKeys) {
     continue;
   }
 
-  const procedureKeys = extractProcedureKeys(source, routerKey);
+  const procedureKeys = extractProcedureKeys(source, routerKey, filePath);
   allTrpcKeys.push(...procedureKeys);
 }
 
