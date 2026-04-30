@@ -17,7 +17,7 @@ import {
   guardedToMs,
   intToBoolFailClosed,
   parseJsonSafe,
-} from "../row-transforms/index.js";
+} from "../../row-transforms/index.js";
 
 describe("RowTransformError", () => {
   it("captures table, field, and rowId context", () => {

@@ -1,15 +1,15 @@
 /**
- * SyncProvider pipeline initialization tests.
+ * SyncProvider bootstrap error handling tests.
  *
- * Covers: mid-adapter-creation cleanup, storage-adapter rejection, SyncEngine
- *         constructor failure
+ * Covers: successful bootstrap, captured Error rejection, non-Error coercion,
+ *         MAX_BOOTSTRAP_ATTEMPTS fallback, retryBootstrap reset
  * Companion files: SyncProvider-lifecycle.test.tsx,
- *                  SyncProvider-bootstrap.test.tsx,
+ *                  SyncProvider-pipeline.test.tsx,
  *                  SyncProvider-materializer.test.tsx
  */
 // @vitest-environment happy-dom
 import { brandId } from "@pluralscape/types";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -331,7 +331,7 @@ function makeWrapper(): ({ children }: { readonly children: ReactNode }) => Reac
 
 // ── Tests ──────────────────────────────────────────────────────────
 
-describe("SyncProvider pipeline initialization", () => {
+describe("SyncProvider bootstrap", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setUnauthenticated();
@@ -340,93 +340,103 @@ describe("SyncProvider pipeline initialization", () => {
     mockEventBus = createEventBus();
   });
 
-  it("cleans up resources when unmounted mid-adapter-creation", async () => {
+  it("bootstraps engine when connected and sets isBootstrapped", async () => {
     setUnlocked();
     mockConnectionStatus = "connected";
 
-    let resolveAdapter!: (value: unknown) => void;
-    MockSqliteStorageAdapter.create.mockImplementationOnce(
-      () =>
-        new Promise((res) => {
-          resolveAdapter = res;
-        }),
-    );
-
-    const { unmount } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+    const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
 
     await waitFor(() => {
-      expect(MockSqliteStorageAdapter.create).toHaveBeenCalledTimes(1);
-    });
-
-    unmount();
-
-    resolveAdapter({
-      loadSnapshot: vi.fn(),
-      saveSnapshot: vi.fn(),
-      loadChanges: vi.fn(),
-      appendChange: vi.fn(),
-      pruneChanges: vi.fn(),
-      listDocuments: vi.fn(() => []),
-      deleteDocument: vi.fn(),
+      expect(mockBootstrap).toHaveBeenCalled();
     });
     await waitFor(() => {
-      expect(mockClearAll).toHaveBeenCalledTimes(1);
+      expect(result.current.isBootstrapped).toBe(true);
     });
-
-    expect(MockSyncEngine).not.toHaveBeenCalled();
-    expect(mockWsDisconnect).not.toHaveBeenCalled();
   });
 
-  it("emits sync:error when storage-adapter initialization rejects", async () => {
+  it("captures bootstrapError when bootstrap rejects with an Error", async () => {
     setUnlocked();
     mockConnectionStatus = "connected";
+    const bootError = new Error("storage init failed");
+    mockBootstrap.mockImplementationOnce(() => Promise.reject(bootError));
 
-    const initError = new Error("storage adapter create failed");
-    MockSqliteStorageAdapter.create.mockRejectedValueOnce(initError);
+    const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
 
-    const emitted: import("@pluralscape/sync").SyncErrorEvent[] = [];
-    mockEventBus.on("sync:error", (event) => {
-      emitted.push(event);
+    await waitFor(() => {
+      expect(result.current.bootstrapError).toEqual(bootError);
+    });
+    expect(result.current.bootstrapAttempts).toBe(1);
+    expect(result.current.fallbackToRemote).toBe(false);
+  });
+
+  it("wraps non-Error rejection values in Error", async () => {
+    setUnlocked();
+    mockConnectionStatus = "connected";
+    mockBootstrap.mockImplementationOnce(() => {
+      const literal: unknown = "string failure";
+      return Promise.reject(literal as Error);
     });
 
     const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
 
     await waitFor(() => {
-      expect(emitted).toHaveLength(1);
+      expect(result.current.bootstrapError).toBeInstanceOf(Error);
     });
-
-    expect(emitted[0]?.message).toContain("initialization failed");
-    expect(emitted[0]?.error).toBe(initError);
-    expect(MockSyncEngine).not.toHaveBeenCalled();
-    expect(result.current.engine).toBeNull();
+    expect(result.current.bootstrapError?.message).toBe("string failure");
   });
 
-  it("clears engine state when SyncEngine construction throws", async () => {
+  it("falls back to remote after MAX_BOOTSTRAP_ATTEMPTS failures", async () => {
     setUnlocked();
     mockConnectionStatus = "connected";
-
-    const constructError = new Error("engine ctor failed");
-    MockSyncEngine.mockImplementationOnce(function FailingCtor() {
-      throw constructError;
-    });
-
-    const emitted: import("@pluralscape/sync").SyncErrorEvent[] = [];
-    mockEventBus.on("sync:error", (event) => {
-      emitted.push(event);
-    });
+    mockBootstrap.mockImplementation(() => Promise.reject(new Error("permanent failure")));
 
     const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
 
     await waitFor(() => {
-      expect(emitted).toHaveLength(1);
+      expect(result.current.bootstrapAttempts).toBe(1);
+    });
+    expect(result.current.fallbackToRemote).toBe(false);
+
+    await act(() => {
+      result.current.retryBootstrap();
+      return Promise.resolve();
+    });
+    expect(result.current.bootstrapAttempts).toBe(2);
+    expect(result.current.fallbackToRemote).toBe(false);
+
+    await act(() => {
+      result.current.retryBootstrap();
+      return Promise.resolve();
+    });
+    expect(result.current.bootstrapAttempts).toBe(3);
+    expect(result.current.fallbackToRemote).toBe(true);
+
+    const callsBefore = mockBootstrap.mock.calls.length;
+    await act(() => {
+      result.current.retryBootstrap();
+      return Promise.resolve();
+    });
+    expect(mockBootstrap.mock.calls.length).toBe(callsBefore);
+  });
+
+  it("resets bootstrapError when retryBootstrap is called", async () => {
+    setUnlocked();
+    mockConnectionStatus = "connected";
+    mockBootstrap
+      .mockImplementationOnce(() => Promise.reject(new Error("first")))
+      .mockImplementationOnce(() => Promise.resolve());
+
+    const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+    await waitFor(() => {
+      expect(result.current.bootstrapError?.message).toBe("first");
     });
 
-    expect(emitted[0]?.message).toContain("initialization failed");
-    expect(emitted[0]?.error).toBe(constructError);
-    expect(result.current.engine).toBeNull();
-    expect(result.current.isBootstrapped).toBe(false);
-    expect(mockKeyResolverDispose).toHaveBeenCalledTimes(1);
-    expect(mockClearAll).toHaveBeenCalledTimes(1);
-    expect(mockWsDisconnect).toHaveBeenCalledTimes(1);
+    await act(() => {
+      result.current.retryBootstrap();
+      return Promise.resolve();
+    });
+
+    expect(result.current.bootstrapError).toBeNull();
+    expect(result.current.isBootstrapped).toBe(true);
   });
 });

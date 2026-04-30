@@ -1,8 +1,8 @@
 /**
- * OPFS worker dispatch tests — basic ops (init/prepare/run/all/get/close,
- * txn-begin/commit/rollback, finalize).
+ * OPFS worker dispatch tests — statement cache, LRU eviction, BLOB coercion,
+ * error envelopes, exhaustive switch guard, error propagation.
  *
- * Companion files: opfs-worker-cache.test.ts, opfs-worker-panic.test.ts
+ * Companion files: opfs-worker-dispatch.test.ts, opfs-worker-panic.test.ts
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -109,25 +109,6 @@ function singleStmtIter(ptr: number): AsyncIterable<number> {
   };
 }
 
-function multiStmtIter(ptrs: readonly number[]): AsyncIterable<number> {
-  return {
-    [Symbol.asyncIterator]() {
-      let i = 0;
-      return {
-        next(): Promise<IteratorResult<number>> {
-          if (i >= ptrs.length) return Promise.resolve({ done: true as const, value: 0 });
-          const value = ptrs[i++];
-          if (value === undefined) return Promise.resolve({ done: true as const, value: 0 });
-          return Promise.resolve({ done: false as const, value });
-        },
-        return(): Promise<IteratorResult<number>> {
-          return Promise.resolve({ done: true as const, value: 0 });
-        },
-      };
-    },
-  };
-}
-
 interface OkEnvelope<T> {
   id: number;
   ok: true;
@@ -222,212 +203,250 @@ async function dispatch(req: unknown): Promise<Envelope<unknown>> {
   return assertEnvelope(posted);
 }
 
-describe("OPFS worker dispatch", () => {
-  it("init returns { ok: true, result: undefined }", async () => {
-    const res = await dispatch({ id: 1, kind: "init" });
-    expect(res).toEqual({ id: 1, ok: true, result: undefined });
-    expect(mockOpenV2).toHaveBeenCalledWith("pluralscape-sync.db");
-    expect(mockVfsRegister).toHaveBeenCalled();
-    expect(mockVfsRegister.mock.calls.length).toBeGreaterThan(0);
-    const firstCall = mockVfsRegister.mock.calls[0];
-    if (firstCall !== undefined) {
-      expect(firstCall[1]).toBe(true);
-    }
-  });
-
-  it("errors when ops come before init", async () => {
-    fakeSelf = installFakeSelf();
-    vi.resetModules();
-    await import("../opfs-worker.js");
-
-    const res = await dispatch({ id: 7, kind: "exec", sql: "SELECT 1" });
-    expect(res.ok).toBe(false);
-    if (!res.ok) {
-      expect(res.error.message).toMatch(/init not called/);
-    }
-  });
-
-  it("prepare returns a numeric handle", async () => {
+describe("OPFS worker cache + error handling", () => {
+  it("get returns the first row when step yields SQLITE_ROW", async () => {
     await dispatch({ id: 1, kind: "init" });
     mockStatements.mockReturnValue(singleStmtIter(42));
-
-    const res = await dispatch({ id: 2, kind: "prepare", sql: "SELECT 1" });
-    expect(res.ok).toBe(true);
-    if (res.ok) {
-      expect(typeof res.result).toBe("number");
-    }
-    expect(mockStatements).toHaveBeenCalledWith(1, "SELECT 1", { unscoped: true });
-  });
-
-  it("all returns rows assembled from step loop + column_names + row()", async () => {
-    await dispatch({ id: 1, kind: "init" });
-    mockStatements.mockReturnValue(singleStmtIter(42));
-    const prep = await dispatch({ id: 2, kind: "prepare", sql: "SELECT * FROM t" });
+    const prep = await dispatch({ id: 2, kind: "prepare", sql: "SELECT * FROM t LIMIT 1" });
     expect(prep.ok).toBe(true);
     if (!prep.ok) return;
-    const stmtHandle = asNumber(prep.result);
 
     mockColumnNames.mockReturnValue(["id", "name"]);
-    mockRow.mockReturnValueOnce([1, "alice"]).mockReturnValueOnce([2, "bob"]);
-    mockStep
-      .mockResolvedValueOnce(100)
-      .mockResolvedValueOnce(100)
-      .mockResolvedValueOnce(101);
+    mockRow.mockReturnValueOnce([7, "carol"]);
+    mockStep.mockResolvedValueOnce(100);
+
+    const res = await dispatch({
+      id: 3,
+      kind: "get",
+      stmt: asNumber(prep.result),
+      params: [],
+    });
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.result).toEqual({ id: 7, name: "carol" });
+    }
+  });
+
+  it("get returns undefined when step yields SQLITE_DONE (no row)", async () => {
+    await dispatch({ id: 1, kind: "init" });
+    mockStatements.mockReturnValue(singleStmtIter(42));
+    const prep = await dispatch({ id: 2, kind: "prepare", sql: "SELECT * FROM t WHERE 0" });
+    expect(prep.ok).toBe(true);
+    if (!prep.ok) return;
+
+    mockStep.mockResolvedValueOnce(101);
+
+    const res = await dispatch({
+      id: 3,
+      kind: "get",
+      stmt: asNumber(prep.result),
+      params: [],
+    });
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.result).toBeUndefined();
+    }
+  });
+
+  it("evicts oldest statement via LRU once MAX_STMT_HANDLES is exceeded", async () => {
+    await dispatch({ id: 1, kind: "init" });
+
+    const MAX_STMT_HANDLES = 128;
+    const totalToPrepare = MAX_STMT_HANDLES + 1;
+    for (let i = 0; i < totalToPrepare; i++) {
+      mockStatements.mockReturnValueOnce(singleStmtIter(1000 + i));
+      const prep = await dispatch({ id: 100 + i, kind: "prepare", sql: `SELECT ${String(i)}` });
+      expect(prep.ok).toBe(true);
+    }
+
+    expect(mockFinalize).toHaveBeenCalledWith(1000);
+  });
+
+  it("coerces number[] column values (BLOB) to Uint8Array", async () => {
+    await dispatch({ id: 1, kind: "init" });
+    mockStatements.mockReturnValue(singleStmtIter(42));
+    const prep = await dispatch({ id: 2, kind: "prepare", sql: "SELECT data FROM blobs" });
+    expect(prep.ok).toBe(true);
+    if (!prep.ok) return;
+
+    mockColumnNames.mockReturnValue(["data"]);
+    mockRow.mockReturnValueOnce([[1, 2, 3]]);
+    mockStep.mockResolvedValueOnce(100).mockResolvedValueOnce(101);
 
     const res = await dispatch({
       id: 3,
       kind: "all",
-      stmt: stmtHandle,
-      params: [1],
+      stmt: asNumber(prep.result),
+      params: [],
     });
-
     expect(res.ok).toBe(true);
     if (res.ok) {
-      expect(res.result).toEqual([
-        { id: 1, name: "alice" },
-        { id: 2, name: "bob" },
-      ]);
+      const rows = res.result;
+      expect(Array.isArray(rows)).toBe(true);
+      if (Array.isArray(rows)) {
+        expect(rows).toHaveLength(1);
+        const first = rows[0];
+        if (first !== undefined && typeof first === "object" && first !== null) {
+          const rec: Record<string, unknown> = first as Record<string, unknown>;
+          const data = rec.data;
+          expect(data).toBeInstanceOf(Uint8Array);
+          if (data instanceof Uint8Array) {
+            expect(Array.from(data)).toEqual([1, 2, 3]);
+          }
+        }
+      }
     }
   });
 
-  it("rejects Date bind param with index + type name", async () => {
+  it("falls back to error envelope when postMessage throws on first response", async () => {
+    const originalPost = fakeSelf.postMessage.bind(fakeSelf);
+    let calls = 0;
+    const thrownMessages: unknown[] = [];
+    fakeSelf.postMessage = (msg: unknown): void => {
+      calls++;
+      if (calls === 1) {
+        thrownMessages.push(msg);
+        throw new Error("structured clone failed");
+      }
+      originalPost(msg);
+    };
+
+    try {
+      const before = fakeSelf.lastPosted.length;
+      const listeners = fakeSelf.listenersByType.get("message") ?? [];
+      for (const l of listeners) {
+        l({ data: { id: 99, kind: "init" } } satisfies Pick<MessageEvent<unknown>, "data">);
+      }
+      for (let i = 0; i < MAX_SETTLE_TICKS; i++) {
+        if (fakeSelf.lastPosted.length > before) break;
+        await new Promise<void>((r) => {
+          setTimeout(r, 0);
+        });
+      }
+      const posted = fakeSelf.lastPosted[before];
+      const env = assertEnvelope(posted);
+      expect(env.ok).toBe(false);
+      if (!env.ok) {
+        expect(env.error.message).toMatch(/failed to post response/);
+      }
+      expect(calls).toBeGreaterThanOrEqual(2);
+    } finally {
+      fakeSelf.postMessage = originalPost;
+    }
+  });
+
+  it("rejects unknown request kind via default/exhaustive switch arm", async () => {
+    await dispatch({ id: 1, kind: "init" });
+
+    const res = await dispatch({ id: 42, kind: "bogus" });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toMatch(/unknown request kind/);
+    }
+  });
+
+  it("bindAndReset calls sqlite3.reset before bind_collection so cached statements re-bind cleanly", async () => {
     await dispatch({ id: 1, kind: "init" });
     mockStatements.mockReturnValue(singleStmtIter(42));
     const prep = await dispatch({ id: 2, kind: "prepare", sql: "INSERT INTO t VALUES (?)" });
     expect(prep.ok).toBe(true);
     if (!prep.ok) return;
+    const handle = asNumber(prep.result);
 
-    const res = await dispatch({
-      id: 3,
-      kind: "run",
-      stmt: asNumber(prep.result),
-      params: [new Date()],
-    });
-    expect(res.ok).toBe(false);
-    if (!res.ok) {
-      expect(res.error.message).toMatch(/unsupported bind type.*index 0.*Date/);
+    mockStep.mockResolvedValueOnce(101);
+    await dispatch({ id: 3, kind: "run", stmt: handle, params: [] });
+
+    mockReset.mockClear();
+    mockBindCollection.mockClear();
+    mockStep.mockResolvedValueOnce(101);
+    await dispatch({ id: 4, kind: "run", stmt: handle, params: [42] });
+
+    expect(mockReset).toHaveBeenCalledWith(42);
+    expect(mockReset).toHaveBeenCalledTimes(1);
+    expect(mockBindCollection).toHaveBeenCalledTimes(1);
+    const resetOrder = mockReset.mock.invocationCallOrder[0];
+    const bindOrder = mockBindCollection.mock.invocationCallOrder[0];
+    expect(typeof resetOrder).toBe("number");
+    expect(typeof bindOrder).toBe("number");
+    if (resetOrder !== undefined && bindOrder !== undefined) {
+      expect(resetOrder).toBeLessThan(bindOrder);
     }
   });
 
-  it("txn-begin / txn-commit / txn-rollback call sqlite3.exec with BEGIN/COMMIT/ROLLBACK", async () => {
-    await dispatch({ id: 1, kind: "init" });
-
-    const begin = await dispatch({ id: 2, kind: "txn-begin" });
-    expect(begin.ok).toBe(true);
-    expect(mockExec).toHaveBeenCalledWith(1, "BEGIN");
-
-    const commit = await dispatch({ id: 3, kind: "txn-commit" });
-    expect(commit.ok).toBe(true);
-    expect(mockExec).toHaveBeenCalledWith(1, "COMMIT");
-
-    const rollback = await dispatch({ id: 4, kind: "txn-rollback" });
-    expect(rollback.ok).toBe(true);
-    expect(mockExec).toHaveBeenCalledWith(1, "ROLLBACK");
-  });
-
-  it("close nulls state and calls sqlite3.close(db)", async () => {
-    await dispatch({ id: 1, kind: "init" });
-
-    const res = await dispatch({ id: 2, kind: "close" });
-    expect(res).toEqual({ id: 2, ok: true, result: undefined });
-    expect(mockClose).toHaveBeenCalledWith(1);
-
-    const afterClose = await dispatch({ id: 3, kind: "exec", sql: "SELECT 1" });
-    expect(afterClose.ok).toBe(false);
-    if (!afterClose.ok) {
-      expect(afterClose.error.message).toMatch(/init not called/);
-    }
-  });
-
-  it("finalize calls sqlite3.finalize(ptr) on the stored statement", async () => {
-    await dispatch({ id: 1, kind: "init" });
-    mockStatements.mockReturnValue(singleStmtIter(4242));
-    const prep = await dispatch({ id: 2, kind: "prepare", sql: "SELECT 1" });
-    expect(prep.ok).toBe(true);
-    if (!prep.ok) return;
-
-    const res = await dispatch({ id: 3, kind: "finalize", stmt: asNumber(prep.result) });
-    expect(res.ok).toBe(true);
-    expect(mockFinalize).toHaveBeenCalledWith(4242);
-
-    mockFinalize.mockClear();
-    const res2 = await dispatch({ id: 4, kind: "finalize", stmt: asNumber(prep.result) });
-    expect(res2.ok).toBe(true);
-    expect(mockFinalize).not.toHaveBeenCalled();
-  });
-
-  it("close finalizes still-registered statements before calling sqlite3.close", async () => {
+  it("handleClose continues past a failing finalize and still closes + nulls state", async () => {
     await dispatch({ id: 1, kind: "init" });
 
     mockStatements.mockReturnValueOnce(singleStmtIter(111));
     const prep1 = await dispatch({ id: 2, kind: "prepare", sql: "SELECT 1" });
     expect(prep1.ok).toBe(true);
-
     mockStatements.mockReturnValueOnce(singleStmtIter(222));
     const prep2 = await dispatch({ id: 3, kind: "prepare", sql: "SELECT 2" });
     expect(prep2.ok).toBe(true);
 
-    const res = await dispatch({ id: 4, kind: "close" });
-    expect(res.ok).toBe(true);
+    mockFinalize.mockReset();
+    mockFinalize.mockRejectedValueOnce(new Error("finalize boom")).mockResolvedValueOnce(0);
 
-    expect(mockFinalize).toHaveBeenCalledWith(111);
-    expect(mockFinalize).toHaveBeenCalledWith(222);
+    const closeRes = await dispatch({ id: 4, kind: "close" });
+    expect(closeRes.ok).toBe(true);
     expect(mockFinalize).toHaveBeenCalledTimes(2);
     expect(mockClose).toHaveBeenCalledWith(1);
     expect(mockClose).toHaveBeenCalledTimes(1);
+
+    const reInit = await dispatch({ id: 5, kind: "init" });
+    expect(reInit.ok).toBe(true);
   });
 
-  it("rejects multi-statement SQL and finalizes the first ptr to avoid leak", async () => {
-    await dispatch({ id: 1, kind: "init" });
-    mockStatements.mockReturnValue(multiStmtIter([42, 43]));
-
-    const res = await dispatch({ id: 2, kind: "prepare", sql: "SELECT 1; SELECT 2" });
-    expect(res.ok).toBe(false);
-    if (!res.ok) {
-      expect(res.error.message).toMatch(/multi-statement SQL not supported/);
-    }
-    expect(mockFinalize).toHaveBeenCalledWith(42);
-  });
-
-  it("rejects empty-statement SQL", async () => {
-    await dispatch({ id: 1, kind: "init" });
-    mockStatements.mockReturnValue(multiStmtIter([]));
-
-    const res = await dispatch({ id: 2, kind: "prepare", sql: "   " });
-    expect(res.ok).toBe(false);
-    if (!res.ok) {
-      expect(res.error.message).toMatch(/prepare produced no statement/);
-    }
-  });
-
-  it("rejects run with unknown statement handle", async () => {
+  it("propagates numeric error.code from wa-sqlite errors through the envelope", async () => {
     await dispatch({ id: 1, kind: "init" });
 
-    const res = await dispatch({ id: 2, kind: "run", stmt: 999, params: [] });
-    expect(res.ok).toBe(false);
-    if (!res.ok) {
-      expect(res.error.message).toMatch(/unknown statement handle/);
-    }
-  });
-
-  it("rejects run when bind_collection returns non-zero rc", async () => {
-    await dispatch({ id: 1, kind: "init" });
-    mockStatements.mockReturnValue(singleStmtIter(42));
-    const prep = await dispatch({ id: 2, kind: "prepare", sql: "INSERT INTO t VALUES (?)" });
-    expect(prep.ok).toBe(true);
-    if (!prep.ok) return;
-
-    mockBindCollection.mockReturnValue(1);
-
-    const res = await dispatch({
-      id: 3,
-      kind: "run",
-      stmt: asNumber(prep.result),
-      params: [1],
+    const SQLITE_FULL = 13;
+    const err: Error & { code: number } = Object.assign(new Error("disk full"), {
+      code: SQLITE_FULL,
+      name: "SQLiteError",
     });
+    mockExec.mockRejectedValueOnce(err);
+
+    const res = await dispatch({ id: 2, kind: "exec", sql: "INSERT INTO t VALUES (1)" });
     expect(res.ok).toBe(false);
-    if (!res.ok) {
-      expect(res.error.message).toMatch(/bind_collection failed/);
+    if (res.ok) return;
+    expect(res.error.name).toBe("SQLiteError");
+    expect(res.error.message).toBe("disk full");
+
+    const rawPosted = fakeSelf.lastPosted[fakeSelf.lastPosted.length - 1];
+    if (rawPosted === null || typeof rawPosted !== "object") {
+      throw new Error("posted envelope missing");
     }
+    const rawRec: Record<string, unknown> = rawPosted as Record<string, unknown>;
+    const rawErr = rawRec.error;
+    if (rawErr === null || typeof rawErr !== "object") {
+      throw new Error("posted error field missing");
+    }
+    const rawErrRec: Record<string, unknown> = rawErr as Record<string, unknown>;
+    expect(rawErrRec.code).toBe(SQLITE_FULL);
+  });
+
+  it("true-LRU: touching a cached SQL bumps its recency so it survives eviction", async () => {
+    await dispatch({ id: 1, kind: "init" });
+
+    const MAX = 128;
+    for (let i = 0; i < MAX; i++) {
+      mockStatements.mockReturnValueOnce(singleStmtIter(1000 + i));
+      const prep = await dispatch({ id: 100 + i, kind: "prepare", sql: `SELECT ${String(i)}` });
+      expect(prep.ok).toBe(true);
+    }
+
+    mockStatements.mockClear();
+    const bump = await dispatch({ id: 300, kind: "prepare", sql: "SELECT 0" });
+    expect(bump.ok).toBe(true);
+    expect(mockStatements).not.toHaveBeenCalled();
+
+    mockFinalize.mockClear();
+    mockStatements.mockReturnValueOnce(singleStmtIter(2000));
+    const fresh = await dispatch({ id: 400, kind: "prepare", sql: "SELECT NEW" });
+    expect(fresh.ok).toBe(true);
+
+    expect(mockFinalize).toHaveBeenCalledTimes(1);
+    expect(mockFinalize).toHaveBeenCalledWith(1001);
+    expect(mockFinalize).not.toHaveBeenCalledWith(1000);
   });
 });

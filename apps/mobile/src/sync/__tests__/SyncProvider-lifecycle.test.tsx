@@ -1,13 +1,16 @@
 /**
- * SyncProvider lifecycle and bootstrap error handling tests.
+ * SyncProvider lifecycle tests — engine creation, disposal, auth transitions.
  *
- * Covers: engine creation/disposal, auth transitions, bootstrap errors,
- *         retryBootstrap, useSync outside provider
- * Companion file: SyncProvider-pipeline.test.tsx
+ * Covers: useSync defaults, engine ctor with sqlite/indexeddb, profile selection,
+ *         bootstrap gating by connection, dispose-on-unmount, dispose-on-logout,
+ *         eventBus + DocumentKeyResolver wiring, useSync-outside-provider guard
+ * Companion files: SyncProvider-bootstrap.test.tsx,
+ *                  SyncProvider-pipeline.test.tsx,
+ *                  SyncProvider-materializer.test.tsx
  */
 // @vitest-environment happy-dom
 import { brandId } from "@pluralscape/types";
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -31,72 +34,48 @@ import type { MaterializerDb } from "@pluralscape/sync/materializer";
 import type { AccountId, SystemId } from "@pluralscape/types";
 import type { ReactNode } from "react";
 
-// ── Branded type helpers (assertion-based, no double-cast) ──────────
+// ── Branded type helpers ───────────────────────────────────────────
 
-const KDF_MASTER_KEY_BYTES = 32;
-const SIGN_PUBLIC_KEY_BYTES = 32;
-const SIGN_SECRET_KEY_BYTES = 64;
+const KDF_KEY_BYTES = 32;
+const SIGN_PUB_BYTES = 32;
+const SIGN_SEC_BYTES = 64;
 const BOX_KEY_BYTES = 32;
 const SALT_BYTES = 16;
 
+function checkLen(b: Uint8Array, expected: number): void {
+  if (b.length !== expected) throw new Error(`bad bytes len ${String(b.length)}`);
+}
+
 function makeKdfMasterKey(): KdfMasterKey {
-  const raw = new Uint8Array(KDF_MASTER_KEY_BYTES).fill(0x01);
-  function assertKey(k: Uint8Array): asserts k is KdfMasterKey {
-    if (k.length !== KDF_MASTER_KEY_BYTES) throw new Error("bad key");
-  }
-  assertKey(raw);
-  return raw;
+  const raw = new Uint8Array(KDF_KEY_BYTES).fill(0x01);
+  checkLen(raw, KDF_KEY_BYTES);
+  return raw as KdfMasterKey;
 }
 
 function makeSignKeypair(): SignKeypair {
-  const pub = new Uint8Array(SIGN_PUBLIC_KEY_BYTES).fill(0x02);
-  const sec = new Uint8Array(SIGN_SECRET_KEY_BYTES).fill(0x03);
-  function assertPub(k: Uint8Array): asserts k is SignPublicKey {
-    if (k.length !== SIGN_PUBLIC_KEY_BYTES) throw new Error("bad pub");
-  }
-  function assertSec(k: Uint8Array): asserts k is SignSecretKey {
-    if (k.length !== SIGN_SECRET_KEY_BYTES) throw new Error("bad sec");
-  }
-  assertPub(pub);
-  assertSec(sec);
-  return { publicKey: pub, secretKey: sec };
+  const pub = new Uint8Array(SIGN_PUB_BYTES).fill(0x02);
+  const sec = new Uint8Array(SIGN_SEC_BYTES).fill(0x03);
+  checkLen(pub, SIGN_PUB_BYTES);
+  checkLen(sec, SIGN_SEC_BYTES);
+  return { publicKey: pub as SignPublicKey, secretKey: sec as SignSecretKey };
 }
 
 function makeBoxKeypair(): BoxKeypair {
   const pub = new Uint8Array(BOX_KEY_BYTES).fill(0x04);
   const sec = new Uint8Array(BOX_KEY_BYTES).fill(0x05);
-  function assertPub(k: Uint8Array): asserts k is BoxPublicKey {
-    if (k.length !== BOX_KEY_BYTES) throw new Error("bad pub");
-  }
-  function assertSec(k: Uint8Array): asserts k is BoxSecretKey {
-    if (k.length !== BOX_KEY_BYTES) throw new Error("bad sec");
-  }
-  assertPub(pub);
-  assertSec(sec);
-  return { publicKey: pub, secretKey: sec };
+  checkLen(pub, BOX_KEY_BYTES);
+  checkLen(sec, BOX_KEY_BYTES);
+  return { publicKey: pub as BoxPublicKey, secretKey: sec as BoxSecretKey };
 }
 
 function makeSalt(): PwhashSalt {
   const raw = new Uint8Array(SALT_BYTES).fill(0x06);
-  function assertSalt(k: Uint8Array): asserts k is PwhashSalt {
-    if (k.length !== SALT_BYTES) throw new Error("bad salt");
-  }
-  assertSalt(raw);
-  return raw;
+  checkLen(raw, SALT_BYTES);
+  return raw as PwhashSalt;
 }
 
-function makeAccountId(s: string): AccountId {
-  return brandId<AccountId>(s);
-}
-
-function makeSystemId(s: string): SystemId {
-  return brandId<SystemId>(s);
-}
-
-// ── Test fixtures ───────────────────────────────────────────────────
-
-const TEST_SYSTEM_ID = makeSystemId("sys_test123");
-const TEST_ACCOUNT_ID = makeAccountId("acc_test");
+const TEST_SYSTEM_ID = brandId<SystemId>("sys_test123");
+const TEST_ACCOUNT_ID = brandId<AccountId>("acc_test");
 const TEST_MASTER_KEY = makeKdfMasterKey();
 const TEST_SIGN_KEYS = makeSignKeypair();
 const TEST_BOX_KEYS = makeBoxKeypair();
@@ -110,7 +89,6 @@ let mockAuthState: AuthContextValue["snapshot"] = {
   session: null,
   credentials: null,
 };
-
 let mockConnectionStatus: ConnectionContextValue["status"] = "disconnected";
 
 function makeMockMaterializerDb(): MaterializerDb {
@@ -123,11 +101,7 @@ function makeMockMaterializerDb(): MaterializerDb {
   };
 }
 
-function makeSqliteDriver(
-  opts: {
-    materializerDb?: MaterializerDb | null;
-  } = {},
-): PlatformStorage {
+function makeSqliteDriver(opts: { materializerDb?: MaterializerDb | null } = {}): PlatformStorage {
   const driver = {
     exec: vi.fn(() => Promise.resolve()),
     prepare: vi.fn(() => ({
@@ -140,9 +114,7 @@ function makeSqliteDriver(
     },
     close: vi.fn(() => Promise.resolve()),
   };
-  if (opts.materializerDb === null) {
-    return { backend: "sqlite-async" as const, driver };
-  }
+  if (opts.materializerDb === null) return { backend: "sqlite-async" as const, driver };
   return {
     backend: "sqlite-sync" as const,
     driver,
@@ -179,7 +151,7 @@ const mockSodium: PlatformContext["crypto"] = {
   memcmp: vi.fn(),
 };
 
-// ── Mock SyncEngine ─────────────────────────────────────────────────
+// ── Mocks ──────────────────────────────────────────────────────────
 
 const mockBootstrap = vi.fn(() => Promise.resolve());
 const mockDispose = vi.fn();
@@ -191,33 +163,17 @@ const MockSyncEngine = vi.fn(function MockSyncEngineImpl(this: Record<string, un
   this.getDocumentSnapshot = mockGetDocumentSnapshot;
 });
 
-// ── Mock materializer registry ──────────────────────────────────────
-
 const mockMaterialize = vi.fn();
 const mockGetMaterializer = vi.fn<
   (docType: string) => { materialize: typeof mockMaterialize } | null
->(() => ({
-  materialize: mockMaterialize,
-}));
+>(() => ({ materialize: mockMaterialize }));
 
-// ── Hoisted subscriber-dispose spy ──────────────────────────────────
-
-const { mockSubscriberDispose } = vi.hoisted(() => ({
-  mockSubscriberDispose: vi.fn(),
-}));
-
-// ── Mock DocumentKeyResolver ────────────────────────────────────────
+const { mockSubscriberDispose } = vi.hoisted(() => ({ mockSubscriberDispose: vi.fn() }));
 
 const mockKeyResolverDispose = vi.fn();
-
 const MockDocumentKeyResolver = {
-  create: vi.fn(() => ({
-    resolveKeys: vi.fn(),
-    dispose: mockKeyResolverDispose,
-  })),
+  create: vi.fn(() => ({ resolveKeys: vi.fn(), dispose: mockKeyResolverDispose })),
 };
-
-// ── Mock BucketKeyCache ─────────────────────────────────────────────
 
 const mockClearAll = vi.fn();
 const mockBucketKeyCache: BucketKeyCache = {
@@ -231,26 +187,19 @@ const mockBucketKeyCache: BucketKeyCache = {
   setVersioned: vi.fn(),
   deleteVersion: vi.fn(),
 };
-
-const mockCreateBucketKeyCache = vi.fn(() => mockBucketKeyCache);
-
-// ── Mock SqliteStorageAdapter ───────────────────────────────────────
+const mockCreateBucketKeyCache = vi.fn((): BucketKeyCache => mockBucketKeyCache);
 
 const MockSqliteStorageAdapter = {
-  create: vi.fn((): Promise<unknown> => {
-    return Promise.resolve({
-      loadSnapshot: vi.fn(),
-      saveSnapshot: vi.fn(),
-      loadChanges: vi.fn(),
-      appendChange: vi.fn(),
-      pruneChanges: vi.fn(),
-      listDocuments: vi.fn(() => []),
-      deleteDocument: vi.fn(),
-    });
-  }),
+  create: vi.fn((): Promise<unknown> => Promise.resolve({
+    loadSnapshot: vi.fn(),
+    saveSnapshot: vi.fn(),
+    loadChanges: vi.fn(),
+    appendChange: vi.fn(),
+    pruneChanges: vi.fn(),
+    listDocuments: vi.fn(() => []),
+    deleteDocument: vi.fn(),
+  })),
 };
-
-// ── Mock WsManager ──────────────────────────────────────────────────
 
 const mockWsConnect = vi.fn();
 const mockWsDisconnect = vi.fn();
@@ -263,7 +212,6 @@ const mockWsGetAdapter = vi.fn(() => ({
   fetchManifest: vi.fn(),
   close: vi.fn(),
 }));
-
 const mockCreateWsManager = vi.fn(() => ({
   connect: mockWsConnect,
   disconnect: mockWsDisconnect,
@@ -272,13 +220,9 @@ const mockCreateWsManager = vi.fn(() => ({
   getAdapter: mockWsGetAdapter,
 }));
 
-// ── Mock event bus ──────────────────────────────────────────────────
-
 let mockEventBus: import("@pluralscape/sync").EventBus<
   import("@pluralscape/sync").DataLayerEventMap
 >;
-
-// ── Module mocks ────────────────────────────────────────────────────
 
 vi.mock("../../auth/index.js", () => ({
   useAuth: (): AuthContextValue => ({
@@ -289,21 +233,18 @@ vi.mock("../../auth/index.js", () => ({
     unlock: vi.fn(),
   }),
 }));
-
 vi.mock("../../connection/index.js", () => ({
   useConnection: (): ConnectionContextValue => ({
     status: mockConnectionStatus,
     manager: {} as ConnectionContextValue["manager"],
   }),
 }));
-
 vi.mock("../../data/DataLayerProvider.js", () => ({
   useDataLayer: (): DataLayerContextValue => ({
     eventBus: mockEventBus,
     localDb: {} as DataLayerContextValue["localDb"],
   }),
 }));
-
 vi.mock("../../platform/index.js", () => ({
   usePlatform: (): PlatformContext => ({
     capabilities: {
@@ -317,40 +258,22 @@ vi.mock("../../platform/index.js", () => ({
     crypto: mockSodium,
   }),
 }));
-
 vi.mock("@pluralscape/sync", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@pluralscape/sync")>();
-  return {
-    ...actual,
-    SyncEngine: MockSyncEngine,
-    DocumentKeyResolver: MockDocumentKeyResolver,
-  };
+  return { ...actual, SyncEngine: MockSyncEngine, DocumentKeyResolver: MockDocumentKeyResolver };
 });
-
 vi.mock("@pluralscape/crypto", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@pluralscape/crypto")>();
-  return {
-    ...actual,
-    createBucketKeyCache: mockCreateBucketKeyCache,
-  };
+  return { ...actual, createBucketKeyCache: mockCreateBucketKeyCache };
 });
-
 vi.mock("@pluralscape/sync/adapters", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@pluralscape/sync/adapters")>();
-  return {
-    ...actual,
-    SqliteStorageAdapter: MockSqliteStorageAdapter,
-  };
+  return { ...actual, SqliteStorageAdapter: MockSqliteStorageAdapter };
 });
-
 vi.mock("@pluralscape/sync/materializer", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@pluralscape/sync/materializer")>();
-  return {
-    ...actual,
-    getMaterializer: mockGetMaterializer,
-  };
+  return { ...actual, getMaterializer: mockGetMaterializer };
 });
-
 vi.mock("@pluralscape/data", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@pluralscape/data")>();
   return {
@@ -368,20 +291,11 @@ vi.mock("@pluralscape/data", async (importOriginal) => {
     },
   };
 });
+vi.mock("../../connection/ws-manager.js", () => ({ createWsManager: mockCreateWsManager }));
+vi.mock("../../config.js", () => ({ getWsUrl: () => "ws://localhost:3000/sync" }));
 
-vi.mock("../../connection/ws-manager.js", () => ({
-  createWsManager: mockCreateWsManager,
-}));
-
-vi.mock("../../config.js", () => ({
-  getWsUrl: () => "ws://localhost:3000/sync",
-}));
-
-// Dynamic import after all mocks
 const { createEventBus } = await import("@pluralscape/sync");
 const { SyncProvider, useSync } = await import("../SyncProvider.js");
-
-// ── Test helpers ────────────────────────────────────────────────────
 
 function setUnlocked(): void {
   mockAuthState = {
@@ -394,10 +308,7 @@ function setUnlocked(): void {
         salt: TEST_SALT,
       },
       masterKey: TEST_MASTER_KEY,
-      identityKeys: {
-        sign: TEST_SIGN_KEYS,
-        box: TEST_BOX_KEYS,
-      },
+      identityKeys: { sign: TEST_SIGN_KEYS, box: TEST_BOX_KEYS },
     },
     credentials: {
       sessionToken: TEST_TOKEN,
@@ -409,11 +320,7 @@ function setUnlocked(): void {
 }
 
 function setUnauthenticated(): void {
-  mockAuthState = {
-    state: "unauthenticated",
-    session: null,
-    credentials: null,
-  };
+  mockAuthState = { state: "unauthenticated", session: null, credentials: null };
 }
 
 function makeWrapper(): ({ children }: { readonly children: ReactNode }) => React.JSX.Element {
@@ -422,7 +329,7 @@ function makeWrapper(): ({ children }: { readonly children: ReactNode }) => Reac
   };
 }
 
-// ── Tests ───────────────────────────────────────────────────────────
+// ── Tests ──────────────────────────────────────────────────────────
 
 describe("SyncProvider", () => {
   beforeEach(() => {
@@ -454,19 +361,14 @@ describe("SyncProvider", () => {
       expect(MockSyncEngine).toHaveBeenCalledTimes(1);
     });
     expect(MockSyncEngine).toHaveBeenCalledWith(
-      expect.objectContaining({
-        systemId: TEST_SYSTEM_ID,
-        sodium: mockSodium,
-      }),
+      expect.objectContaining({ systemId: TEST_SYSTEM_ID, sodium: mockSodium }),
     );
 
     expect(MockSqliteStorageAdapter.create).toHaveBeenCalledTimes(1);
     expect(MockDocumentKeyResolver.create).toHaveBeenCalledTimes(1);
     expect(mockCreateBucketKeyCache).toHaveBeenCalledTimes(1);
     expect(mockCreateWsManager).toHaveBeenCalledTimes(1);
-
     expect(mockWsConnect).toHaveBeenCalledWith(TEST_TOKEN, TEST_SYSTEM_ID);
-
     expect(result.current.engine).not.toBeNull();
   });
 
@@ -505,20 +407,6 @@ describe("SyncProvider", () => {
           profile: { profileType: "owner-full" } satisfies ReplicationProfile,
         }),
       );
-    });
-  });
-
-  it("bootstraps engine when connected and sets isBootstrapped", async () => {
-    setUnlocked();
-    mockConnectionStatus = "connected";
-
-    const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
-
-    await waitFor(() => {
-      expect(mockBootstrap).toHaveBeenCalled();
-    });
-    await waitFor(() => {
-      expect(result.current.isBootstrapped).toBe(true);
     });
   });
 
@@ -581,9 +469,7 @@ describe("SyncProvider", () => {
 
     await waitFor(() => {
       expect(MockSyncEngine).toHaveBeenCalledWith(
-        expect.objectContaining({
-          eventBus: mockEventBus,
-        }),
+        expect.objectContaining({ eventBus: mockEventBus }),
       );
     });
   });
@@ -608,93 +494,5 @@ describe("SyncProvider", () => {
     expect(() => {
       renderHook(() => useSync());
     }).toThrow("useSync must be used within SyncProvider");
-  });
-
-  describe("bootstrap error handling", () => {
-    it("captures bootstrapError when bootstrap rejects with an Error", async () => {
-      setUnlocked();
-      mockConnectionStatus = "connected";
-      const bootError = new Error("storage init failed");
-      mockBootstrap.mockImplementationOnce(() => Promise.reject(bootError));
-
-      const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
-
-      await waitFor(() => {
-        expect(result.current.bootstrapError).toEqual(bootError);
-      });
-      expect(result.current.bootstrapAttempts).toBe(1);
-      expect(result.current.fallbackToRemote).toBe(false);
-    });
-
-    it("wraps non-Error rejection values in Error", async () => {
-      setUnlocked();
-      mockConnectionStatus = "connected";
-      mockBootstrap.mockImplementationOnce(() => {
-        const literal: unknown = "string failure";
-        return Promise.reject(literal as Error);
-      });
-
-      const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
-
-      await waitFor(() => {
-        expect(result.current.bootstrapError).toBeInstanceOf(Error);
-      });
-      expect(result.current.bootstrapError?.message).toBe("string failure");
-    });
-
-    it("falls back to remote after MAX_BOOTSTRAP_ATTEMPTS failures", async () => {
-      setUnlocked();
-      mockConnectionStatus = "connected";
-      mockBootstrap.mockImplementation(() => Promise.reject(new Error("permanent failure")));
-
-      const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
-
-      await waitFor(() => {
-        expect(result.current.bootstrapAttempts).toBe(1);
-      });
-      expect(result.current.fallbackToRemote).toBe(false);
-
-      await act(() => {
-        result.current.retryBootstrap();
-        return Promise.resolve();
-      });
-      expect(result.current.bootstrapAttempts).toBe(2);
-      expect(result.current.fallbackToRemote).toBe(false);
-
-      await act(() => {
-        result.current.retryBootstrap();
-        return Promise.resolve();
-      });
-      expect(result.current.bootstrapAttempts).toBe(3);
-      expect(result.current.fallbackToRemote).toBe(true);
-
-      const callsBefore = mockBootstrap.mock.calls.length;
-      await act(() => {
-        result.current.retryBootstrap();
-        return Promise.resolve();
-      });
-      expect(mockBootstrap.mock.calls.length).toBe(callsBefore);
-    });
-
-    it("resets bootstrapError when retryBootstrap is called", async () => {
-      setUnlocked();
-      mockConnectionStatus = "connected";
-      mockBootstrap
-        .mockImplementationOnce(() => Promise.reject(new Error("first")))
-        .mockImplementationOnce(() => Promise.resolve());
-
-      const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
-      await waitFor(() => {
-        expect(result.current.bootstrapError?.message).toBe("first");
-      });
-
-      await act(() => {
-        result.current.retryBootstrap();
-        return Promise.resolve();
-      });
-
-      expect(result.current.bootstrapError).toBeNull();
-      expect(result.current.isBootstrapped).toBe(true);
-    });
   });
 });

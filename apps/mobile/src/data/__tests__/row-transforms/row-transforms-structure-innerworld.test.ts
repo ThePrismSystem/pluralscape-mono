@@ -19,7 +19,7 @@ import {
   rowToStructureEntityLink,
   rowToStructureEntityMemberLink,
   rowToStructureEntityType,
-} from "../row-transforms/index.js";
+} from "../../row-transforms/index.js";
 
 // ── rowToStructureEntity ──────────────────────────────────────────────────────
 

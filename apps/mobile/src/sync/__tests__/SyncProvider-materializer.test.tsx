@@ -1,12 +1,4 @@
-/**
- * SyncProvider pipeline initialization tests.
- *
- * Covers: mid-adapter-creation cleanup, storage-adapter rejection, SyncEngine
- *         constructor failure
- * Companion files: SyncProvider-lifecycle.test.tsx,
- *                  SyncProvider-bootstrap.test.tsx,
- *                  SyncProvider-materializer.test.tsx
- */
+/** Materializer subscriber wiring; companions: -lifecycle/-bootstrap/-pipeline. */
 // @vitest-environment happy-dom
 import { brandId } from "@pluralscape/types";
 import { renderHook, waitFor } from "@testing-library/react";
@@ -29,7 +21,7 @@ import type {
   SignSecretKey,
 } from "@pluralscape/crypto";
 import type { MaterializerDb } from "@pluralscape/sync/materializer";
-import type { AccountId, SystemId } from "@pluralscape/types";
+import type { AccountId, SyncDocumentId, SystemId } from "@pluralscape/types";
 import type { ReactNode } from "react";
 
 // ── Branded type helpers ───────────────────────────────────────────
@@ -331,7 +323,7 @@ function makeWrapper(): ({ children }: { readonly children: ReactNode }) => Reac
 
 // ── Tests ──────────────────────────────────────────────────────────
 
-describe("SyncProvider pipeline initialization", () => {
+describe("SyncProvider materializer subscriber wiring", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setUnauthenticated();
@@ -340,93 +332,167 @@ describe("SyncProvider pipeline initialization", () => {
     mockEventBus = createEventBus();
   });
 
-  it("cleans up resources when unmounted mid-adapter-creation", async () => {
+  it("invokes the materializer when sync:changes-merged fires after engine creation", async () => {
     setUnlocked();
     mockConnectionStatus = "connected";
 
-    let resolveAdapter!: (value: unknown) => void;
-    MockSqliteStorageAdapter.create.mockImplementationOnce(
-      () =>
-        new Promise((res) => {
-          resolveAdapter = res;
-        }),
-    );
+    const materializerDb = makeMockMaterializerDb();
+    mockPlatformStorage = makeSqliteDriver({ materializerDb });
 
-    const { unmount } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+    const docSnapshot = { members: { mem_1: { id: "mem_1", name: "Test" } } };
+    mockGetDocumentSnapshot.mockReturnValue(docSnapshot);
+
+    renderHook(() => useSync(), { wrapper: makeWrapper() });
 
     await waitFor(() => {
-      expect(MockSqliteStorageAdapter.create).toHaveBeenCalledTimes(1);
+      expect(MockSyncEngine).toHaveBeenCalledTimes(1);
+    });
+
+    const docId = brandId<SyncDocumentId>("system-core_sys_test123");
+    mockEventBus.emit("sync:changes-merged", {
+      type: "sync:changes-merged",
+      documentId: docId,
+      documentType: "system-core",
+      dirtyEntityTypes: new Set(["member"]),
+      conflicts: [],
+    });
+
+    expect(mockGetDocumentSnapshot).toHaveBeenCalledWith(docId);
+    expect(mockGetMaterializer).toHaveBeenCalledWith("system-core");
+    expect(mockMaterialize).toHaveBeenCalledTimes(1);
+    expect(mockMaterialize).toHaveBeenCalledWith(
+      docSnapshot,
+      materializerDb,
+      mockEventBus,
+      new Set(["member"]),
+    );
+  });
+
+  it("invokes the materializer with no dirty filter on sync:snapshot-applied", async () => {
+    setUnlocked();
+    mockConnectionStatus = "connected";
+
+    const materializerDb = makeMockMaterializerDb();
+    mockPlatformStorage = makeSqliteDriver({ materializerDb });
+    const docSnapshot = { members: {} };
+    mockGetDocumentSnapshot.mockReturnValue(docSnapshot);
+
+    renderHook(() => useSync(), { wrapper: makeWrapper() });
+    await waitFor(() => {
+      expect(MockSyncEngine).toHaveBeenCalledTimes(1);
+    });
+
+    const docId = brandId<SyncDocumentId>("system-core_sys_test123");
+    mockEventBus.emit("sync:snapshot-applied", {
+      type: "sync:snapshot-applied",
+      documentId: docId,
+      documentType: "system-core",
+    });
+
+    expect(mockMaterialize).toHaveBeenCalledTimes(1);
+    expect(mockMaterialize).toHaveBeenCalledWith(
+      docSnapshot,
+      materializerDb,
+      mockEventBus,
+      undefined,
+    );
+  });
+
+  it("does not wire a subscriber when materializerDb is null", async () => {
+    setUnlocked();
+    mockConnectionStatus = "connected";
+
+    mockPlatformStorage = makeSqliteDriver({ materializerDb: null });
+    mockGetDocumentSnapshot.mockReturnValue({ members: {} });
+
+    renderHook(() => useSync(), { wrapper: makeWrapper() });
+    await waitFor(() => {
+      expect(MockSyncEngine).toHaveBeenCalledTimes(1);
+    });
+
+    mockEventBus.emit("sync:changes-merged", {
+      type: "sync:changes-merged",
+      documentId: brandId<SyncDocumentId>("system-core_sys_test123"),
+      documentType: "system-core",
+      dirtyEntityTypes: new Set(["member"]),
+      conflicts: [],
+    });
+
+    expect(mockMaterialize).not.toHaveBeenCalled();
+  });
+
+  it("disposes the subscriber on unmount so later events are ignored", async () => {
+    setUnlocked();
+    mockConnectionStatus = "connected";
+
+    mockPlatformStorage = makeSqliteDriver({ materializerDb: makeMockMaterializerDb() });
+    mockGetDocumentSnapshot.mockReturnValue({ members: {} });
+
+    const { unmount } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+    await waitFor(() => {
+      expect(MockSyncEngine).toHaveBeenCalledTimes(1);
     });
 
     unmount();
 
-    resolveAdapter({
-      loadSnapshot: vi.fn(),
-      saveSnapshot: vi.fn(),
-      loadChanges: vi.fn(),
-      appendChange: vi.fn(),
-      pruneChanges: vi.fn(),
-      listDocuments: vi.fn(() => []),
-      deleteDocument: vi.fn(),
-    });
-    await waitFor(() => {
-      expect(mockClearAll).toHaveBeenCalledTimes(1);
+    mockEventBus.emit("sync:changes-merged", {
+      type: "sync:changes-merged",
+      documentId: brandId<SyncDocumentId>("system-core_sys_test123"),
+      documentType: "system-core",
+      dirtyEntityTypes: new Set(["member"]),
+      conflicts: [],
     });
 
-    expect(MockSyncEngine).not.toHaveBeenCalled();
-    expect(mockWsDisconnect).not.toHaveBeenCalled();
+    expect(mockMaterialize).not.toHaveBeenCalled();
   });
 
-  it("emits sync:error when storage-adapter initialization rejects", async () => {
+  it("disposes the subscriber before the engine on unmount", async () => {
     setUnlocked();
     mockConnectionStatus = "connected";
 
-    const initError = new Error("storage adapter create failed");
-    MockSqliteStorageAdapter.create.mockRejectedValueOnce(initError);
+    mockPlatformStorage = makeSqliteDriver({ materializerDb: makeMockMaterializerDb() });
 
-    const emitted: import("@pluralscape/sync").SyncErrorEvent[] = [];
-    mockEventBus.on("sync:error", (event) => {
-      emitted.push(event);
-    });
-
-    const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
-
+    const { unmount } = renderHook(() => useSync(), { wrapper: makeWrapper() });
     await waitFor(() => {
-      expect(emitted).toHaveLength(1);
+      expect(MockSyncEngine).toHaveBeenCalledTimes(1);
     });
 
-    expect(emitted[0]?.message).toContain("initialization failed");
-    expect(emitted[0]?.error).toBe(initError);
-    expect(MockSyncEngine).not.toHaveBeenCalled();
-    expect(result.current.engine).toBeNull();
+    unmount();
+
+    const subscriberOrder = mockSubscriberDispose.mock.invocationCallOrder[0];
+    const engineOrder = mockDispose.mock.invocationCallOrder[0];
+    expect(subscriberOrder).toBeGreaterThan(0);
+    expect(engineOrder).toBeGreaterThan(0);
+    expect(subscriberOrder).toBeLessThan(engineOrder ?? 0);
   });
 
-  it("clears engine state when SyncEngine construction throws", async () => {
+  it("creates a fresh subscriber on lock→unlock cycle", async () => {
     setUnlocked();
     mockConnectionStatus = "connected";
 
-    const constructError = new Error("engine ctor failed");
-    MockSyncEngine.mockImplementationOnce(function FailingCtor() {
-      throw constructError;
-    });
+    mockPlatformStorage = makeSqliteDriver({ materializerDb: makeMockMaterializerDb() });
 
-    const emitted: import("@pluralscape/sync").SyncErrorEvent[] = [];
-    mockEventBus.on("sync:error", (event) => {
-      emitted.push(event);
+    const { rerender } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+    await waitFor(() => {
+      expect(MockSyncEngine).toHaveBeenCalledTimes(1);
     });
+    expect(mockSubscriberDispose).not.toHaveBeenCalled();
 
-    const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+    setUnauthenticated();
+    mockConnectionStatus = "disconnected";
+    rerender();
 
     await waitFor(() => {
-      expect(emitted).toHaveLength(1);
+      expect(mockSubscriberDispose).toHaveBeenCalledTimes(1);
     });
 
-    expect(emitted[0]?.message).toContain("initialization failed");
-    expect(emitted[0]?.error).toBe(constructError);
-    expect(result.current.engine).toBeNull();
-    expect(result.current.isBootstrapped).toBe(false);
-    expect(mockKeyResolverDispose).toHaveBeenCalledTimes(1);
-    expect(mockClearAll).toHaveBeenCalledTimes(1);
-    expect(mockWsDisconnect).toHaveBeenCalledTimes(1);
+    setUnlocked();
+    mockConnectionStatus = "connected";
+    mockPlatformStorage = makeSqliteDriver({ materializerDb: makeMockMaterializerDb() });
+    rerender();
+
+    await waitFor(() => {
+      expect(MockSyncEngine).toHaveBeenCalledTimes(2);
+    });
   });
 });

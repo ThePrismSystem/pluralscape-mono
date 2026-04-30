@@ -18,7 +18,7 @@ import {
   rowToGroup,
   rowToMember,
   rowToSystemSettings,
-} from "../row-transforms/index.js";
+} from "../../row-transforms/index.js";
 
 // ── rowToMember ───────────────────────────────────────────────────────────────
 
