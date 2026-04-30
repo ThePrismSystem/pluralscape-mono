@@ -432,9 +432,11 @@ describe("analytics truncation", () => {
   it("returns truncated: true when session count hits the limit", async () => {
     const { db, chain } = mockDb();
     // The fronting breakdown truncation test is in fronting.test.ts;
-    // this covers the co-fronting row-count path.
+    // this covers the co-fronting row-count path. We give all rows null
+    // memberId so the pair-aggregation phase short-circuits and the
+    // 10k-row test stays well under vitest's default 5s timeout on CI.
     const rows = Array.from({ length: 10_000 }, (_, i) =>
-      makeSessionRow({ id: `fs_session-${String(i)}` }),
+      makeSessionRow({ id: `fs_session-${String(i)}`, memberId: null, customFrontId: "cf_x" }),
     );
     chain.limit.mockResolvedValueOnce(rows);
 
