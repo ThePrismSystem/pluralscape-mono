@@ -204,7 +204,7 @@ export function makeArchivedMember(id: string, updatedAt = 1000): CrdtMemberShap
 interface FrontingSessionShape {
   id: Automerge.ImmutableString;
   systemId: Automerge.ImmutableString;
-  memberId: Automerge.ImmutableString | null;
+  memberId: Automerge.ImmutableString;
   customFrontId: Automerge.ImmutableString | null;
   structureEntityId: Automerge.ImmutableString | null;
   startTime: number;

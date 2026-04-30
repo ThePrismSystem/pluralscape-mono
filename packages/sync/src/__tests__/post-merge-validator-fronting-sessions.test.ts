@@ -22,6 +22,7 @@ import { asFrontingSessionId, asSyncDocId } from "./test-crypto-helpers.js";
 
 import type { DocumentKeys } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
+import type { FrontingSessionId } from "@pluralscape/types";
 
 let sodium: SodiumAdapter;
 let keys: DocumentKeys;
@@ -32,7 +33,7 @@ beforeAll(async () => {
   setSodium(sodium);
 });
 
-const newFsId = (): string => asFrontingSessionId(`fs_${crypto.randomUUID()}`);
+const newFsId = (): FrontingSessionId => asFrontingSessionId(`fs_${crypto.randomUUID()}`);
 
 // ── normalizeFrontingSessions ─────────────────────────────────────────
 
