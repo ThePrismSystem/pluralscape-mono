@@ -108,18 +108,6 @@ describe("setAccountPin", () => {
     );
   });
 
-  it("throws VALIDATION_ERROR for invalid PIN format", async () => {
-    await expect(setAccountPin({} as never, ACCOUNT_ID, { pin: "abc" }, mockAudit)).rejects.toThrow(
-      expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }),
-    );
-  });
-
-  it("throws VALIDATION_ERROR for missing PIN field", async () => {
-    await expect(setAccountPin({} as never, ACCOUNT_ID, {}, mockAudit)).rejects.toThrow(
-      expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }),
-    );
-  });
-
   it("throws NOT_FOUND when no system exists for account", async () => {
     // resolveSystemId → empty
     mockTx.limit.mockResolvedValueOnce([]);
@@ -175,12 +163,6 @@ describe("removeAccountPin", () => {
       mockTx,
       expect.objectContaining({ eventType: "settings.pin-removed" }),
     );
-  });
-
-  it("throws VALIDATION_ERROR for invalid PIN format", async () => {
-    await expect(
-      removeAccountPin({} as never, ACCOUNT_ID, { pin: "short" }, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
   it("throws NOT_FOUND when no system found for account", async () => {
@@ -266,12 +248,6 @@ describe("verifyAccountPin", () => {
       mockTx,
       expect.objectContaining({ eventType: "settings.pin-verified" }),
     );
-  });
-
-  it("throws VALIDATION_ERROR for invalid PIN format", async () => {
-    await expect(
-      verifyAccountPin({} as never, ACCOUNT_ID, { pin: "toolong1234" }, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
   it("throws NOT_FOUND when no system found for account", async () => {

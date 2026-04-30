@@ -1,11 +1,10 @@
 import { frontingComments, frontingSessions } from "@pluralscape/db/pg";
 import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
-import { CreateFrontingCommentBodySchema } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../../../http.constants.js";
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { parseAndValidateBlob } from "../../../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../../../lib/encrypted-blob.js";
 import { withTenantTransaction } from "../../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../../lib/system-ownership.js";
 import { tenantCtx } from "../../../lib/tenant-context.js";
@@ -24,12 +23,10 @@ import type {
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
+import type { CreateFrontingCommentBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
-/**
- * Resolves the sessionStartTime from the parent fronting session.
- * Required for the FK into the partitioned fronting_sessions table (PG only).
- */
 async function resolveSessionStartTime(
   tx: PostgresJsDatabase,
   sessionId: FrontingSessionId,
@@ -53,8 +50,6 @@ async function resolveSessionStartTime(
     );
   }
 
-  // Brand-construction site for sessionStartTime: lifts the parent session's
-  // startTime to the ServerInternal<UnixMillis> brand for partition-FK use.
   return session.startTime as ServerInternal<UnixMillis>;
 }
 
@@ -62,24 +57,20 @@ export async function createFrontingComment(
   db: PostgresJsDatabase,
   systemId: SystemId,
   sessionId: FrontingSessionId,
-  params: unknown,
+  body: z.infer<typeof CreateFrontingCommentBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<FrontingCommentResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    CreateFrontingCommentBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
 
   const commentId = brandId<FrontingCommentId>(createId(ID_PREFIXES.frontingComment));
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const sessionStartTime = await resolveSessionStartTime(tx, sessionId, systemId);
-    await validateSubjectIds(tx, systemId, parsed);
+    await validateSubjectIds(tx, systemId, body);
 
     const [row] = await tx
       .insert(frontingComments)
@@ -88,9 +79,9 @@ export async function createFrontingComment(
         frontingSessionId: sessionId,
         systemId,
         sessionStartTime,
-        memberId: parsed.memberId ?? null,
-        customFrontId: parsed.customFrontId ?? null,
-        structureEntityId: parsed.structureEntityId ?? null,
+        memberId: body.memberId ?? null,
+        customFrontId: body.customFrontId ?? null,
+        structureEntityId: body.structureEntityId ?? null,
         encryptedData: blob,
         createdAt: timestamp,
         updatedAt: timestamp,

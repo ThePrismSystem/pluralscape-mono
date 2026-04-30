@@ -1,11 +1,10 @@
 import { buckets, systems } from "@pluralscape/db/pg";
 import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
-import { CreateBucketBodySchema } from "@pluralscape/validation";
 import { and, count, eq } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
-import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
@@ -19,24 +18,25 @@ import type { BucketResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { BucketId, SystemId } from "@pluralscape/types";
+import type { CreateBucketBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function createBucket(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  params: unknown,
+  body: z.infer<typeof CreateBucketBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<BucketResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { blob } = parseAndValidateBlob(params, CreateBucketBodySchema, MAX_ENCRYPTED_DATA_BYTES);
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
 
   const bucketId = brandId<BucketId>(createId(ID_PREFIXES.bucket));
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
-    // Lock the system row to serialize concurrent bucket creation per system (prevents TOCTOU race)
     await tx.select({ id: systems.id }).from(systems).where(eq(systems.id, systemId)).for("update");
 
     const [existing] = await tx

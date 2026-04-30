@@ -6,7 +6,7 @@ import { mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
-import type { RelationshipId, SystemId } from "@pluralscape/types";
+import type { MemberId, RelationshipId, SystemId } from "@pluralscape/types";
 
 // ── Mock external deps ───────────────────────────────────────────────
 
@@ -47,6 +47,8 @@ const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 const SYSTEM_ID = brandId<SystemId>("sys_test-system");
 const RELATIONSHIP_ID = brandId<RelationshipId>("rel_test-relationship");
+const SOURCE_MEMBER_ID = brandId<MemberId>("mem_source");
+const TARGET_MEMBER_ID = brandId<MemberId>("mem_target");
 
 const AUTH = makeTestAuth({
   accountId: "acct_test-account",
@@ -97,8 +99,8 @@ describe("createRelationship", () => {
       db,
       SYSTEM_ID,
       {
-        sourceMemberId: "mem_source",
-        targetMemberId: "mem_target",
+        sourceMemberId: SOURCE_MEMBER_ID,
+        targetMemberId: TARGET_MEMBER_ID,
         type: "sibling",
         bidirectional: true,
         encryptedData: VALID_BLOB_BASE64,
@@ -131,8 +133,8 @@ describe("createRelationship", () => {
         db,
         SYSTEM_ID,
         {
-          sourceMemberId: "mem_source",
-          targetMemberId: "mem_target",
+          sourceMemberId: SOURCE_MEMBER_ID,
+          targetMemberId: TARGET_MEMBER_ID,
           type: "sibling",
           bidirectional: true,
           encryptedData: VALID_BLOB_BASE64,
@@ -154,8 +156,8 @@ describe("createRelationship", () => {
         db,
         SYSTEM_ID,
         {
-          sourceMemberId: "mem_source",
-          targetMemberId: "mem_target",
+          sourceMemberId: SOURCE_MEMBER_ID,
+          targetMemberId: TARGET_MEMBER_ID,
           type: "sibling",
           bidirectional: true,
           encryptedData: VALID_BLOB_BASE64,
@@ -175,8 +177,8 @@ describe("createRelationship", () => {
         db,
         SYSTEM_ID,
         {
-          sourceMemberId: "mem_source",
-          targetMemberId: "mem_target",
+          sourceMemberId: SOURCE_MEMBER_ID,
+          targetMemberId: TARGET_MEMBER_ID,
           type: "sibling",
           bidirectional: true,
           encryptedData: VALID_BLOB_BASE64,
@@ -185,14 +187,6 @@ describe("createRelationship", () => {
         mockAudit,
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
-  });
-
-  it("throws 400 for invalid body", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      createRelationship(db, SYSTEM_ID, { invalid: true }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
   it("throws 404 when both members are missing", async () => {
@@ -206,8 +200,8 @@ describe("createRelationship", () => {
         db,
         SYSTEM_ID,
         {
-          sourceMemberId: "mem_source",
-          targetMemberId: "mem_target",
+          sourceMemberId: SOURCE_MEMBER_ID,
+          targetMemberId: TARGET_MEMBER_ID,
           type: "sibling",
           bidirectional: true,
           encryptedData: VALID_BLOB_BASE64,
@@ -216,26 +210,6 @@ describe("createRelationship", () => {
         mockAudit,
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
-  });
-
-  it("throws 400 for invalid relationship type", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      createRelationship(
-        db,
-        SYSTEM_ID,
-        {
-          sourceMemberId: "mem_source",
-          targetMemberId: "mem_target",
-          type: "not-a-valid-type",
-          bidirectional: true,
-          encryptedData: VALID_BLOB_BASE64,
-        },
-        AUTH,
-        mockAudit,
-      ),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 });
 
@@ -411,14 +385,6 @@ describe("updateRelationship", () => {
         mockAudit,
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
-  });
-
-  it("throws 400 for invalid body", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      updateRelationship(db, SYSTEM_ID, RELATIONSHIP_ID, { invalid: true }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
   it("throws 404 for system ownership failure", async () => {

@@ -4,10 +4,9 @@ import {
   systemStructureEntityTypes,
 } from "@pluralscape/db/pg";
 import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
-import { CreateStructureEntityBodySchema } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../../../http.constants.js";
+import { HTTP_NOT_FOUND } from "../../../http.constants.js";
 import { ApiHttpError } from "../../../lib/api-error.js";
 import { validateEncryptedBlob } from "../../../lib/encrypted-blob.js";
 import { withTenantTransaction } from "../../../lib/rls-context.js";
@@ -25,34 +24,30 @@ import type {
   SystemStructureEntityId,
   SystemStructureEntityLinkId,
 } from "@pluralscape/types";
+import type { CreateStructureEntityBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function createStructureEntity(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  params: unknown,
+  body: z.infer<typeof CreateStructureEntityBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<StructureEntityResult> {
   assertSystemOwnership(systemId, auth);
 
-  const parsed = CreateStructureEntityBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid create payload");
-  }
-
-  const blob = validateEncryptedBlob(parsed.data.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
   const entityId = brandId<SystemStructureEntityId>(createId(ID_PREFIXES.structureEntity));
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
-    // Verify entity type exists
     const [entityType] = await tx
       .select({ id: systemStructureEntityTypes.id })
       .from(systemStructureEntityTypes)
       .where(
         and(
-          eq(systemStructureEntityTypes.id, parsed.data.structureEntityTypeId),
+          eq(systemStructureEntityTypes.id, body.structureEntityTypeId),
           eq(systemStructureEntityTypes.systemId, systemId),
           eq(systemStructureEntityTypes.archived, false),
         ),
@@ -68,8 +63,8 @@ export async function createStructureEntity(
       .values({
         id: entityId,
         systemId,
-        entityTypeId: parsed.data.structureEntityTypeId,
-        sortOrder: parsed.data.sortOrder,
+        entityTypeId: body.structureEntityTypeId,
+        sortOrder: body.sortOrder,
         encryptedData: blob,
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -80,8 +75,7 @@ export async function createStructureEntity(
       throw new Error("Failed to create structure entity — INSERT returned no rows");
     }
 
-    // Auto-create an entity link if parentEntityId is provided
-    if (parsed.data.parentEntityId !== null) {
+    if (body.parentEntityId !== null) {
       const linkId = brandId<SystemStructureEntityLinkId>(
         createId(ID_PREFIXES.structureEntityLink),
       );
@@ -89,7 +83,7 @@ export async function createStructureEntity(
         id: linkId,
         systemId,
         entityId,
-        parentEntityId: parsed.data.parentEntityId,
+        parentEntityId: body.parentEntityId,
         sortOrder: 0,
         createdAt: timestamp,
       });

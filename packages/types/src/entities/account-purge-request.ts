@@ -28,8 +28,8 @@ export interface AccountPurgeRequest {
 export type AccountPurgeRequestServerMetadata = AccountPurgeRequest;
 
 /**
- * JSON-wire representation of an AccountPurgeRequest. Derived from the
- * domain `AccountPurgeRequest` type via `Serialize<T>`; branded IDs become
+ * JSON-wire representation of an AccountPurgeRequest. Derived from
+ * `AccountPurgeRequestServerMetadata` via `Serialize<T>`; branded IDs become
  * plain strings and `UnixMillis` becomes `number`.
  */
-export type AccountPurgeRequestWire = Serialize<AccountPurgeRequest>;
+export type AccountPurgeRequestWire = Serialize<AccountPurgeRequestServerMetadata>;

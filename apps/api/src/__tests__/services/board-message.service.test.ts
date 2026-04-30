@@ -128,7 +128,7 @@ describe("board-message service", () => {
   // ── createBoardMessage ─────────────────────────────────────────
 
   describe("createBoardMessage", () => {
-    const validPayload = { encryptedData: VALID_BLOB_BASE64, sortOrder: 0 };
+    const validPayload = { encryptedData: VALID_BLOB_BASE64, sortOrder: 0, pinned: false };
 
     it("creates a board message and returns result", async () => {
       const { db, chain } = mockDb();
@@ -143,14 +143,6 @@ describe("board-message service", () => {
         chain,
         expect.objectContaining({ eventType: "board-message.created" }),
       );
-    });
-
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      const { db } = mockDb();
-
-      await expect(
-        createBoardMessage(db, SYSTEM_ID, { bad: true }, AUTH, mockAudit),
-      ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
     });
 
     it("throws 404 on ownership failure", async () => {
@@ -242,14 +234,6 @@ describe("board-message service", () => {
         chain,
         expect.objectContaining({ eventType: "board-message.updated" }),
       );
-    });
-
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      const { db } = mockDb();
-
-      await expect(
-        updateBoardMessage(db, SYSTEM_ID, BM_ID, { bad: true }, AUTH, mockAudit),
-      ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
     });
 
     it("throws CONFLICT on OCC version mismatch", async () => {
@@ -366,14 +350,6 @@ describe("board-message service", () => {
         chain,
         expect.objectContaining({ eventType: "board-message.reordered" }),
       );
-    });
-
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      const { db } = mockDb();
-
-      await expect(
-        reorderBoardMessages(db, SYSTEM_ID, { bad: true }, AUTH, mockAudit),
-      ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
     });
 
     it("throws VALIDATION_ERROR for duplicate board message IDs", async () => {

@@ -82,14 +82,6 @@ const mockAudit = vi.fn().mockResolvedValue(undefined);
 
 const VALID_BLOB_BASE64 = Buffer.from(new Uint8Array(40)).toString("base64");
 
-// Minimal Zod-like schemas for the factory — must implement safeParse
-const createSchema = {
-  safeParse: vi.fn((data: unknown) => ({ success: true, data })),
-};
-const updateSchema = {
-  safeParse: vi.fn((data: unknown) => ({ success: true, data })),
-};
-
 // Column mocks that match the HierarchyColumns interface shape
 const mockColumns = {
   id: "id",
@@ -107,6 +99,18 @@ const mockTable = { _: { name: "test_entities" } };
 
 interface TestResult {
   readonly id: string;
+  readonly name: string;
+}
+
+interface TestCreateBody {
+  readonly encryptedData: string;
+  readonly name: string;
+  readonly parentId?: string | number | null;
+}
+
+interface TestUpdateBody {
+  readonly encryptedData: string;
+  readonly version: number;
   readonly name: string;
 }
 
@@ -138,7 +142,7 @@ function makeService(overrides?: {
   beforeUpdate?: (
     tx: unknown,
     entityId: string,
-    parsed: Record<string, unknown>,
+    body: TestUpdateBody,
     systemId: SystemId,
   ) => Promise<void>;
   webhookEvents?: {
@@ -147,17 +151,21 @@ function makeService(overrides?: {
     buildPayload: (id: string) => Record<string, unknown>;
   };
 }) {
-  return createHierarchyService<Record<string, unknown>, string, TestResult>({
+  return createHierarchyService<
+    Record<string, unknown>,
+    string,
+    TestResult,
+    TestCreateBody,
+    TestUpdateBody
+  >({
     table: mockTable as never,
     columns: mockColumns as never,
     idPrefix: "ent_",
     entityName: "Entity",
     parentFieldName: "parentId",
     toResult,
-    createSchema: createSchema as never,
-    updateSchema: updateSchema as never,
-    createInsertValues: (parsed) => ({ name: parsed.name }),
-    updateSetValues: (parsed) => ({ name: parsed.name }),
+    createInsertValues: (body) => ({ name: body.name }),
+    updateSetValues: (body) => ({ name: body.name }),
     dependentChecks: [],
     events: {
       created: "entity.created" as never,

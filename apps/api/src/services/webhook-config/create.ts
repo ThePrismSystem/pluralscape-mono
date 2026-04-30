@@ -2,10 +2,9 @@ import { randomBytes } from "node:crypto";
 
 import { systems, webhookConfigs } from "@pluralscape/db/pg";
 import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
-import { CreateWebhookConfigBodySchema } from "@pluralscape/validation";
 import { and, count, eq } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_TOO_MANY_REQUESTS } from "../../http.constants.js";
+import { HTTP_TOO_MANY_REQUESTS } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
@@ -20,23 +19,20 @@ import type { WebhookConfigCreateResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { ApiKeyId, SystemId, WebhookId } from "@pluralscape/types";
+import type { CreateWebhookConfigBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function createWebhookConfig(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  params: unknown,
+  body: z.infer<typeof CreateWebhookConfigBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<WebhookConfigCreateResult> {
   assertSystemOwnership(systemId, auth);
 
-  const result = CreateWebhookConfigBodySchema.safeParse(params);
-  if (!result.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid payload");
-  }
-
-  const { url, eventTypes, enabled, cryptoKeyId } = result.data;
+  const { url, eventTypes, enabled, cryptoKeyId } = body;
   await validateWebhookUrl(url);
 
   const whId = brandId<WebhookId>(createId(ID_PREFIXES.webhook));

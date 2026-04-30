@@ -17,10 +17,33 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
-import type { BlobId, BucketId, ChecksumHex } from "@pluralscape/types";
+import type {
+  BlobId,
+  BucketId,
+  ChecksumHex,
+  EncryptionTier,
+  ServerInternal,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, buckets, blobMetadata };
+
+/**
+ * The `blob_metadata` schema brands a handful of server-only columns with
+ * `ServerInternal<T>` so `Serialize<>` strips them at the wire boundary.
+ * Test fixtures don't care about that brand — these helpers tag the raw
+ * inputs at the boundary so the typed `.values({…})` overload accepts them
+ * without polluting every assertion site with a brand cast.
+ */
+function asInternalKey(value: string): ServerInternal<string> {
+  return value as ServerInternal<string>;
+}
+function asInternalTier(value: EncryptionTier): ServerInternal<EncryptionTier> {
+  return value as ServerInternal<EncryptionTier>;
+}
+function asInternalBucket(value: BucketId): ServerInternal<BucketId> {
+  return value as ServerInternal<BucketId>;
+}
 
 describe("PG blob_metadata schema", () => {
   let client: PGlite;
@@ -52,10 +75,10 @@ describe("PG blob_metadata schema", () => {
     await db.insert(blobMetadata).values({
       id,
       systemId,
-      storageKey: `blobs/${crypto.randomUUID()}`,
+      storageKey: asInternalKey(`blobs/${crypto.randomUUID()}`),
       mimeType: "image/png",
       sizeBytes: 1024,
-      encryptionTier: 1,
+      encryptionTier: asInternalTier(1),
       purpose: "avatar",
       checksum: brandId<ChecksumHex>("a".repeat(64)),
       createdAt: now,
@@ -75,7 +98,7 @@ describe("PG blob_metadata schema", () => {
   it("enforces unique storage_key", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
-    const storageKey = `blobs/${crypto.randomUUID()}`;
+    const storageKey = asInternalKey(`blobs/${crypto.randomUUID()}`);
     const now = fixtureNow();
 
     await db.insert(blobMetadata).values({
@@ -83,7 +106,7 @@ describe("PG blob_metadata schema", () => {
       systemId,
       storageKey,
       sizeBytes: 100,
-      encryptionTier: 1,
+      encryptionTier: asInternalTier(1),
       purpose: "attachment",
       checksum: brandId<ChecksumHex>("a".repeat(64)),
       createdAt: now,
@@ -96,7 +119,7 @@ describe("PG blob_metadata schema", () => {
         systemId,
         storageKey,
         sizeBytes: 200,
-        encryptionTier: 1,
+        encryptionTier: asInternalTier(1),
         purpose: "attachment",
         checksum: brandId<ChecksumHex>("a".repeat(64)),
         createdAt: now,
@@ -114,9 +137,9 @@ describe("PG blob_metadata schema", () => {
       db.insert(blobMetadata).values({
         id: brandId<BlobId>(crypto.randomUUID()),
         systemId,
-        storageKey: `blobs/${crypto.randomUUID()}`,
+        storageKey: asInternalKey(`blobs/${crypto.randomUUID()}`),
         sizeBytes: 0,
-        encryptionTier: 1,
+        encryptionTier: asInternalTier(1),
         purpose: "avatar",
         checksum: brandId<ChecksumHex>("a".repeat(64)),
         createdAt: now,
@@ -130,12 +153,17 @@ describe("PG blob_metadata schema", () => {
     const systemId = await insertSystem(accountId);
     const now = fixtureNow();
 
+    // Intentionally testing CHECK constraint with invalid tier value;
+    // 3 is not a valid EncryptionTier (1 | 2). The @ts-expect-error
+    // directive is load-bearing: if TS ever accepts `3` here, the test
+    // would silently turn into a no-op (the runtime CHECK could never
+    // fire if TS pre-validates the value).
     await expect(
-      // @ts-expect-error — intentionally testing CHECK constraint with invalid tier value
+      // @ts-expect-error invalid encryptionTier value: testing runtime CHECK
       db.insert(blobMetadata).values({
         id: brandId<BlobId>(crypto.randomUUID()),
         systemId,
-        storageKey: `blobs/${crypto.randomUUID()}`,
+        storageKey: asInternalKey(`blobs/${crypto.randomUUID()}`),
         sizeBytes: 100,
         encryptionTier: 3,
         purpose: "avatar",
@@ -155,9 +183,9 @@ describe("PG blob_metadata schema", () => {
       db.insert(blobMetadata).values({
         id: brandId<BlobId>(crypto.randomUUID()),
         systemId,
-        storageKey: `blobs/${crypto.randomUUID()}`,
+        storageKey: asInternalKey(`blobs/${crypto.randomUUID()}`),
         sizeBytes: 100,
-        encryptionTier: 1,
+        encryptionTier: asInternalTier(1),
         purpose: "invalid" as "avatar",
         checksum: brandId<ChecksumHex>("a".repeat(64)),
         createdAt: now,
@@ -175,9 +203,9 @@ describe("PG blob_metadata schema", () => {
     await db.insert(blobMetadata).values({
       id,
       systemId,
-      storageKey: `blobs/${crypto.randomUUID()}`,
+      storageKey: asInternalKey(`blobs/${crypto.randomUUID()}`),
       sizeBytes: 100,
-      encryptionTier: 2,
+      encryptionTier: asInternalTier(2),
       purpose: "member-photo",
       checksum: brandId<ChecksumHex>("a".repeat(64)),
       createdAt: now,
@@ -206,12 +234,12 @@ describe("PG blob_metadata schema", () => {
     await db.insert(blobMetadata).values({
       id: brandId<BlobId>(crypto.randomUUID()),
       systemId,
-      storageKey: `blobs/${crypto.randomUUID()}`,
+      storageKey: asInternalKey(`blobs/${crypto.randomUUID()}`),
       sizeBytes: 100,
-      encryptionTier: 1,
+      encryptionTier: asInternalTier(1),
       purpose: "attachment",
       checksum: brandId<ChecksumHex>("a".repeat(64)),
-      bucketId,
+      bucketId: asInternalBucket(bucketId),
       createdAt: now,
       uploadedAt: now,
     });
@@ -261,9 +289,9 @@ describe("PG blob_metadata schema", () => {
       db.insert(blobMetadata).values({
         id: brandId<BlobId>(crypto.randomUUID()),
         systemId,
-        storageKey: `blobs/${crypto.randomUUID()}`,
+        storageKey: asInternalKey(`blobs/${crypto.randomUUID()}`),
         sizeBytes: 100,
-        encryptionTier: 1,
+        encryptionTier: asInternalTier(1),
         purpose: "avatar",
         checksum: brandId<ChecksumHex>("a".repeat(63)),
         createdAt: now,
@@ -275,9 +303,9 @@ describe("PG blob_metadata schema", () => {
       db.insert(blobMetadata).values({
         id: brandId<BlobId>(crypto.randomUUID()),
         systemId,
-        storageKey: `blobs/${crypto.randomUUID()}`,
+        storageKey: asInternalKey(`blobs/${crypto.randomUUID()}`),
         sizeBytes: 100,
-        encryptionTier: 1,
+        encryptionTier: asInternalTier(1),
         purpose: "avatar",
         checksum: brandId<ChecksumHex>("a".repeat(65)),
         createdAt: now,
@@ -294,9 +322,9 @@ describe("PG blob_metadata schema", () => {
     await db.insert(blobMetadata).values({
       id: brandId<BlobId>(crypto.randomUUID()),
       systemId,
-      storageKey: `blobs/${crypto.randomUUID()}`,
+      storageKey: asInternalKey(`blobs/${crypto.randomUUID()}`),
       sizeBytes: 10737418240,
-      encryptionTier: 1,
+      encryptionTier: asInternalTier(1),
       purpose: "avatar",
       checksum: brandId<ChecksumHex>("a".repeat(64)),
       createdAt: now,
@@ -313,9 +341,9 @@ describe("PG blob_metadata schema", () => {
       db.insert(blobMetadata).values({
         id: brandId<BlobId>(crypto.randomUUID()),
         systemId,
-        storageKey: `blobs/${crypto.randomUUID()}`,
+        storageKey: asInternalKey(`blobs/${crypto.randomUUID()}`),
         sizeBytes: 10737418241,
-        encryptionTier: 1,
+        encryptionTier: asInternalTier(1),
         purpose: "avatar",
         checksum: brandId<ChecksumHex>("a".repeat(64)),
         createdAt: now,
@@ -333,9 +361,9 @@ describe("PG blob_metadata schema", () => {
     await db.insert(blobMetadata).values({
       id,
       systemId,
-      storageKey: `blobs/${crypto.randomUUID()}`,
+      storageKey: asInternalKey(`blobs/${crypto.randomUUID()}`),
       sizeBytes: 100,
-      encryptionTier: 1,
+      encryptionTier: asInternalTier(1),
       purpose: "avatar",
       checksum: brandId<ChecksumHex>("a".repeat(64)),
       createdAt: now,
@@ -356,9 +384,9 @@ describe("PG blob_metadata schema", () => {
     await db.insert(blobMetadata).values({
       id,
       systemId,
-      storageKey: `blobs/${crypto.randomUUID()}`,
+      storageKey: asInternalKey(`blobs/${crypto.randomUUID()}`),
       sizeBytes: 100,
-      encryptionTier: 1,
+      encryptionTier: asInternalTier(1),
       purpose: "avatar",
       checksum: brandId<ChecksumHex>("a".repeat(64)),
       createdAt: now,
@@ -381,9 +409,9 @@ describe("PG blob_metadata schema", () => {
     await db.insert(blobMetadata).values({
       id,
       systemId,
-      storageKey: `blobs/${crypto.randomUUID()}`,
+      storageKey: asInternalKey(`blobs/${crypto.randomUUID()}`),
       sizeBytes: 100,
-      encryptionTier: 1,
+      encryptionTier: asInternalTier(1),
       purpose: "avatar",
       checksum: brandId<ChecksumHex>("a".repeat(64)),
       createdAt: now,

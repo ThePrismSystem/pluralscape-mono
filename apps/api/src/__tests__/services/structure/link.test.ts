@@ -5,7 +5,11 @@ import { mockDb } from "../../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../../helpers/mock-ownership.js";
 import { makeTestAuth } from "../../helpers/test-auth.js";
 
-import type { SystemId, SystemStructureEntityLinkId } from "@pluralscape/types";
+import type {
+  SystemId,
+  SystemStructureEntityId,
+  SystemStructureEntityLinkId,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
@@ -33,21 +37,6 @@ vi.mock("@pluralscape/types", async (importOriginal) => {
   };
 });
 
-vi.mock("@pluralscape/validation", () => ({
-  CreateStructureEntityLinkBodySchema: {
-    safeParse: vi.fn().mockReturnValue({
-      success: true,
-      data: { entityId: "sse_child", parentEntityId: "sse_parent", sortOrder: 0 },
-    }),
-  },
-  UpdateStructureEntityLinkBodySchema: {
-    safeParse: vi.fn().mockReturnValue({
-      success: true,
-      data: { sortOrder: 5 },
-    }),
-  },
-}));
-
 vi.mock("drizzle-orm", async (importOriginal) => {
   const actual = await importOriginal<typeof import("drizzle-orm")>();
   return {
@@ -62,8 +51,6 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 // ── Imports after mocks ──────────────────────────────────────────────
 
 const { assertSystemOwnership } = await import("../../../lib/system-ownership.js");
-const { CreateStructureEntityLinkBodySchema, UpdateStructureEntityLinkBodySchema } =
-  await import("@pluralscape/validation");
 
 const { createEntityLink, updateEntityLink, listEntityLinks, deleteEntityLink } =
   await import("../../../services/structure/link.js");
@@ -72,8 +59,16 @@ const { createEntityLink, updateEntityLink, listEntityLinks, deleteEntityLink } 
 
 const SYSTEM_ID = brandId<SystemId>("sys_test-system");
 const LINK_ID = brandId<SystemStructureEntityLinkId>("sel_test-link");
+const CHILD_ID = brandId<SystemStructureEntityId>("sse_child");
+const PARENT_ID = brandId<SystemStructureEntityId>("sse_parent");
 const AUTH = makeTestAuth({ systemId: SYSTEM_ID });
 const mockAudit = vi.fn().mockResolvedValue(undefined);
+
+const validCreatePayload = {
+  entityId: CHILD_ID,
+  parentEntityId: PARENT_ID,
+  sortOrder: 0,
+};
 
 function makeLinkRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -98,18 +93,17 @@ describe("structure-entity-link service", () => {
   // ── createEntityLink ───────────────────────────────────────────
 
   describe("createEntityLink", () => {
-    const validPayload = { entityId: "sse_child", parentEntityId: "sse_parent", sortOrder: 0 };
-
     it("creates a root link (null parent) without CTE queries", async () => {
       const { db, chain } = mockDb();
-      const schema = vi.mocked(CreateStructureEntityLinkBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: true,
-        data: { entityId: "sse_child", parentEntityId: null, sortOrder: 0 },
-      });
       chain.returning.mockResolvedValueOnce([makeLinkRow({ parentEntityId: null })]);
 
-      const result = await createEntityLink(db, SYSTEM_ID, validPayload, AUTH, mockAudit);
+      const result = await createEntityLink(
+        db,
+        SYSTEM_ID,
+        { entityId: CHILD_ID, parentEntityId: null, sortOrder: 0 },
+        AUTH,
+        mockAudit,
+      );
 
       expect(result.id).toBe(LINK_ID);
       expect(result.parentEntityId).toBeNull();
@@ -118,20 +112,18 @@ describe("structure-entity-link service", () => {
         chain,
         expect.objectContaining({ eventType: "structure-entity-link.created" }),
       );
-      // setTenantContext calls execute once; no CTE queries for null parent
       expect(chain.execute).toHaveBeenCalledTimes(1);
     });
 
     it("creates a link with non-null parent when no cycle and depth ok", async () => {
       const { db, chain } = mockDb();
-      // execute calls: setTenantContext, cycle CTE, depth CTE
       chain.execute
-        .mockResolvedValueOnce(undefined) // setTenantContext
-        .mockResolvedValueOnce([{ count: "0" }]) // cycle detection — no cycle
-        .mockResolvedValueOnce([{ count: "3" }]); // depth check — well under 50
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce([{ count: "0" }])
+        .mockResolvedValueOnce([{ count: "3" }]);
       chain.returning.mockResolvedValueOnce([makeLinkRow()]);
 
-      const result = await createEntityLink(db, SYSTEM_ID, validPayload, AUTH, mockAudit);
+      const result = await createEntityLink(db, SYSTEM_ID, validCreatePayload, AUTH, mockAudit);
 
       expect(result.id).toBe(LINK_ID);
       expect(result.entityId).toBe("sse_child");
@@ -146,101 +138,86 @@ describe("structure-entity-link service", () => {
 
     it("throws CYCLE_DETECTED when entityId === parentEntityId (self-link)", async () => {
       const { db } = mockDb();
-      const schema = vi.mocked(CreateStructureEntityLinkBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: true,
-        data: { entityId: "sse_same", parentEntityId: "sse_same", sortOrder: 0 },
-      });
+      const SAME = brandId<SystemStructureEntityId>("sse_same");
 
-      await expect(createEntityLink(db, SYSTEM_ID, {}, AUTH, mockAudit)).rejects.toThrow(
-        expect.objectContaining({ status: 409, code: "CYCLE_DETECTED" }),
-      );
+      await expect(
+        createEntityLink(
+          db,
+          SYSTEM_ID,
+          { entityId: SAME, parentEntityId: SAME, sortOrder: 0 },
+          AUTH,
+          mockAudit,
+        ),
+      ).rejects.toThrow(expect.objectContaining({ status: 409, code: "CYCLE_DETECTED" }));
     });
 
     it("throws CYCLE_DETECTED when ancestor CTE finds a cycle", async () => {
       const { db, chain } = mockDb();
-      // execute calls: setTenantContext, cycle CTE returns count > 0
-      chain.execute
-        .mockResolvedValueOnce(undefined) // setTenantContext
-        .mockResolvedValueOnce([{ count: "1" }]); // cycle detected
+      chain.execute.mockResolvedValueOnce(undefined).mockResolvedValueOnce([{ count: "1" }]);
 
-      await expect(createEntityLink(db, SYSTEM_ID, validPayload, AUTH, mockAudit)).rejects.toThrow(
-        expect.objectContaining({ status: 409, code: "CYCLE_DETECTED" }),
-      );
+      await expect(
+        createEntityLink(db, SYSTEM_ID, validCreatePayload, AUTH, mockAudit),
+      ).rejects.toThrow(expect.objectContaining({ status: 409, code: "CYCLE_DETECTED" }));
     });
 
     it("throws MAX_DEPTH_EXCEEDED when depth >= 50", async () => {
       const { db, chain } = mockDb();
-      // execute calls: setTenantContext, cycle CTE (ok), depth CTE (too deep)
       chain.execute
-        .mockResolvedValueOnce(undefined) // setTenantContext
-        .mockResolvedValueOnce([{ count: "0" }]) // no cycle
-        .mockResolvedValueOnce([{ count: "50" }]); // depth at limit
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce([{ count: "0" }])
+        .mockResolvedValueOnce([{ count: "50" }]);
 
-      await expect(createEntityLink(db, SYSTEM_ID, validPayload, AUTH, mockAudit)).rejects.toThrow(
-        expect.objectContaining({ status: 409, code: "MAX_DEPTH_EXCEEDED" }),
-      );
+      await expect(
+        createEntityLink(db, SYSTEM_ID, validCreatePayload, AUTH, mockAudit),
+      ).rejects.toThrow(expect.objectContaining({ status: 409, code: "MAX_DEPTH_EXCEEDED" }));
     });
 
     it("throws MAX_DEPTH_EXCEEDED when depth exceeds 50", async () => {
       const { db, chain } = mockDb();
       chain.execute
-        .mockResolvedValueOnce(undefined) // setTenantContext
-        .mockResolvedValueOnce([{ count: "0" }]) // no cycle
-        .mockResolvedValueOnce([{ count: "99" }]); // well over limit
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce([{ count: "0" }])
+        .mockResolvedValueOnce([{ count: "99" }]);
 
-      await expect(createEntityLink(db, SYSTEM_ID, validPayload, AUTH, mockAudit)).rejects.toThrow(
-        expect.objectContaining({ status: 409, code: "MAX_DEPTH_EXCEEDED" }),
-      );
+      await expect(
+        createEntityLink(db, SYSTEM_ID, validCreatePayload, AUTH, mockAudit),
+      ).rejects.toThrow(expect.objectContaining({ status: 409, code: "MAX_DEPTH_EXCEEDED" }));
     });
 
     it("creates a link when depth is exactly at boundary (49)", async () => {
       const { db, chain } = mockDb();
       chain.execute
-        .mockResolvedValueOnce(undefined) // setTenantContext
-        .mockResolvedValueOnce([{ count: "0" }]) // cycle detection — no cycle
-        .mockResolvedValueOnce([{ count: "49" }]); // depth at boundary (under limit of 50)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce([{ count: "0" }])
+        .mockResolvedValueOnce([{ count: "49" }]);
       chain.returning.mockResolvedValueOnce([makeLinkRow()]);
 
-      const result = await createEntityLink(db, SYSTEM_ID, validPayload, AUTH, mockAudit);
+      const result = await createEntityLink(db, SYSTEM_ID, validCreatePayload, AUTH, mockAudit);
 
       expect(result.id).toBe(LINK_ID);
       expect(chain.insert).toHaveBeenCalled();
     });
 
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      const { db } = mockDb();
-      const schema = vi.mocked(CreateStructureEntityLinkBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: false,
-        error: { issues: [] },
-      });
-
-      await expect(createEntityLink(db, SYSTEM_ID, {}, AUTH, mockAudit)).rejects.toThrow(
-        expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }),
-      );
-    });
-
     it("throws when INSERT returns no rows", async () => {
       const { db, chain } = mockDb();
       chain.execute
-        .mockResolvedValueOnce(undefined) // setTenantContext
-        .mockResolvedValueOnce([{ count: "0" }]) // no cycle
-        .mockResolvedValueOnce([{ count: "3" }]); // depth ok
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce([{ count: "0" }])
+        .mockResolvedValueOnce([{ count: "3" }]);
       chain.returning.mockResolvedValueOnce([]);
 
-      await expect(createEntityLink(db, SYSTEM_ID, validPayload, AUTH, mockAudit)).rejects.toThrow(
-        "Failed to create entity link — INSERT returned no rows",
-      );
+      await expect(
+        createEntityLink(db, SYSTEM_ID, validCreatePayload, AUTH, mockAudit),
+      ).rejects.toThrow("Failed to create entity link — INSERT returned no rows");
     });
 
     it("throws 404 on ownership failure", async () => {
       const { db } = mockDb();
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
-      await expect(createEntityLink(db, SYSTEM_ID, validPayload, AUTH, mockAudit)).rejects.toThrow(
-        expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
-      );
+      await expect(
+        createEntityLink(db, SYSTEM_ID, validCreatePayload, AUTH, mockAudit),
+      ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
     });
   });
 
@@ -249,11 +226,9 @@ describe("structure-entity-link service", () => {
   describe("updateEntityLink", () => {
     it("updates sortOrder and returns result", async () => {
       const { db, chain } = mockDb();
-      // Existence check: select().from().where().limit(1).for("update")
       chain.where.mockReturnValueOnce(chain);
       chain.limit.mockReturnValueOnce(chain);
       chain.for.mockResolvedValueOnce([{ id: LINK_ID }]);
-      // Update returning
       chain.returning.mockResolvedValueOnce([makeLinkRow({ sortOrder: 5 })]);
 
       const result = await updateEntityLink(
@@ -283,19 +258,6 @@ describe("structure-entity-link service", () => {
       await expect(
         updateEntityLink(db, SYSTEM_ID, "sel_missing", { sortOrder: 1 }, AUTH, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
-    });
-
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      const { db } = mockDb();
-      const schema = vi.mocked(UpdateStructureEntityLinkBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: false,
-        error: { issues: [] },
-      });
-
-      await expect(updateEntityLink(db, SYSTEM_ID, LINK_ID, {}, AUTH, mockAudit)).rejects.toThrow(
-        expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }),
-      );
     });
 
     it("throws when UPDATE returns no rows", async () => {

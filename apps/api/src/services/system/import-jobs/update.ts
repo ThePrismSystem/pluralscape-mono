@@ -1,9 +1,8 @@
 import { importJobs } from "@pluralscape/db/pg";
 import { now } from "@pluralscape/types";
-import { UpdateImportJobBodySchema } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../../../http.constants.js";
+import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../../../http.constants.js";
 import { ApiHttpError } from "../../../lib/api-error.js";
 import { withTenantTransaction } from "../../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../../lib/system-ownership.js";
@@ -14,8 +13,17 @@ import { parseErrorLog, toImportJobResult } from "./internal.js";
 import type { ImportJobResult } from "./internal.js";
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { ImportError, ImportJobId, ImportJobStatus, SystemId } from "@pluralscape/types";
+import type {
+  ImportCheckpointState,
+  ImportError,
+  ImportJobId,
+  ImportJobStatus,
+  ServerInternal,
+  SystemId,
+} from "@pluralscape/types";
+import type { UpdateImportJobBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 const TERMINAL_STATUSES: ReadonlySet<ImportJobStatus> = new Set(["completed", "failed"]);
 
@@ -54,18 +62,11 @@ export async function updateImportJob(
   db: PostgresJsDatabase,
   systemId: SystemId,
   id: ImportJobId,
-  params: unknown,
+  body: z.infer<typeof UpdateImportJobBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<ImportJobResult> {
   assertSystemOwnership(systemId, auth);
-  const parseResult = UpdateImportJobBodySchema.safeParse(params);
-  if (!parseResult.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid request body", {
-      issues: parseResult.error.issues,
-    });
-  }
-  const parsed = parseResult.data;
 
   const timestamp = now();
 
@@ -94,13 +95,13 @@ export async function updateImportJob(
     // error entries to an already-failed job without triggering the
     // resumability check, and progress bumps on `importing → importing`
     // are the normal hot path.
-    if (parsed.status !== undefined && parsed.status !== current.status) {
+    if (body.status !== undefined && body.status !== current.status) {
       const allowed = ALLOWED_TRANSITIONS[current.status];
-      if (!allowed.includes(parsed.status)) {
+      if (!allowed.includes(body.status)) {
         throw new ApiHttpError(
           HTTP_CONFLICT,
           "INVALID_STATE",
-          `Illegal transition from ${current.status} to ${parsed.status}`,
+          `Illegal transition from ${current.status} to ${body.status}`,
         );
       }
       // failed → importing|validating: require last error to be fatal + recoverable
@@ -110,7 +111,7 @@ export async function updateImportJob(
           throw new ApiHttpError(
             HTTP_CONFLICT,
             "INVALID_STATE",
-            `Cannot resume ${current.status} → ${parsed.status}: last error is not recoverable`,
+            `Cannot resume ${current.status} → ${body.status}: last error is not recoverable`,
           );
         }
       }
@@ -118,24 +119,25 @@ export async function updateImportJob(
 
     const updates: Partial<typeof importJobs.$inferInsert> = { updatedAt: timestamp };
     const terminalTransition =
-      parsed.status !== undefined &&
-      TERMINAL_STATUSES.has(parsed.status) &&
-      parsed.status !== current.status;
+      body.status !== undefined &&
+      TERMINAL_STATUSES.has(body.status) &&
+      body.status !== current.status;
     const nonTerminalReentry =
-      parsed.status !== undefined &&
-      !TERMINAL_STATUSES.has(parsed.status) &&
+      body.status !== undefined &&
+      !TERMINAL_STATUSES.has(body.status) &&
       TERMINAL_STATUSES.has(current.status);
 
-    if (parsed.status !== undefined) updates.status = parsed.status;
-    if (parsed.progressPercent !== undefined) updates.progressPercent = parsed.progressPercent;
-    if (parsed.warningCount !== undefined) updates.warningCount = parsed.warningCount;
-    if (parsed.chunksTotal !== undefined) updates.chunksTotal = parsed.chunksTotal;
-    if (parsed.chunksCompleted !== undefined) updates.chunksCompleted = parsed.chunksCompleted;
-    if (parsed.errorLog !== undefined) {
-      updates.errorLog = parsed.errorLog as readonly ImportError[] | null;
+    if (body.status !== undefined) updates.status = body.status;
+    if (body.progressPercent !== undefined) updates.progressPercent = body.progressPercent;
+    if (body.warningCount !== undefined) updates.warningCount = body.warningCount;
+    if (body.chunksTotal !== undefined) updates.chunksTotal = body.chunksTotal;
+    if (body.chunksCompleted !== undefined) updates.chunksCompleted = body.chunksCompleted;
+    if (body.errorLog !== undefined) {
+      updates.errorLog = body.errorLog as readonly ImportError[] | null;
     }
-    if (parsed.checkpointState !== undefined) {
-      updates.checkpointState = parsed.checkpointState;
+    if (body.checkpointState !== undefined) {
+      updates.checkpointState =
+        body.checkpointState as ServerInternal<ImportCheckpointState> | null;
     }
 
     if (terminalTransition) {

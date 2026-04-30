@@ -8,10 +8,9 @@ import {
   toUnixMillis,
   toUnixMillisOrNull,
 } from "@pluralscape/types";
-import { ClaimChunkBodySchema } from "@pluralscape/validation";
 import { and, eq, inArray, lt } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../../../http.constants.js";
+import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../../../http.constants.js";
 import { ApiHttpError } from "../../../lib/api-error.js";
 import { withTenantTransaction } from "../../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../../lib/system-ownership.js";
@@ -26,7 +25,9 @@ import type {
   RotationState,
   SystemId,
 } from "@pluralscape/types";
+import type { ClaimChunkBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 function toItemResult(row: typeof bucketRotationItems.$inferSelect): BucketRotationItem {
   return {
@@ -47,17 +48,12 @@ export async function claimRotationChunk(
   systemId: SystemId,
   bucketId: BucketId,
   rotationId: BucketKeyRotationId,
-  params: unknown,
+  body: z.infer<typeof ClaimChunkBodySchema>,
   auth: AuthContext,
 ): Promise<ChunkClaimResponse> {
   assertSystemOwnership(systemId, auth);
 
-  const parsed = ClaimChunkBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid claim payload");
-  }
-
-  const chunkSize = parsed.data.chunkSize;
+  const chunkSize = body.chunkSize;
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Verify rotation exists and belongs to this system/bucket

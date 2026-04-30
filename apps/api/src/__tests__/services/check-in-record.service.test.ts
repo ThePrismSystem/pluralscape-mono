@@ -156,14 +156,6 @@ describe("createCheckInRecord", () => {
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
-  it("throws 400 for invalid payload", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      createCheckInRecord(db, SYSTEM_ID, { bad: "data" }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-  });
-
   it("throws 400 when timer config not found in system", async () => {
     const { db, chain } = mockDb();
     // timerConfig lookup returns empty
@@ -225,20 +217,6 @@ describe("createCheckInRecord", () => {
         db,
         SYSTEM_ID,
         { timerConfigId: TIMER_ID, scheduledAt: 1.5 },
-        AUTH,
-        mockAudit,
-      ),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-  });
-
-  it("throws 400 for invalid timerConfigId format", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      createCheckInRecord(
-        db,
-        SYSTEM_ID,
-        { timerConfigId: "bad-id", scheduledAt: 1000 },
         AUTH,
         mockAudit,
       ),
@@ -524,29 +502,6 @@ describe("respondCheckInRecord", () => {
         mockAudit,
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
-  });
-
-  it("throws 400 for invalid payload", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      respondCheckInRecord(db, SYSTEM_ID, RECORD_ID, { bad: "data" }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-  });
-
-  it("throws 400 for invalid respondedByMemberId format", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      respondCheckInRecord(
-        db,
-        SYSTEM_ID,
-        RECORD_ID,
-        { respondedByMemberId: "not-a-member-id" },
-        AUTH,
-        mockAudit,
-      ),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
   it("throws 404 when check-in record not found (fetchPendingCheckIn)", async () => {

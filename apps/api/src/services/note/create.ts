@@ -1,11 +1,10 @@
 import { notes, systems } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, brandId } from "@pluralscape/types";
-import { CreateNoteBodySchema } from "@pluralscape/validation";
 import { and, count, eq } from "drizzle-orm";
 
 import { HTTP_TOO_MANY_REQUESTS } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
-import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
@@ -19,28 +18,25 @@ import type { NoteResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { AnyBrandedId, NoteId, SystemId } from "@pluralscape/types";
+import type { CreateNoteBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function createNote(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  params: unknown,
+  body: z.infer<typeof CreateNoteBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<NoteResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    CreateNoteBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
 
   const noteId = brandId<NoteId>(createId(ID_PREFIXES.note));
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
-    // Enforce per-system note quota
     await tx.select({ id: systems.id }).from(systems).where(eq(systems.id, systemId)).for("update");
 
     const [existingCount] = await tx
@@ -61,11 +57,9 @@ export async function createNote(
       .values({
         id: noteId,
         systemId,
-        authorEntityType: parsed.author?.entityType ?? null,
+        authorEntityType: body.author?.entityType ?? null,
         authorEntityId:
-          parsed.author?.entityId === undefined
-            ? null
-            : brandId<AnyBrandedId>(parsed.author.entityId),
+          body.author?.entityId === undefined ? null : brandId<AnyBrandedId>(body.author.entityId),
         encryptedData: blob,
         createdAt: timestamp,
         updatedAt: timestamp,

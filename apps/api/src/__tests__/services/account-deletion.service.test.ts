@@ -153,20 +153,6 @@ describe("deleteAccount", () => {
     ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
-  it("throws ZodError when authKey field is missing from params", async () => {
-    const auth = makeTestAuth({ accountId: ACCOUNT_ID });
-
-    await expect(deleteAccount(makeMockDb() as never, {}, auth, mockAudit)).rejects.toThrow();
-  });
-
-  it("throws ZodError when authKey is empty string", async () => {
-    const auth = makeTestAuth({ accountId: ACCOUNT_ID });
-
-    await expect(
-      deleteAccount(makeMockDb() as never, { authKey: "" }, auth, mockAudit),
-    ).rejects.toThrow();
-  });
-
   it("does not write audit or delete rows when auth key verification fails", async () => {
     mockTx.limit.mockResolvedValueOnce([{ authKeyHash: VALID_HASH }]);
     vi.mocked(verifyAuthKey).mockReturnValueOnce(false);

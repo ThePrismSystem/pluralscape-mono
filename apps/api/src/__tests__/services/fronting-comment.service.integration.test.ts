@@ -42,14 +42,13 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
+import type { AccountId, FrontingSessionId, MemberId, SystemId } from "@pluralscape/types";
 import type {
-  AccountId,
-  CustomFrontId,
-  FrontingSessionId,
-  MemberId,
-  SystemId,
-} from "@pluralscape/types";
+  CreateFrontingCommentBodySchema,
+  CreateFrontingSessionBodySchema,
+} from "@pluralscape/validation";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
+import type { z } from "zod/v4";
 
 const { customFronts, frontingSessions, frontingComments } = schema;
 
@@ -90,7 +89,10 @@ describe("fronting-comment.service (PGlite integration)", () => {
         encryptedData: testEncryptedDataBase64(),
         startTime: Date.now(),
         memberId,
-      },
+        customFrontId: undefined,
+        structureEntityId: undefined,
+        endTime: undefined,
+      } satisfies z.infer<typeof CreateFrontingSessionBodySchema>,
       auth,
       noopAudit,
     );
@@ -98,15 +100,13 @@ describe("fronting-comment.service (PGlite integration)", () => {
   }
 
   function commentParams(
-    overrides: Partial<{
-      encryptedData: string;
-      memberId: MemberId;
-      customFrontId: CustomFrontId;
-    }> = {},
-  ) {
+    overrides: Partial<z.infer<typeof CreateFrontingCommentBodySchema>> = {},
+  ): z.infer<typeof CreateFrontingCommentBodySchema> {
     return {
       encryptedData: testEncryptedDataBase64(),
       memberId,
+      customFrontId: undefined,
+      structureEntityId: undefined,
       ...overrides,
     };
   }

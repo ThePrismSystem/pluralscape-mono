@@ -280,5 +280,10 @@ export type WebhookConfigServerMetadata = Omit<WebhookConfig, "archived"> & {
  * JSON-wire representation of WebhookConfig. Derived from the domain
  * type via `Serialize<T>`; branded IDs become plain strings,
  * `UnixMillis` becomes `number`, `Uint8Array` becomes base64 string.
+ *
+ * NB: Wire is derived from the domain type (not
+ * `WebhookConfigServerMetadata`) because the server row widens
+ * `archived` to a raw boolean plus a companion `archivedAt`; the domain
+ * carries the `archived: false` literal.
  */
 export type WebhookConfigWire = Serialize<WebhookConfig>;

@@ -1,10 +1,5 @@
 import { nomenclatureSettings, systemSettings, systems } from "@pluralscape/db/pg";
 import { brandId, ID_PREFIXES, createId, now } from "@pluralscape/types";
-import {
-  SetupCompleteBodySchema,
-  SetupNomenclatureStepBodySchema,
-  SetupProfileStepBodySchema,
-} from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
@@ -20,7 +15,13 @@ import { toSystemSettingsResult } from "./system-settings.service.js";
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { SetupStepName, SystemId, SystemSettingsId } from "@pluralscape/types";
+import type {
+  SetupCompleteBodySchema,
+  SetupNomenclatureStepBodySchema,
+  SetupProfileStepBodySchema,
+} from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 // ── GET Setup Status ────────────────────────────────────────────────
 
@@ -89,18 +90,13 @@ export interface SetupStepResult {
 export async function setupNomenclatureStep(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  params: unknown,
+  body: z.infer<typeof SetupNomenclatureStepBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SetupStepResult> {
   assertSystemOwnership(systemId, auth);
 
-  const parsed = SetupNomenclatureStepBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid nomenclature payload");
-  }
-
-  const blob = validateEncryptedBlob(parsed.data.encryptedData);
+  const blob = validateEncryptedBlob(body.encryptedData);
   const timestamp = now();
 
   await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -137,18 +133,13 @@ export async function setupNomenclatureStep(
 export async function setupProfileStep(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  params: unknown,
+  body: z.infer<typeof SetupProfileStepBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SetupStepResult> {
   assertSystemOwnership(systemId, auth);
 
-  const parsed = SetupProfileStepBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid profile payload");
-  }
-
-  const blob = validateEncryptedBlob(parsed.data.encryptedData);
+  const blob = validateEncryptedBlob(body.encryptedData);
   const timestamp = now();
 
   await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -183,16 +174,11 @@ export type SetupCompleteResult = ReturnType<typeof toSystemSettingsResult>;
 export async function setupComplete(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  params: unknown,
+  body: z.infer<typeof SetupCompleteBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SetupCompleteResult> {
   assertSystemOwnership(systemId, auth);
-
-  const parsed = SetupCompleteBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid setup complete payload");
-  }
 
   // Guard: recovery key must exist
   const recoveryStatus = await getRecoveryKeyStatus(db, auth.accountId);
@@ -243,7 +229,7 @@ export async function setupComplete(
     );
   }
 
-  const blob = validateEncryptedBlob(parsed.data.encryptedData);
+  const blob = validateEncryptedBlob(body.encryptedData);
   const id = brandId<SystemSettingsId>(createId(ID_PREFIXES.systemSettings));
   const timestamp = now();
 
@@ -254,8 +240,8 @@ export async function setupComplete(
       .values({
         id,
         systemId,
-        locale: parsed.data.locale ?? null,
-        biometricEnabled: parsed.data.biometricEnabled ?? false,
+        locale: body.locale ?? null,
+        biometricEnabled: body.biometricEnabled ?? false,
         encryptedData: blob,
         createdAt: timestamp,
         updatedAt: timestamp,

@@ -6,7 +6,7 @@ import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
 import type { ArchivableEntityConfig, DeletableEntityConfig } from "../../lib/entity-lifecycle.js";
-import type { EncryptedBase64, AcknowledgementId, SystemId } from "@pluralscape/types";
+import type { EncryptedBase64, AcknowledgementId, MemberId, SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
@@ -125,7 +125,7 @@ describe("acknowledgement service", () => {
   // ── createAcknowledgement ──────────────────────────────────────
 
   describe("createAcknowledgement", () => {
-    const validPayload = { encryptedData: VALID_BLOB_BASE64 };
+    const validPayload = { encryptedData: VALID_BLOB_BASE64, createdByMemberId: undefined };
 
     it("creates an acknowledgement and returns result", async () => {
       const { db, chain } = mockDb();
@@ -144,30 +144,21 @@ describe("acknowledgement service", () => {
 
     it("creates acknowledgement with createdByMemberId when provided", async () => {
       const { db, chain } = mockDb();
-      chain.returning.mockResolvedValueOnce([
-        makeAckRow({ createdByMemberId: "mem_00000000-0000-4000-a000-000000000001" }),
-      ]);
+      const memberId = brandId<MemberId>("mem_00000000-0000-4000-a000-000000000001");
+      chain.returning.mockResolvedValueOnce([makeAckRow({ createdByMemberId: memberId })]);
 
       const result = await createAcknowledgement(
         db,
         SYSTEM_ID,
         {
           encryptedData: VALID_BLOB_BASE64,
-          createdByMemberId: "mem_00000000-0000-4000-a000-000000000001",
+          createdByMemberId: memberId,
         },
         AUTH,
         mockAudit,
       );
 
       expect(result.createdByMemberId).toBe("mem_00000000-0000-4000-a000-000000000001");
-    });
-
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      const { db } = mockDb();
-
-      await expect(
-        createAcknowledgement(db, SYSTEM_ID, { bad: true }, AUTH, mockAudit),
-      ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
     });
 
     it("throws 404 on ownership failure", async () => {

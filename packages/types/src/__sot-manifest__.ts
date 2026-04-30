@@ -96,6 +96,11 @@ import type {
   DeviceTransferRequestWire,
 } from "./entities/device-transfer-request.js";
 import type {
+  ExportRequest,
+  ExportRequestServerMetadata,
+  ExportRequestWire,
+} from "./entities/export-request.js";
+import type {
   FieldDefinitionScope,
   FieldDefinitionScopeServerMetadata,
   FieldDefinitionScopeWire,
@@ -158,6 +163,11 @@ import type {
   GroupServerMetadata,
   GroupWire,
 } from "./entities/group.js";
+import type {
+  ImportEntityRef,
+  ImportEntityRefServerMetadata,
+  ImportEntityRefWire,
+} from "./entities/import-entity-ref.js";
 import type { ImportJob, ImportJobServerMetadata, ImportJobWire } from "./entities/import-job.js";
 import type {
   InnerWorldCanvas,
@@ -305,7 +315,11 @@ import type {
   SystemStructureEntityServerMetadata,
   SystemStructureEntityWire,
 } from "./entities/structure-entity.js";
-import type { SyncDocument, SyncDocumentWire } from "./entities/sync-document.js";
+import type {
+  SyncDocument,
+  SyncDocumentServerMetadata,
+  SyncDocumentWire,
+} from "./entities/sync-document.js";
 import type {
   SystemSettings,
   SystemSettingsEncryptedFields,
@@ -755,8 +769,9 @@ export type SotEntityManifest = {
   SyncDocument: {
     domain: SyncDocument;
     // SyncDocument has no server-only columns — the server sees the same
-    // document-metadata shape as the client.
-    server: SyncDocument;
+    // document-metadata shape as the client. Identity alias maintains
+    // canonical-chain consistency across the plaintext fleet.
+    server: SyncDocumentServerMetadata;
     wire: SyncDocumentWire;
     encryptedFields: never;
   };
@@ -766,6 +781,22 @@ export type SotEntityManifest = {
     wire: ImportJobWire;
     // Plaintext domain — `checkpointState` is server-only resumption
     // state, attached only to the server-side metadata.
+    encryptedFields: never;
+  };
+  ImportEntityRef: {
+    domain: ImportEntityRef;
+    server: ImportEntityRefServerMetadata;
+    wire: ImportEntityRefWire;
+    // Plaintext entity — identity case on the discriminated union;
+    // source-entity to target-entity mapping carries no encrypted fields.
+    encryptedFields: never;
+  };
+  ExportRequest: {
+    domain: ExportRequest;
+    server: ExportRequestServerMetadata;
+    wire: ExportRequestWire;
+    // Plaintext entity — identity case; the domain already exposes
+    // everything the server tracks for an export request.
     encryptedFields: never;
   };
   // ── Cluster 10: Privacy-social ────────────────────────────────────────

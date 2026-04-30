@@ -3,7 +3,7 @@ import { now } from "@pluralscape/types";
 import { UpdateRegionBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
-import { parseAndValidateBlob } from "../../../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../../../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../../../lib/occ-update.js";
 import { withTenantTransaction } from "../../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../../lib/system-ownership.js";
@@ -17,22 +17,19 @@ import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type { InnerWorldRegionId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function updateRegion(
   db: PostgresJsDatabase,
   systemId: SystemId,
   regionId: InnerWorldRegionId,
-  params: unknown,
+  body: z.infer<typeof UpdateRegionBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<RegionResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    UpdateRegionBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
 
   const timestamp = now();
 
@@ -48,7 +45,7 @@ export async function updateRegion(
         and(
           eq(innerworldRegions.id, regionId),
           eq(innerworldRegions.systemId, systemId),
-          eq(innerworldRegions.version, parsed.version),
+          eq(innerworldRegions.version, body.version),
           eq(innerworldRegions.archived, false),
         ),
       )

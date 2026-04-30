@@ -1,8 +1,7 @@
 import { timerConfigs } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, brandId, toUnixMillis } from "@pluralscape/types";
-import { CreateTimerConfigBodySchema } from "@pluralscape/validation";
 
-import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
@@ -15,38 +14,35 @@ import type { TimerConfigResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { SystemId, TimerId } from "@pluralscape/types";
+import type { CreateTimerConfigBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function createTimerConfig(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  params: unknown,
+  body: z.infer<typeof CreateTimerConfigBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<TimerConfigResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    CreateTimerConfigBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
 
   const timerId = brandId<TimerId>(createId(ID_PREFIXES.timer));
   const timestamp = now();
-  const isEnabled = parsed.enabled ?? true;
-  const intervalMinutes = parsed.intervalMinutes ?? null;
+  const isEnabled = body.enabled ?? true;
+  const intervalMinutes = body.intervalMinutes ?? null;
 
-  // Compute initial nextCheckInAt if the timer is enabled with a valid interval
   const nextCheckInAt =
     isEnabled && intervalMinutes !== null
       ? toUnixMillis(
           computeNextCheckInAt(
             {
               intervalMinutes,
-              wakingHoursOnly: parsed.wakingHoursOnly ?? null,
-              wakingStart: parsed.wakingStart ?? null,
-              wakingEnd: parsed.wakingEnd ?? null,
+              wakingHoursOnly: body.wakingHoursOnly ?? null,
+              wakingStart: body.wakingStart ?? null,
+              wakingEnd: body.wakingEnd ?? null,
             },
             Date.now(),
           ),
@@ -61,9 +57,9 @@ export async function createTimerConfig(
         systemId,
         enabled: isEnabled,
         intervalMinutes,
-        wakingHoursOnly: parsed.wakingHoursOnly ?? null,
-        wakingStart: parsed.wakingStart ?? null,
-        wakingEnd: parsed.wakingEnd ?? null,
+        wakingHoursOnly: body.wakingHoursOnly ?? null,
+        wakingStart: body.wakingStart ?? null,
+        wakingEnd: body.wakingEnd ?? null,
         nextCheckInAt,
         encryptedData: blob,
         createdAt: timestamp,

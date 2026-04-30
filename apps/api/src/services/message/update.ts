@@ -1,9 +1,8 @@
 import { messages } from "@pluralscape/db/pg";
 import { brandId, now } from "@pluralscape/types";
-import { UpdateMessageBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
-import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../../lib/occ-update.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
@@ -17,25 +16,23 @@ import type { MessageResult, TimestampHint } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { ChannelId, MessageId, SystemId } from "@pluralscape/types";
+import type { UpdateMessageBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function updateMessage(
   db: PostgresJsDatabase,
   systemId: SystemId,
   messageId: MessageId,
-  params: unknown,
+  body: z.infer<typeof UpdateMessageBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
   hint?: TimestampHint,
 ): Promise<MessageResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    UpdateMessageBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
-  const version = parsed.version;
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
+  const version = body.version;
   const ts = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {

@@ -149,11 +149,12 @@ describe("poll service", () => {
   describe("createPoll", () => {
     const validPayload = {
       encryptedData: VALID_BLOB_BASE64,
-      kind: "standard",
+      kind: "standard" as const,
       allowMultipleVotes: false,
       maxVotesPerMember: 1,
       allowAbstain: false,
       allowVeto: false,
+      createdByMemberId: undefined,
     };
 
     it("creates a poll and returns result", async () => {
@@ -168,14 +169,6 @@ describe("poll service", () => {
       expect(mockAudit).toHaveBeenCalledWith(
         chain,
         expect.objectContaining({ eventType: "poll.created" }),
-      );
-    });
-
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      const { db } = mockDb();
-
-      await expect(createPoll(db, SYSTEM_ID, { bad: true }, AUTH, mockAudit)).rejects.toThrow(
-        expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }),
       );
     });
 
@@ -278,14 +271,6 @@ describe("poll service", () => {
         chain,
         expect.objectContaining({ eventType: "poll.updated" }),
       );
-    });
-
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      const { db } = mockDb();
-
-      await expect(
-        updatePoll(db, SYSTEM_ID, POLL_ID, { bad: true }, AUTH, mockAudit),
-      ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
     });
 
     it("throws POLL_CLOSED when poll is closed", async () => {

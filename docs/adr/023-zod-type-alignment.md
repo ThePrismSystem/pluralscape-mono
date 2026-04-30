@@ -2,7 +2,12 @@
 
 ## Status
 
-Accepted (refreshed 2026-04-22). This ADR refines the original Zod-type-alignment decision by extending it into a full single-source-of-truth convention covering Drizzle schema and generated OpenAPI types alongside Zod.
+Accepted (refreshed 2026-04-29). This ADR refines the original Zod-type-alignment decision by extending it into a full single-source-of-truth convention covering Drizzle schema and generated OpenAPI types alongside Zod.
+
+| Date       | Refresh                                                                                                                                                                                                |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-04-22 | Pilot decision (Option B), Class C/E taxonomy, archivable discriminated chain.                                                                                                                         |
+| 2026-04-29 | ps-6phh closeout: plaintext canonical chain documented; G8/G9/G10/G13 added; G6 expanded to fleet; G7 expanded to plaintext fleet. Full G1–G13 gate inventory added; G12 explicitly N/A for plaintext. |
 
 ## Context
 
@@ -21,7 +26,19 @@ Every encrypted domain entity publishes a six-link canonical chain from `package
 5. **`<Entity>Result`** — `EncryptedWire<<Entity>ServerMetadata>`. Server JS-runtime response shape: `encryptedData` brand-tagged as `EncryptedBase64`, `ServerInternal<…>` fields stripped.
 6. **`<Entity>Wire`** — `Serialize<<Entity>Result>`. JSON-serialized HTTP shape: brands strip to plain `string`, `UnixMillis` becomes `number`, `EncryptedBase64` collapses to `string`.
 
-Plaintext entities publish only `<Entity>` → `<Entity>ServerMetadata` → `<Entity>Wire`.
+### Plaintext entity canonical chain
+
+For entities without client-side encryption, the chain is:
+
+    X → XServerMetadata → XWire = Serialize<XServerMetadata>
+
+Where `XServerMetadata` is one of:
+
+- `X` (identity case — junction tables, `sync-document`)
+- `Archivable<X>` (archivable plaintext entities — `friend-code`, `notification-config`)
+- `X` extended with server-only columns wrapped in `ServerInternal<T>` (`account`, `audit-log-entry`, `blob-metadata`, `import-job`, `webhook-config`, `key-grant`)
+
+The `Serialize<>` mapped type strips `ServerInternal<T>`-marked fields automatically, so server-only state never reaches the wire. Plaintext entities therefore publish a three-link chain — `X` → `XServerMetadata` → `XWire` — and the wire derivation is mechanical (G10 enforces `XWire = Serialize<XServerMetadata>`). No `EncryptedWire<T>` step is needed because there is no encrypted blob.
 
 The taxonomy of encrypted-data shapes covered by this ADR:
 
@@ -162,6 +179,29 @@ the discriminated archivable shape doesn't compose cleanly with it.
 ### Enforcement — `pnpm types:check-sot`
 
 A single root script (`scripts/check-types-sot.ts`) runs all three parity mechanisms sequentially, short-circuiting on first failure. CI step in `.github/workflows/ci.yml` blocks on failure. Drift at any layer fails CI.
+
+### Parity gate inventory
+
+The full set of CI-enforced gates that defend the canonical chain:
+
+| Gate | What it checks                                                              | Where                                                                            |
+| ---- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| G1   | Domain ↔ Drizzle row equality (encrypted)                                   | `packages/db/src/__tests__/type-parity/<entity>.type.test.ts`                    |
+| G2   | Drizzle ↔ Zod input parity                                                  | `packages/validation/src/__tests__/type-parity/<entity>.type.test.ts`            |
+| G3   | Domain ↔ Zod encrypted input                                                | `packages/validation/src/__tests__/type-parity/<entity>.type.test.ts`            |
+| G4   | Body Zod ↔ Transform output                                                 | `packages/data/src/__tests__/type-parity/<entity>.type.test.ts`                  |
+| G5   | Encrypted ServerMetadata ↔ Drizzle row                                      | `packages/db/src/__tests__/type-parity/<entity>.type.test.ts`                    |
+| G6   | Manifest completeness (fleet bidirectional)                                 | `packages/db/src/__tests__/type-parity/__manifest-completeness__.type.test.ts`   |
+| G7   | OpenAPI ↔ Wire equality                                                     | `scripts/openapi-wire-parity.type-test.ts`                                       |
+| G8   | No hand-rolled `*Body`/`*Input`/`*Credentials`/`*Params`/`*Args` interfaces | `tooling/eslint-config/rules/no-hand-rolled-request-types.js`                    |
+| G9   | No `params: unknown` + `safeParse` in services; no `parseAndValidateBlob`   | `tooling/eslint-config/rules/no-params-unknown.js`                               |
+| G10  | Wire derivation = `Serialize<server>` or `Serialize<result>`                | `packages/types/src/__tests__/wire-derivation.type.test.ts`                      |
+| G11  | Every tRPC procedure has REST counterpart (or in `REST_ONLY_SET`)           | `apps/api/scripts/check-trpc-parity.ts`                                          |
+| G13  | Plaintext ServerMetadata ↔ Drizzle row                                      | `packages/db/src/__tests__/type-parity/plaintext-server-row-parity.type.test.ts` |
+
+G12 is intentionally omitted — it does not apply to plaintext entities (it covered an encrypted-only invariant absorbed into G5).
+
+Drift on any gate fails CI. The G8 and G9 rules have no allow-list mechanism — adding exceptions requires modifying the rule source itself, which is reviewed at the same level as a feature change. Project-wide `@eslint-community/eslint-comments/no-use` applies uniformly, so `eslint-disable` comments cannot bypass the rules in any subtree.
 
 ## Consequences
 

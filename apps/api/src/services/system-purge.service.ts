@@ -1,6 +1,5 @@
 import { assertAuthKey, assertAuthKeyHash, fromHex, verifyAuthKey } from "@pluralscape/crypto";
 import { accounts, systems } from "@pluralscape/db/pg";
-import { PurgeSystemBodySchema } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
@@ -12,7 +11,9 @@ import { tenantCtx } from "../lib/tenant-context.js";
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { SystemId } from "@pluralscape/types";
+import type { PurgeSystemBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 /**
  * Permanently hard-delete a system and all dependents.
@@ -26,12 +27,10 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 export async function purgeSystem(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  params: unknown,
+  body: z.infer<typeof PurgeSystemBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  const parsed = PurgeSystemBodySchema.parse(params);
-
   await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Verify system exists and belongs to account
     const [system] = await tx
@@ -65,7 +64,7 @@ export async function purgeSystem(
     }
 
     const authKeyHash = ensureUint8Array(account.authKeyHash);
-    const authKeyBytes = fromHex(parsed.authKey);
+    const authKeyBytes = fromHex(body.authKey);
     assertAuthKey(authKeyBytes);
     assertAuthKeyHash(authKeyHash);
     const valid = verifyAuthKey(authKeyBytes, authKeyHash);

@@ -1,11 +1,10 @@
 import { systemSnapshots } from "@pluralscape/db/pg";
 import { brandId, ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
-import { CreateSnapshotBodySchema } from "@pluralscape/validation";
 import { and, desc, eq, lt } from "drizzle-orm";
 
 import { HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { encryptedBlobToBase64, validateEncryptedBlob } from "../lib/encrypted-blob.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
@@ -27,7 +26,9 @@ import type {
   SystemSnapshotId,
   SystemSnapshotServerMetadata,
 } from "@pluralscape/types";
+import type { CreateSnapshotBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -56,17 +57,13 @@ function toSnapshotResult(row: {
 export async function createSnapshot(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  params: unknown,
+  body: z.infer<typeof CreateSnapshotBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SnapshotResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    CreateSnapshotBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
 
   const snapshotId = createId(ID_PREFIXES.systemSnapshot);
   const timestamp = now();
@@ -77,7 +74,7 @@ export async function createSnapshot(
       .values({
         id: brandId<SystemSnapshotId>(snapshotId),
         systemId,
-        snapshotTrigger: parsed.snapshotTrigger,
+        snapshotTrigger: body.snapshotTrigger,
         encryptedData: blob,
         createdAt: timestamp,
       })
@@ -90,7 +87,7 @@ export async function createSnapshot(
     await audit(tx, {
       eventType: "snapshot.created",
       actor: { kind: "account", id: auth.accountId },
-      detail: `Snapshot created (trigger: ${parsed.snapshotTrigger})`,
+      detail: `Snapshot created (trigger: ${body.snapshotTrigger})`,
       systemId,
     });
 

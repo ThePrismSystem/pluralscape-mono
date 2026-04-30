@@ -63,9 +63,10 @@ const VALID_BODY = {
   email: "test@example.com",
   newAuthKey: "a".repeat(64),
   newKdfSalt: "b".repeat(32),
-  newEncryptedMasterKey: "encryptedblob",
-  newRecoveryEncryptedMasterKey: "encryptedblob",
-  challengeSignature: "c".repeat(128),
+  newEncryptedMasterKey: "cd".repeat(48),
+  newRecoveryEncryptedMasterKey: "ef".repeat(48),
+  recoveryKeyHash: "11".repeat(32),
+  newRecoveryKeyHash: "22".repeat(32),
 };
 
 // ── Tests ────────────────────────────────────────────────────────

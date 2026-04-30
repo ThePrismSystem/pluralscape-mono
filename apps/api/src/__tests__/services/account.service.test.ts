@@ -289,18 +289,6 @@ describe("account service", () => {
       ).rejects.toThrow("Email change failed");
     });
 
-    it("throws ZodError on invalid email format", async () => {
-      const { db } = mockDb();
-      await expect(
-        changeEmail(
-          db,
-          brandId<AccountId>("acct_123"),
-          { email: "not-an-email", authKey: VALID_AUTH_KEY_HEX },
-          mockAudit,
-        ),
-      ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
-    });
-
     it("uses optimistic locking via version", async () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([
@@ -358,19 +346,6 @@ describe("account service", () => {
           mockAudit,
         ),
       ).rejects.toThrow("Incorrect password");
-    });
-
-    it("throws ZodError on missing required fields", async () => {
-      const { db } = mockDb();
-
-      await expect(
-        changePassword(
-          db,
-          brandId<AccountId>("acct_123"),
-          { oldAuthKey: VALID_AUTH_KEY_HEX },
-          mockAudit,
-        ),
-      ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
 
     it("returns ok and revokedSessionCount on success", async () => {
@@ -433,13 +408,6 @@ describe("account service", () => {
       await expect(
         changePassword(db, brandId<AccountId>("acct_123"), VALID_CHANGE_PASSWORD_PARAMS, mockAudit),
       ).rejects.toThrow("Account was modified concurrently");
-    });
-
-    it("throws ZodError on invalid Zod input", async () => {
-      const { db } = mockDb();
-      await expect(
-        changePassword(db, brandId<AccountId>("acct_123"), { oldAuthKey: "" }, mockAudit),
-      ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
 
     it("rejects when no signing key found", async () => {
@@ -505,30 +473,6 @@ describe("account service", () => {
           mockAudit,
         ),
       ).rejects.toThrow("Account was modified concurrently");
-    });
-
-    it("throws ZodError on invalid input type", async () => {
-      const { db } = mockDb();
-      await expect(
-        updateAccountSettings(
-          db,
-          brandId<AccountId>("acct_123"),
-          { auditLogIpTracking: "yes" },
-          mockAudit,
-        ),
-      ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
-    });
-
-    it("throws ZodError when version is missing", async () => {
-      const { db } = mockDb();
-      await expect(
-        updateAccountSettings(
-          db,
-          brandId<AccountId>("acct_123"),
-          { auditLogIpTracking: true },
-          mockAudit,
-        ),
-      ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
 
     it("calls audit with correct detail when enabling", async () => {

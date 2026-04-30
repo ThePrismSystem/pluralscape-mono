@@ -17,6 +17,7 @@ import {
 } from "./helpers/pg-helpers.js";
 
 import type { DbAuditActor } from "../helpers/types.js";
+import type { ServerInternal } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, auditLog };
@@ -50,7 +51,7 @@ describe("PG audit_log schema", () => {
 
     await db.insert(auditLog).values({
       id,
-      accountId,
+      accountId: accountId as ServerInternal<typeof accountId>,
       systemId,
       eventType: "auth.login",
       timestamp: now,
@@ -133,14 +134,17 @@ describe("PG audit_log schema", () => {
     for (const eventType of eventTypes) {
       await db.insert(auditLog).values({
         id: makeAuditLogEntryId(),
-        accountId,
+        accountId: accountId as ServerInternal<typeof accountId>,
         eventType,
         timestamp: now,
         actor: testActor("account", accountId),
       });
     }
 
-    const rows = await db.select().from(auditLog).where(eq(auditLog.accountId, accountId));
+    const rows = await db
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.accountId, accountId as ServerInternal<typeof accountId>));
     const insertedTypes = new Set(rows.map((r) => r.eventType));
     for (const et of eventTypes) {
       expect(insertedTypes.has(et)).toBe(true);
@@ -170,7 +174,7 @@ describe("PG audit_log schema", () => {
 
     await db.insert(auditLog).values({
       id,
-      accountId,
+      accountId: accountId as ServerInternal<typeof accountId>,
       eventType: "auth.login",
       timestamp: now,
       actor: testActor("account", accountId),
@@ -190,7 +194,7 @@ describe("PG audit_log schema", () => {
 
     await db.insert(auditLog).values({
       id,
-      accountId,
+      accountId: accountId as ServerInternal<typeof accountId>,
       systemId,
       eventType: "member.created",
       timestamp: now,

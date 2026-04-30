@@ -39,7 +39,8 @@ export type SystemStructureEntityMemberLinkServerMetadata = SystemStructureEntit
 
 /**
  * JSON-wire representation of SystemStructureEntityMemberLink. Derived
- * via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
- * becomes `number`.
+ * from `SystemStructureEntityMemberLinkServerMetadata` via `Serialize<T>`;
+ * branded IDs become plain strings, `UnixMillis` becomes `number`.
  */
-export type SystemStructureEntityMemberLinkWire = Serialize<SystemStructureEntityMemberLink>;
+export type SystemStructureEntityMemberLinkWire =
+  Serialize<SystemStructureEntityMemberLinkServerMetadata>;

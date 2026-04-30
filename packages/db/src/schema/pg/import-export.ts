@@ -62,7 +62,10 @@ export const importJobs = pgTable(
     progressPercent: integer("progress_percent").notNull().default(0),
     /** Error messages must be sanitized to exclude user-generated content (member names, etc.). */
     errorLog: jsonb("error_log").$type<readonly ImportError[]>(),
-    /** Resumption state for interrupted imports. See ImportCheckpointState in @pluralscape/types. */
+    /**
+     * Resumption state for interrupted imports. Exposed on the wire so
+     * the client can resume mid-import (see ADR-024 import resumability).
+     */
     checkpointState: jsonb("checkpoint_state").$type<ImportCheckpointState>(),
     warningCount: integer("warning_count").notNull().default(0),
     chunksTotal: integer("chunks_total"),

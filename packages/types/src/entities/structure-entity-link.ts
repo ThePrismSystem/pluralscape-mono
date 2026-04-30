@@ -20,8 +20,8 @@ export interface SystemStructureEntityLink {
 export type SystemStructureEntityLinkServerMetadata = SystemStructureEntityLink;
 
 /**
- * JSON-wire representation of SystemStructureEntityLink. Derived via
- * `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
- * becomes `number`.
+ * JSON-wire representation of SystemStructureEntityLink. Derived from
+ * `SystemStructureEntityLinkServerMetadata` via `Serialize<T>`; branded IDs
+ * become plain strings, `UnixMillis` becomes `number`.
  */
-export type SystemStructureEntityLinkWire = Serialize<SystemStructureEntityLink>;
+export type SystemStructureEntityLinkWire = Serialize<SystemStructureEntityLinkServerMetadata>;

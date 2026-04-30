@@ -240,12 +240,6 @@ describe("bucket service", () => {
       );
     });
 
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      await expect(
-        createBucket({} as never, SYSTEM_ID, { bad: true }, AUTH, mockAudit),
-      ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-    });
-
     it("throws QUOTA_EXCEEDED when at max buckets", async () => {
       thenableQueue.push([], [{ count: 50 }]);
 
@@ -354,12 +348,6 @@ describe("bucket service", () => {
         mockTx,
         expect.objectContaining({ eventType: "bucket.updated" }),
       );
-    });
-
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      await expect(
-        updateBucket({} as never, SYSTEM_ID, BUCKET_ID, { bad: true }, AUTH, mockAudit),
-      ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
     });
 
     it("throws CONFLICT on version mismatch when entity exists", async () => {

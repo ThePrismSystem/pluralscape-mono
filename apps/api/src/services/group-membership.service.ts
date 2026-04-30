@@ -1,9 +1,8 @@
 import { groupMemberships, groups, members } from "@pluralscape/db/pg";
 import { brandId, now, toUnixMillis } from "@pluralscape/types";
-import { AddGroupMemberBodySchema } from "@pluralscape/validation";
 import { and, eq, gt } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { toCursor } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
@@ -15,7 +14,9 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { GroupId, MemberId, PaginatedResult, SystemId, UnixMillis } from "@pluralscape/types";
+import type { AddGroupMemberBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -48,18 +49,13 @@ export async function addMember(
   db: PostgresJsDatabase,
   systemId: SystemId,
   groupId: GroupId,
-  params: unknown,
+  body: z.infer<typeof AddGroupMemberBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<GroupMembershipResult> {
   assertSystemOwnership(systemId, auth);
 
-  const parsed = AddGroupMemberBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid add member payload");
-  }
-
-  const { memberId } = parsed.data;
+  const { memberId } = body;
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {

@@ -8,7 +8,6 @@ import {
   now,
   toUnixMillis,
 } from "@pluralscape/types";
-import { CreateUploadUrlBodySchema } from "@pluralscape/validation";
 
 import { HTTP_BAD_REQUEST, HTTP_CONTENT_TOO_LARGE } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
@@ -21,8 +20,10 @@ import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { BlobStorageAdapter } from "@pluralscape/storage";
 import type { BlobQuotaService } from "@pluralscape/storage/quota";
-import type { BlobId, StorageKey, SystemId, UnixMillis } from "@pluralscape/types";
+import type { BlobId, ServerInternal, StorageKey, SystemId, UnixMillis } from "@pluralscape/types";
+import type { CreateUploadUrlBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export interface UploadUrlResult {
   readonly blobId: BlobId;
@@ -37,18 +38,13 @@ export async function createUploadUrl(
   storageAdapter: BlobStorageAdapter,
   quotaService: BlobQuotaService,
   systemId: SystemId,
-  params: unknown,
+  body: z.infer<typeof CreateUploadUrlBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<UploadUrlResult> {
   assertSystemOwnership(systemId, auth);
 
-  const result = CreateUploadUrlBodySchema.safeParse(params);
-  if (!result.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid payload");
-  }
-
-  const { purpose, mimeType, sizeBytes, encryptionTier } = result.data;
+  const { purpose, mimeType, sizeBytes, encryptionTier } = body;
 
   // Check per-purpose size limit
   const maxSize = BLOB_SIZE_LIMITS[purpose];
@@ -77,19 +73,23 @@ export async function createUploadUrl(
 
   // DB insert + audit inside transaction; S3 presigned URL outside to avoid
   // holding a DB connection open during external network I/O.
+  //
+  // The DB columns for storage_key, encryption_tier, expires_at are branded
+  // `ServerInternal<…>` so `Serialize<>` strips them at the wire boundary;
+  // tag the local values at the insert site (compile-time only).
   await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     await tx.insert(blobMetadata).values({
       id: blobId,
       systemId,
-      storageKey,
+      storageKey: storageKey as string as ServerInternal<string>,
       mimeType,
       sizeBytes,
-      encryptionTier,
+      encryptionTier: encryptionTier as ServerInternal<typeof encryptionTier>,
       purpose,
       checksum: null,
       createdAt: timestamp,
       uploadedAt: null,
-      expiresAt,
+      expiresAt: expiresAt as ServerInternal<UnixMillis>,
     });
 
     await audit(tx, {

@@ -1,7 +1,6 @@
 import { assertAuthKey, assertAuthKeyHash, verifyAuthKey } from "@pluralscape/crypto";
 import { accounts, recoveryKeys } from "@pluralscape/db/pg";
 import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
-import { RegenerateRecoveryKeySchema } from "@pluralscape/validation";
 import { and, eq, isNull } from "drizzle-orm";
 
 import { ensureUint8Array } from "../../lib/binary.js";
@@ -14,7 +13,9 @@ import { NoActiveRecoveryKeyError } from "./internal.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AccountId, RecoveryKeyId } from "@pluralscape/types";
+import type { RegenerateRecoveryKeySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 // ── Regenerate Recovery Key ──────────────────────────────────────
 
@@ -25,11 +26,9 @@ export interface RegenerateRecoveryKeyResult {
 export async function regenerateRecoveryKeyBackup(
   db: PostgresJsDatabase,
   accountId: AccountId,
-  params: unknown,
+  body: z.infer<typeof RegenerateRecoveryKeySchema>,
   audit: AuditWriter,
 ): Promise<RegenerateRecoveryKeyResult> {
-  const parsed = RegenerateRecoveryKeySchema.parse(params);
-
   return withAccountTransaction(db, accountId, async (tx) => {
     const [account] = await tx
       .select({
@@ -45,7 +44,7 @@ export async function regenerateRecoveryKeyBackup(
 
     const storedHash = ensureUint8Array(account.authKeyHash);
     assertAuthKeyHash(storedHash);
-    const authKeyBytes = fromHex(parsed.authKey);
+    const authKeyBytes = fromHex(body.authKey);
     assertAuthKey(authKeyBytes);
     const valid = verifyAuthKey(authKeyBytes, storedHash);
     if (!valid) {
@@ -64,8 +63,8 @@ export async function regenerateRecoveryKeyBackup(
       throw new NoActiveRecoveryKeyError("No active recovery key to revoke");
     }
 
-    const newRecoveryEncryptedMasterKeyBytes = fromHex(parsed.newRecoveryEncryptedMasterKey);
-    const recoveryKeyHashBytes = fromHex(parsed.recoveryKeyHash);
+    const newRecoveryEncryptedMasterKeyBytes = fromHex(body.newRecoveryEncryptedMasterKey);
+    const recoveryKeyHashBytes = fromHex(body.recoveryKeyHash);
     const timestamp = now();
     const newId = brandId<RecoveryKeyId>(createId(ID_PREFIXES.recoveryKey));
 

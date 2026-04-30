@@ -192,19 +192,6 @@ describe("recovery-key service", () => {
       ).rejects.toThrow("Incorrect password");
     });
 
-    it("throws ZodError when confirmed is false", async () => {
-      const { db } = mockDb();
-
-      await expect(
-        regenerateRecoveryKeyBackup(
-          db,
-          brandId<AccountId>("acct_123"),
-          { ...validParams, confirmed: false },
-          mockAudit,
-        ),
-      ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
-    });
-
     it("throws NoActiveRecoveryKeyError when no active key to revoke", async () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([{ authKeyHash: new Uint8Array(64) }]);
@@ -214,14 +201,6 @@ describe("recovery-key service", () => {
       await expect(
         regenerateRecoveryKeyBackup(db, brandId<AccountId>("acct_123"), validParams, mockAudit),
       ).rejects.toThrow(NoActiveRecoveryKeyError);
-    });
-
-    it("throws ZodError on invalid input", async () => {
-      const { db } = mockDb();
-
-      await expect(
-        regenerateRecoveryKeyBackup(db, brandId<AccountId>("acct_123"), {}, mockAudit),
-      ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
 
     it("throws when recovery key revoked concurrently (TOCTOU)", async () => {
@@ -345,14 +324,6 @@ describe("recovery-key service", () => {
       ).rejects.toThrow(NoActiveRecoveryKeyError);
 
       expect(mockEqualizeAntiEnumTiming).toHaveBeenCalledOnce();
-    });
-
-    it("throws ZodError on invalid input", async () => {
-      const { db } = mockDb();
-
-      await expect(
-        resetPasswordWithRecoveryKey(db, { email: "bad" }, "web", mockAudit),
-      ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
 
     it("uses a transaction for the atomic update", async () => {

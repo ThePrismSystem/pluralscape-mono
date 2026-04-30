@@ -1,4 +1,4 @@
-import { PAGINATION, brandId } from "@pluralscape/types";
+import { PAGINATION, brandId, toChecksumHex } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { fromCursor } from "../../lib/pagination.js";
@@ -50,7 +50,9 @@ const AUTH = makeTestAuth({
 
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 
-const VALID_CHECKSUM = "a".repeat(64);
+// Brand a 64-char lowercase hex digest into the canonical ChecksumHex shape
+// the service signature now expects (validation moved to the route boundary).
+const VALID_CHECKSUM = toChecksumHex("a".repeat(64));
 const VALID_STORAGE_KEY = `${SYSTEM_ID}/${BLOB_ID}`;
 
 function makeBlobRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -195,26 +197,8 @@ describe("createUploadUrl", () => {
     expect(mockAudit).not.toHaveBeenCalled();
   });
 
-  it("throws VALIDATION_ERROR for invalid payload", async () => {
-    const { db } = mockDb();
-    const storageAdapter = makeStorageAdapter();
-    const quotaService = makeQuotaService();
-
-    await expect(
-      createUploadUrl(
-        db,
-        storageAdapter as never,
-        quotaService as never,
-        SYSTEM_ID,
-        { purpose: "invalid-purpose", mimeType: "image/png", sizeBytes: 1024, encryptionTier: 1 },
-        AUTH,
-        mockAudit,
-      ),
-    ).rejects.toMatchObject({ code: "VALIDATION_ERROR", status: 400 });
-
-    expect(quotaService.assertQuota).not.toHaveBeenCalled();
-    expect(storageAdapter.generatePresignedUploadUrl).not.toHaveBeenCalled();
-  });
+  // Schema-level payload validation (e.g. unknown `purpose`) is exercised at
+  // the route/tRPC boundary; the service consumes already-parsed bodies.
 
   it("throws VALIDATION_ERROR when presigned upload is not supported by backend", async () => {
     const { db, chain } = mockDb();
@@ -306,16 +290,8 @@ describe("confirmUpload", () => {
     expect(mockAudit).not.toHaveBeenCalled();
   });
 
-  it("throws VALIDATION_ERROR for invalid payload", async () => {
-    const { db } = mockDb();
-
-    // checksum must be exactly 64 chars
-    await expect(
-      confirmUpload(db, SYSTEM_ID, BLOB_ID, { checksum: "tooshort" }, AUTH, mockAudit),
-    ).rejects.toMatchObject({ code: "VALIDATION_ERROR", status: 400 });
-
-    expect(mockAudit).not.toHaveBeenCalled();
-  });
+  // Checksum format validation moved to the route/tRPC boundary; the service
+  // consumes an already-branded `ChecksumHex`.
 });
 
 // ── Tests: getBlob ────────────────────────────────────────────────────

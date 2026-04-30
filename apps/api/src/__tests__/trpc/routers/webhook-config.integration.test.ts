@@ -65,6 +65,7 @@ async function seedWebhookConfig(
       url: TEST_WEBHOOK_URL,
       eventTypes: DEFAULT_EVENT_TYPES,
       enabled: true,
+      cryptoKeyId: undefined,
     },
     auth,
     noopAudit,

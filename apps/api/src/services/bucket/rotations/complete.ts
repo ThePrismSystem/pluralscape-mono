@@ -8,10 +8,9 @@ import {
   createId,
   now,
 } from "@pluralscape/types";
-import { CompleteChunkBodySchema } from "@pluralscape/validation";
 import { and, eq, inArray, sql } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../../../http.constants.js";
+import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../../../http.constants.js";
 import { ApiHttpError } from "../../../lib/api-error.js";
 import { withTenantTransaction } from "../../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../../lib/system-ownership.js";
@@ -29,23 +28,20 @@ import type {
   RotationItemStatus,
   SystemId,
 } from "@pluralscape/types";
+import type { CompleteChunkBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function completeRotationChunk(
   db: PostgresJsDatabase,
   systemId: SystemId,
   bucketId: BucketId,
   rotationId: BucketKeyRotationId,
-  params: unknown,
+  body: z.infer<typeof CompleteChunkBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<ChunkCompletionResponse> {
   assertSystemOwnership(systemId, auth);
-
-  const parsed = CompleteChunkBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid completion payload");
-  }
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Lock the rotation record to prevent concurrent sealing transitions
@@ -79,11 +75,11 @@ export async function completeRotationChunk(
     let failedDelta = 0;
 
     // Batch update items by outcome to avoid N individual round-trips
-    const completedIds = parsed.data.items
+    const completedIds = body.items
       .filter((item) => item.status === ROTATION_ITEM_STATUSES.completed)
       .map((item) => brandId<BucketRotationItemId>(item.itemId));
 
-    const pendingIds = parsed.data.items
+    const pendingIds = body.items
       .filter((item) => item.status !== ROTATION_ITEM_STATUSES.completed)
       .map((item) => brandId<BucketRotationItemId>(item.itemId));
 

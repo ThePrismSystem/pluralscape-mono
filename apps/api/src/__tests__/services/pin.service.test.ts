@@ -1,5 +1,5 @@
 import { brandId } from "@pluralscape/types";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
@@ -20,18 +20,6 @@ vi.mock("@pluralscape/db/pg", () => ({
   systems: { id: "id", accountId: "accountId", archived: "archived" },
 }));
 
-vi.mock("@pluralscape/validation", () => ({
-  SetPinBodySchema: {
-    safeParse: vi.fn(),
-  },
-  RemovePinBodySchema: {
-    safeParse: vi.fn(),
-  },
-  VerifyPinBodySchema: {
-    safeParse: vi.fn(),
-  },
-}));
-
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn((col: unknown, val: unknown) => ({ type: "eq", col, val })),
   sql: (strings: TemplateStringsArray, ...values: unknown[]) => ({ strings, values, _tag: "sql" }),
@@ -44,8 +32,6 @@ vi.mock("../../lib/system-ownership.js", () => ({
 // ── Imports after mocks ──────────────────────────────────────────────
 
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
-const { SetPinBodySchema, RemovePinBodySchema, VerifyPinBodySchema } =
-  await import("@pluralscape/validation");
 const { hashPinOffload, verifyPinOffload } = await import("../../lib/kdf-offload.js");
 const { setPin, removePin, verifyPinCode } = await import("../../services/pin.service.js");
 
@@ -66,14 +52,6 @@ describe("pin service", () => {
   });
 
   describe("setPin", () => {
-    beforeEach(() => {
-      const schema = vi.mocked(SetPinBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValue({
-        success: true,
-        data: { pin: "1234" },
-      });
-    });
-
     it("throws 404 for system ownership failure", async () => {
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
       const { db } = mockDb();
@@ -96,21 +74,6 @@ describe("pin service", () => {
       );
     });
 
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      const schema = vi.mocked(SetPinBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: false,
-        error: { issues: [] },
-      });
-
-      const { db } = mockDb();
-
-      await expect(setPin(db, SYSTEM_ID, {}, AUTH, mockAudit)).rejects.toMatchObject({
-        code: "VALIDATION_ERROR",
-        message: "Invalid PIN payload",
-      });
-    });
-
     it("throws NOT_FOUND when settings not found", async () => {
       const { db, chain } = mockDb();
       chain.returning.mockResolvedValueOnce([]);
@@ -123,14 +86,6 @@ describe("pin service", () => {
   });
 
   describe("removePin", () => {
-    beforeEach(() => {
-      const schema = vi.mocked(RemovePinBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValue({
-        success: true,
-        data: { pin: "1234" },
-      });
-    });
-
     it("succeeds when current PIN is correct", async () => {
       const { db, chain } = mockDb();
       // removePin uses .limit(1).for("update") — limit must return chain, for returns data
@@ -185,32 +140,9 @@ describe("pin service", () => {
         message: "PIN is incorrect",
       });
     });
-
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      const schema = vi.mocked(RemovePinBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: false,
-        error: { issues: [] },
-      });
-
-      const { db } = mockDb();
-
-      await expect(removePin(db, SYSTEM_ID, {}, AUTH, mockAudit)).rejects.toMatchObject({
-        code: "VALIDATION_ERROR",
-        message: "Invalid PIN payload",
-      });
-    });
   });
 
   describe("verifyPinCode", () => {
-    beforeEach(() => {
-      const schema = vi.mocked(VerifyPinBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValue({
-        success: true,
-        data: { pin: "1234" },
-      });
-    });
-
     it("returns { verified: true } on correct PIN", async () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([{ pinHash: "$argon2id$fake$hash" }]);

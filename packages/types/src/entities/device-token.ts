@@ -44,5 +44,11 @@ export interface DeviceTokenServerMetadata {
  * JSON-wire representation of a DeviceToken. Derived from the domain
  * `DeviceToken` type via `Serialize<T>`; branded IDs become plain strings
  * and `UnixMillis` becomes `number`.
+ *
+ * NB: Wire is derived from the domain type (not `DeviceTokenServerMetadata`)
+ * because the row stores `tokenHash` (not the raw `token` the client
+ * submits) and lacks the audit-metadata columns (`updatedAt`, `version`)
+ * the domain carries via `AuditMetadata`. The API never returns the raw
+ * token to the client.
  */
 export type DeviceTokenWire = Serialize<DeviceToken>;

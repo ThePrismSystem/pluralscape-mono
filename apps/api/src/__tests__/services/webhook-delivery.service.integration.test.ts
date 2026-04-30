@@ -53,6 +53,8 @@ describe("webhook-delivery.service (PGlite integration)", () => {
       {
         url: "https://example.com/hook",
         eventTypes: ["fronting.started", "fronting.ended"],
+        enabled: true,
+        cryptoKeyId: undefined,
       },
       auth,
       noopAudit,

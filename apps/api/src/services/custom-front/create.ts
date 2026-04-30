@@ -5,7 +5,7 @@ import { and, count, eq } from "drizzle-orm";
 
 import { HTTP_TOO_MANY_REQUESTS } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
-import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
@@ -20,21 +20,18 @@ import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { CustomFrontId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function createCustomFront(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  params: unknown,
+  body: z.infer<typeof CreateCustomFrontBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<CustomFrontResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { blob } = parseAndValidateBlob(
-    params,
-    CreateCustomFrontBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
 
   const cfId = brandId<CustomFrontId>(createId(ID_PREFIXES.customFront));
   const timestamp = now();

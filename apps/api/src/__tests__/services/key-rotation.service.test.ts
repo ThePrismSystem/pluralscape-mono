@@ -133,14 +133,6 @@ describe("key-rotation service", () => {
       expect(result.toKeyVersion).toBe(2);
     });
 
-    it("throws VALIDATION_ERROR on invalid params", async () => {
-      const { db } = mockDb();
-
-      await expect(
-        initiateRotation(db, SYSTEM_ID, BUCKET_ID, { invalid: true }, AUTH, mockAudit),
-      ).rejects.toThrow("Invalid initiate payload");
-    });
-
     it("throws ROTATION_IN_PROGRESS when a migrating rotation is active", async () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([makeRotationRow({ state: ROTATION_STATES.migrating })]);
@@ -315,14 +307,6 @@ describe("key-rotation service", () => {
       ).rejects.toThrow(expect.objectContaining({ status: 409, code: "CONFLICT" }));
     });
 
-    it("throws VALIDATION_ERROR on invalid claim params", async () => {
-      const { db } = mockDb();
-
-      await expect(
-        claimRotationChunk(db, SYSTEM_ID, BUCKET_ID, ROTATION_ID, { chunkSize: -1 }, AUTH),
-      ).rejects.toThrow("Invalid claim payload");
-    });
-
     it("does not transition state when rotation is already migrating", async () => {
       const { db, chain } = mockDb();
 
@@ -367,22 +351,6 @@ describe("key-rotation service", () => {
       const { db, chain } = mockDb();
       return { db, chain };
     }
-
-    it("throws VALIDATION_ERROR on invalid completion params", async () => {
-      const { db } = mockDb();
-
-      await expect(
-        completeRotationChunk(
-          db,
-          SYSTEM_ID,
-          BUCKET_ID,
-          ROTATION_ID,
-          { invalid: true },
-          AUTH,
-          mockAudit,
-        ),
-      ).rejects.toThrow("Invalid completion payload");
-    });
 
     it("throws NOT_FOUND when rotation does not exist inside transaction", async () => {
       const { db, chain } = mockDbWithFor();
@@ -477,7 +445,7 @@ describe("key-rotation service", () => {
           SYSTEM_ID,
           BUCKET_ID,
           ROTATION_ID,
-          { invalid: true },
+          { items: [] },
           AUTH,
           mockAudit,
         ),

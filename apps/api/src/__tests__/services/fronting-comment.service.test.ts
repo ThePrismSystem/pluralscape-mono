@@ -67,6 +67,8 @@ const mockAudit = vi.fn().mockResolvedValue(undefined);
 const VALID_CREATE_PARAMS = {
   encryptedData: VALID_BLOB_BASE64,
   memberId: MEMBER_ID,
+  customFrontId: undefined,
+  structureEntityId: undefined,
 };
 
 const VALID_UPDATE_PARAMS = {
@@ -149,14 +151,6 @@ describe("createFrontingComment", () => {
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
-  it("throws 400 for invalid body (parseAndValidateBlob fails)", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      createFrontingComment(db, SYSTEM_ID, SESSION_ID, { bad: "data" }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-  });
-
   it("throws 404 when parent fronting session not found", async () => {
     const { db, chain } = mockDb();
     // resolveSessionStartTime: no session found
@@ -212,7 +206,12 @@ describe("createFrontingComment", () => {
       db,
       SYSTEM_ID,
       SESSION_ID,
-      { encryptedData: VALID_BLOB_BASE64, customFrontId: CF_ID },
+      {
+        encryptedData: VALID_BLOB_BASE64,
+        memberId: undefined,
+        customFrontId: CF_ID,
+        structureEntityId: undefined,
+      },
       AUTH,
       mockAudit,
     );
@@ -233,7 +232,12 @@ describe("createFrontingComment", () => {
       db,
       SYSTEM_ID,
       SESSION_ID,
-      { encryptedData: VALID_BLOB_BASE64, structureEntityId: SE_ID },
+      {
+        encryptedData: VALID_BLOB_BASE64,
+        memberId: undefined,
+        customFrontId: undefined,
+        structureEntityId: SE_ID,
+      },
       AUTH,
       mockAudit,
     );
@@ -499,22 +503,6 @@ describe("updateFrontingComment", () => {
       detail: "Fronting comment updated",
       systemId: SYSTEM_ID,
     });
-  });
-
-  it("throws 400 for invalid body", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      updateFrontingComment(
-        db,
-        SYSTEM_ID,
-        SESSION_ID,
-        COMMENT_ID,
-        { bad: "data" },
-        AUTH,
-        mockAudit,
-      ),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
   it("throws 409 on version conflict (entity still exists)", async () => {

@@ -1,11 +1,12 @@
 import { ID_PREFIXES } from "@pluralscape/types";
+import { CastVoteBodySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
 import { HTTP_CREATED } from "../../http.constants.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
+import { parseBody } from "../../lib/body-parse.js";
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
-import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createIdempotencyMiddleware } from "../../middleware/idempotency.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
@@ -19,11 +20,12 @@ castVoteRoute.use("*", createCategoryRateLimiter("write"));
 castVoteRoute.use("*", createIdempotencyMiddleware());
 
 castVoteRoute.post("/:pollId/votes", async (c) => {
+  const body = await parseBody(c, CastVoteBodySchema);
+
   const auth = c.get("auth");
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const pollId = requireIdParam(c.req.param("pollId"), "pollId", ID_PREFIXES.poll);
   const audit = createAuditWriter(c, auth);
-  const body = await parseJsonBody(c);
 
   const db = await getDb();
   const result = await castVote(db, systemId, pollId, body, auth, audit);

@@ -1,9 +1,8 @@
 import { acknowledgements } from "@pluralscape/db/pg";
 import { now } from "@pluralscape/types";
-import { ConfirmAcknowledgementBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../../http.constants.js";
+import { HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
@@ -17,27 +16,23 @@ import { toAcknowledgementResult, type AcknowledgementResult } from "./internal.
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { AcknowledgementId, SystemId } from "@pluralscape/types";
+import type { ConfirmAcknowledgementBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function confirmAcknowledgement(
   db: PostgresJsDatabase,
   systemId: SystemId,
   ackId: AcknowledgementId,
-  params: unknown,
+  body: z.infer<typeof ConfirmAcknowledgementBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<AcknowledgementResult> {
   assertSystemOwnership(systemId, auth);
 
-  const result = ConfirmAcknowledgementBodySchema.safeParse(params);
-  if (!result.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid confirmation payload");
-  }
-  const parsed = result.data;
-
   const newBlob =
-    parsed.encryptedData !== undefined
-      ? validateEncryptedBlob(parsed.encryptedData, MAX_ENCRYPTED_DATA_BYTES)
+    body.encryptedData !== undefined
+      ? validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES)
       : undefined;
 
   const timestamp = now();
@@ -60,7 +55,6 @@ export async function confirmAcknowledgement(
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Acknowledgement not found");
     }
 
-    // Idempotent: already confirmed — return current state without writing
     if (existing.confirmed) {
       return toAcknowledgementResult(existing);
     }

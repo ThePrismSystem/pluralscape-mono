@@ -2,12 +2,11 @@ import { ID_PREFIXES } from "@pluralscape/types";
 import { UpdateFriendVisibilityBodySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
-import { HTTP_BAD_REQUEST } from "../../../http.constants.js";
-import { ApiHttpError } from "../../../lib/api-error.js";
+import {} from "../../../http.constants.js";
 import { createAuditWriter } from "../../../lib/audit-writer.js";
+import { parseBody } from "../../../lib/body-parse.js";
 import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
-import { parseJsonBody } from "../../../lib/parse-json-body.js";
 import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { updateFriendVisibility } from "../../../services/account/friends/update.js";
@@ -26,26 +25,9 @@ visibilityRoute.put("/:connectionId/visibility", async (c) => {
     ID_PREFIXES.friendConnection,
   );
   const audit = createAuditWriter(c, auth);
-  const body = await parseJsonBody(c);
-
-  const parsed = UpdateFriendVisibilityBodySchema.safeParse(body);
-  if (!parsed.success) {
-    throw new ApiHttpError(
-      HTTP_BAD_REQUEST,
-      "VALIDATION_ERROR",
-      "Invalid request body",
-      parsed.error.issues,
-    );
-  }
+  const body = await parseBody(c, UpdateFriendVisibilityBodySchema);
 
   const db = await getDb();
-  const result = await updateFriendVisibility(
-    db,
-    auth.accountId,
-    connectionId,
-    parsed.data,
-    auth,
-    audit,
-  );
+  const result = await updateFriendVisibility(db, auth.accountId, connectionId, body, auth, audit);
   return c.json(envelope(result));
 });

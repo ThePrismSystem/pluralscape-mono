@@ -38,7 +38,8 @@ export type SystemStructureEntityAssociationServerMetadata = SystemStructureEnti
 
 /**
  * JSON-wire representation of SystemStructureEntityAssociation. Derived
- * via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
- * becomes `number`.
+ * from `SystemStructureEntityAssociationServerMetadata` via `Serialize<T>`;
+ * branded IDs become plain strings, `UnixMillis` becomes `number`.
  */
-export type SystemStructureEntityAssociationWire = Serialize<SystemStructureEntityAssociation>;
+export type SystemStructureEntityAssociationWire =
+  Serialize<SystemStructureEntityAssociationServerMetadata>;

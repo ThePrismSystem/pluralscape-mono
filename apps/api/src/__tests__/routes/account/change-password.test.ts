@@ -51,6 +51,18 @@ const { accountRoutes } = await import("../../../routes/account/index.js");
 
 const createApp = () => createRouteApp("/account", accountRoutes);
 
+/**
+ * Valid ChangePasswordSchema body shape — fields are fixed-size hex strings
+ * matching the byte-length validators in `packages/validation/src/auth.ts`.
+ */
+const VALID_CHANGE_PASSWORD_BODY = {
+  oldAuthKey: "ab".repeat(32),
+  newAuthKey: "cd".repeat(32),
+  newKdfSalt: "ef".repeat(16),
+  newEncryptedMasterKey: "11".repeat(72),
+  challengeSignature: "22".repeat(64),
+} as const;
+
 // ── Tests ────────────────────────────────────────────────────────
 
 describe("PUT /account/password", () => {
@@ -73,7 +85,7 @@ describe("PUT /account/password", () => {
     const res = await app.request("/account/password", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword: "oldpass123", newPassword: "newpass123" }),
+      body: JSON.stringify(VALID_CHANGE_PASSWORD_BODY),
     });
 
     expect(res.status).toBe(200);
@@ -92,7 +104,7 @@ describe("PUT /account/password", () => {
     const res = await app.request("/account/password", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword: "wrong", newPassword: "newpass123" }),
+      body: JSON.stringify(VALID_CHANGE_PASSWORD_BODY),
     });
 
     expect(res.status).toBe(400);
@@ -111,13 +123,13 @@ describe("PUT /account/password", () => {
     await app.request("/account/password", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword: "oldpass123", newPassword: "newpass123" }),
+      body: JSON.stringify(VALID_CHANGE_PASSWORD_BODY),
     });
 
     expect(vi.mocked(changePassword)).toHaveBeenCalledWith(
       {},
       "acct_test001",
-      { currentPassword: "oldpass123", newPassword: "newpass123" },
+      VALID_CHANGE_PASSWORD_BODY,
       expect.any(Function),
     );
     expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(
@@ -135,7 +147,7 @@ describe("PUT /account/password", () => {
     const res = await app.request("/account/password", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword: "oldpass123", newPassword: "newpass123" }),
+      body: JSON.stringify(VALID_CHANGE_PASSWORD_BODY),
     });
 
     expect(res.status).toBe(409);
@@ -143,21 +155,16 @@ describe("PUT /account/password", () => {
     expect(body.error.code).toBe("CONFLICT");
   });
 
-  it("returns 400 on short new password", async () => {
-    vi.mocked(changePassword).mockRejectedValueOnce(
-      new ValidationError("Password must be at least 8 characters"),
-    );
-
+  it("returns 400 on schema validation failure", async () => {
     const app = createApp();
     const res = await app.request("/account/password", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword: "oldpass123", newPassword: "short" }),
+      body: JSON.stringify({ oldAuthKey: "not-hex" }),
     });
 
     expect(res.status).toBe(400);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("VALIDATION_ERROR");
-    expect(body.error.message).toContain("Password must be at least");
   });
 });

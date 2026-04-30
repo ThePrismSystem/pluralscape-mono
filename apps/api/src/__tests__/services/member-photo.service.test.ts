@@ -416,16 +416,6 @@ describe("reorderMemberPhotos", () => {
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
-
-  it("throws VALIDATION_ERROR for invalid body", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
-    chain.where.mockReturnValueOnce(chain); // assertMemberActive → chains to .limit()
-
-    await expect(
-      reorderMemberPhotos(db, SYSTEM_ID, MEMBER_ID, { order: [] }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-  });
 });
 
 describe("archiveMemberPhoto", () => {

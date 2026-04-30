@@ -1,10 +1,7 @@
 import { systemStructureEntityTypes } from "@pluralscape/db/pg";
 import { now } from "@pluralscape/types";
-import { UpdateStructureEntityTypeBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST } from "../../../http.constants.js";
-import { ApiHttpError } from "../../../lib/api-error.js";
 import { validateEncryptedBlob } from "../../../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../../../lib/occ-update.js";
 import { withTenantTransaction } from "../../../lib/rls-context.js";
@@ -17,24 +14,21 @@ import { toEntityTypeResult, type EntityTypeResult } from "./internal.js";
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type { SystemId, SystemStructureEntityTypeId } from "@pluralscape/types";
+import type { UpdateStructureEntityTypeBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function updateEntityType(
   db: PostgresJsDatabase,
   systemId: SystemId,
   entityTypeId: SystemStructureEntityTypeId,
-  params: unknown,
+  body: z.infer<typeof UpdateStructureEntityTypeBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<EntityTypeResult> {
   assertSystemOwnership(systemId, auth);
 
-  const parsed = UpdateStructureEntityTypeBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid update payload");
-  }
-
-  const blob = validateEncryptedBlob(parsed.data.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -42,7 +36,7 @@ export async function updateEntityType(
       .update(systemStructureEntityTypes)
       .set({
         encryptedData: blob,
-        sortOrder: parsed.data.sortOrder,
+        sortOrder: body.sortOrder,
         updatedAt: timestamp,
         version: sql`${systemStructureEntityTypes.version} + 1`,
       })
@@ -50,7 +44,7 @@ export async function updateEntityType(
         and(
           eq(systemStructureEntityTypes.id, entityTypeId),
           eq(systemStructureEntityTypes.systemId, systemId),
-          eq(systemStructureEntityTypes.version, parsed.data.version),
+          eq(systemStructureEntityTypes.version, body.version),
           eq(systemStructureEntityTypes.archived, false),
         ),
       )

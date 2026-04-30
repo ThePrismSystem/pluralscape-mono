@@ -1,13 +1,8 @@
 import { bucketContentTags } from "@pluralscape/db/pg";
-import {
-  BucketContentTagQuerySchema,
-  TagContentBodySchema,
-  UntagContentParamsSchema,
-} from "@pluralscape/validation";
+import { BucketContentTagQuerySchema } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
-import { z } from "zod/v4";
 
-import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { logger } from "../lib/logger.js";
 import { parseQuery } from "../lib/query-parse.js";
@@ -32,7 +27,9 @@ import type {
   SystemId,
   TaggedEntityRef,
 } from "@pluralscape/types";
+import type { TagContentBodySchema, UntagContentParamsSchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -47,21 +44,11 @@ export async function tagContent(
   db: PostgresJsDatabase,
   systemId: SystemId,
   bucketId: BucketId,
-  params: unknown,
+  body: z.infer<typeof TagContentBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<BucketContentTag> {
   assertSystemOwnership(systemId, auth);
-
-  const parsed = TagContentBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(
-      HTTP_BAD_REQUEST,
-      "VALIDATION_ERROR",
-      "Invalid tag content payload",
-      z.treeifyError(parsed.error),
-    );
-  }
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     await assertBucketExists(tx, systemId, bucketId);
@@ -69,8 +56,8 @@ export async function tagContent(
     const [inserted] = await tx
       .insert(bucketContentTags)
       .values({
-        entityType: parsed.data.entityType,
-        entityId: parsed.data.entityId,
+        entityType: body.entityType,
+        entityId: body.entityId,
         bucketId,
         systemId,
       })
@@ -81,19 +68,19 @@ export async function tagContent(
       await audit(tx, {
         eventType: "bucket-content-tag.tagged",
         actor: { kind: "account", id: auth.accountId },
-        detail: `Tagged ${parsed.data.entityType} ${parsed.data.entityId} in bucket`,
+        detail: `Tagged ${body.entityType} ${body.entityId} in bucket`,
         systemId,
       });
       await dispatchWebhookEvent(tx, systemId, "bucket-content-tag.tagged", {
         bucketId,
-        entityType: parsed.data.entityType,
-        entityId: parsed.data.entityId,
+        entityType: body.entityType,
+        entityId: body.entityId,
       });
     }
 
     return decodeBucketContentTagRow({
-      entityType: parsed.data.entityType,
-      entityId: parsed.data.entityId,
+      entityType: body.entityType,
+      entityId: body.entityId,
       bucketId,
     });
   });
@@ -105,22 +92,13 @@ export async function untagContent(
   db: PostgresJsDatabase,
   systemId: SystemId,
   bucketId: BucketId,
-  params: unknown,
+  body: z.infer<typeof UntagContentParamsSchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  const parsed = UntagContentParamsSchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(
-      HTTP_BAD_REQUEST,
-      "VALIDATION_ERROR",
-      "Invalid (entityType, entityId) pair",
-      z.treeifyError(parsed.error),
-    );
-  }
-  const ref: TaggedEntityRef = parsed.data;
+  const ref: TaggedEntityRef = body;
 
   await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const deleted = await tx

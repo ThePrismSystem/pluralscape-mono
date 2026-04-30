@@ -19,6 +19,7 @@ import type {
   TimerId,
 } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 import type { ImportEntityType, ImportSourceFormat } from "./import-job.js";
 
 interface ImportEntityRefBase {
@@ -74,3 +75,17 @@ export type ImportEntityRef = {
     readonly pluralscapeEntityId: ImportEntityTargetIdMap[K];
   };
 }[ImportEntityType];
+
+/**
+ * `ImportEntityRefServerMetadata` is the server-side row shape for an
+ * import entity ref. Identity case — the discriminated union is the
+ * complete server view.
+ */
+export type ImportEntityRefServerMetadata = ImportEntityRef;
+
+/**
+ * `ImportEntityRefWire` is the JSON-serialized HTTP shape. Derived from
+ * `ImportEntityRefServerMetadata` via `Serialize<>` for canonical-chain
+ * consistency.
+ */
+export type ImportEntityRefWire = Serialize<ImportEntityRefServerMetadata>;

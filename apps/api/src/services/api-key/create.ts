@@ -9,10 +9,7 @@ import {
   now,
   toUnixMillis,
 } from "@pluralscape/types";
-import { CreateApiKeyBodySchema } from "@pluralscape/validation";
 
-import { HTTP_BAD_REQUEST } from "../../http.constants.js";
-import { ApiHttpError } from "../../lib/api-error.js";
 import { toT3EncryptedBytes, validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
@@ -28,7 +25,9 @@ import {
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { ApiKeyId, BucketId, SystemId } from "@pluralscape/types";
+import type { CreateApiKeyBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 // ── Constants ──────────────────────────────────────────────────────
 
@@ -57,19 +56,13 @@ async function generateTokenPair(): Promise<{ token: string; tokenHash: string }
 export async function createApiKey(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  params: unknown,
+  body: z.infer<typeof CreateApiKeyBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<ApiKeyCreateResult> {
   assertSystemOwnership(systemId, auth);
 
-  const result = CreateApiKeyBodySchema.safeParse(params);
-  if (!result.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid payload");
-  }
-
-  const { keyType, scopes, encryptedData, encryptedKeyMaterial, expiresAt, scopedBucketIds } =
-    result.data;
+  const { keyType, scopes, encryptedData, encryptedKeyMaterial, expiresAt, scopedBucketIds } = body;
 
   const blob = validateEncryptedBlob(encryptedData);
   const akId = brandId<ApiKeyId>(createId(ID_PREFIXES.apiKey));

@@ -1,4 +1,5 @@
 import type { AccountId, Brand } from "../ids.js";
+import type { ServerInternal } from "../server-internal.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { Serialize } from "../type-assertions.js";
 import type { AuditMetadata } from "../utility.js";
@@ -21,33 +22,6 @@ export interface Account extends AuditMetadata {
   readonly encryptedMasterKey: Uint8Array;
 }
 
-/** Input type for login. */
-export interface LoginCredentials {
-  readonly email: string;
-  readonly authKey: string;
-}
-
-/** Input for registration phase 1: initiate. */
-export interface RegistrationInitiateInput {
-  readonly email: string;
-  readonly accountType: AccountType;
-}
-
-/** Input for registration phase 2: commit. */
-export interface RegistrationCommitInput {
-  readonly accountId: string;
-  readonly authKey: string;
-  readonly encryptedMasterKey: string;
-  readonly encryptedSigningPrivateKey: string;
-  readonly encryptedEncryptionPrivateKey: string;
-  readonly publicSigningKey: string;
-  readonly publicEncryptionKey: string;
-  readonly recoveryEncryptedMasterKey: string;
-  readonly challengeSignature: string;
-  readonly recoveryKeyBackupConfirmed: boolean;
-  readonly recoveryKeyHash: string;
-}
-
 /**
  * Server-visible Account metadata — raw Drizzle row shape.
  *
@@ -57,21 +31,27 @@ export interface RegistrationCommitInput {
  * (`challengeNonce` + `challengeExpiresAt`), the server-held encrypted email
  * used for operational mail (ADR 029), and the `auditLogIpTracking` toggle
  * (ADR 028).
+ *
+ * The four server-only columns are branded `ServerInternal<…>` so
+ * `Serialize<AccountServerMetadata>` strips them from the wire envelope —
+ * the client never sees server-fill-only registration scaffolding.
  */
 export interface AccountServerMetadata extends Account {
   /** Challenge nonce for two-phase registration. Cleared after successful commit. */
-  readonly challengeNonce: Uint8Array | null;
+  readonly challengeNonce: ServerInternal<Uint8Array> | null;
   /** Expiry time for the challenge nonce (5 minutes after creation). */
-  readonly challengeExpiresAt: UnixMillis | null;
+  readonly challengeExpiresAt: ServerInternal<UnixMillis> | null;
   /** Server-side encrypted email for operational communication (ADR 029). Null for pre-migration accounts. */
-  readonly encryptedEmail: Uint8Array | null;
+  readonly encryptedEmail: ServerInternal<Uint8Array> | null;
   /** When true, IP address and user-agent are persisted in audit log entries (ADR 028). */
-  readonly auditLogIpTracking: boolean;
+  readonly auditLogIpTracking: ServerInternal<boolean>;
 }
 
 /**
- * JSON-wire representation of an Account. Derived from the domain `Account`
- * type via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
- * becomes `number`, and `Uint8Array` becomes `string` (base64).
+ * JSON-wire representation of an Account. Derived from
+ * `AccountServerMetadata` via `Serialize<T>`; branded IDs become plain
+ * strings, `UnixMillis` becomes `number`, and `Uint8Array` becomes `string`
+ * (base64). `ServerInternal<…>`-branded server-only columns are stripped
+ * by `Serialize<>` so the client never sees them.
  */
-export type AccountWire = Serialize<Account>;
+export type AccountWire = Serialize<AccountServerMetadata>;

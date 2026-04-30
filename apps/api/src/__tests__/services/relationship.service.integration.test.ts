@@ -30,7 +30,9 @@ import {
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { AccountId, MemberId, RelationshipId, SystemId } from "@pluralscape/types";
+import type { CreateRelationshipBodySchema } from "@pluralscape/validation";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
+import type { z } from "zod/v4";
 
 const { relationships } = schema;
 
@@ -63,7 +65,9 @@ describe("relationship.service (PGlite integration)", () => {
     await db.delete(relationships);
   });
 
-  function relParams(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  function relParams(
+    overrides: Partial<z.infer<typeof CreateRelationshipBodySchema>> = {},
+  ): z.infer<typeof CreateRelationshipBodySchema> {
     return {
       sourceMemberId: memberA,
       targetMemberId: memberB,
@@ -98,7 +102,7 @@ describe("relationship.service (PGlite integration)", () => {
         createRelationship(
           asDb(db),
           systemId,
-          relParams({ sourceMemberId: `mem_${crypto.randomUUID()}` }),
+          relParams({ sourceMemberId: brandId<MemberId>(`mem_${crypto.randomUUID()}`) }),
           auth,
           noopAudit,
         ),
@@ -113,7 +117,7 @@ describe("relationship.service (PGlite integration)", () => {
         createRelationship(
           asDb(db),
           systemId,
-          relParams({ targetMemberId: `mem_${crypto.randomUUID()}` }),
+          relParams({ targetMemberId: brandId<MemberId>(`mem_${crypto.randomUUID()}`) }),
           auth,
           noopAudit,
         ),

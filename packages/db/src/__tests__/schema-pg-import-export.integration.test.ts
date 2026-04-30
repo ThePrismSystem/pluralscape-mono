@@ -20,7 +20,12 @@ import {
   pgInsertSystem,
 } from "./helpers/pg-helpers.js";
 
-import type { AccountPurgeRequestId, ImportCheckpointState, ImportJobId } from "@pluralscape/types";
+import type {
+  AccountPurgeRequestId,
+  ImportCheckpointState,
+  ImportJobId,
+  ServerInternal,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = {
@@ -828,7 +833,9 @@ describe("PG import-export schema", () => {
         source: "simply-plural",
         status: "importing",
         progressPercent: 25,
-        checkpointState: state,
+        // The DB column is branded `ServerInternal<…>` for wire-strip; tag
+        // the literal at the insert site (compile-time only).
+        checkpointState: state as ServerInternal<ImportCheckpointState>,
         createdAt: now,
         updatedAt: now,
       });

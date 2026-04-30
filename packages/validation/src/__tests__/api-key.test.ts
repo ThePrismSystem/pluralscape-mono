@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod/v4";
 
-import { ApiKeyEncryptedPayloadSchema } from "../api-key.js";
+import { ApiKeyEncryptedPayloadSchema, CreateApiKeyBodySchema } from "../api-key.js";
 import { PUBLIC_KEY_BYTE_LENGTH } from "../validation.constants.js";
 
 const VALID_PUBLIC_KEY_B64 = z.util.uint8ArrayToBase64(new Uint8Array(PUBLIC_KEY_BYTE_LENGTH));
+const VALID_ENCRYPTED_DATA = z.util.uint8ArrayToBase64(new Uint8Array(64));
 
 describe("ApiKeyEncryptedPayloadSchema (codec)", () => {
   describe("z.decode (wire → memory)", () => {
@@ -108,5 +109,74 @@ describe("ApiKeyEncryptedPayloadSchema (codec)", () => {
     if (decoded.keyType !== "crypto") throw new Error("expected crypto variant");
     expect(Array.from(decoded.publicKey)).toEqual(Array.from(original.publicKey));
     expect(decoded.name).toBe(original.name);
+  });
+});
+
+describe("CreateApiKeyBodySchema", () => {
+  const validMetadataBody = {
+    keyType: "metadata" as const,
+    scopes: ["read:fronting"] as const,
+    encryptedData: VALID_ENCRYPTED_DATA,
+  };
+
+  const validCryptoBody = {
+    keyType: "crypto" as const,
+    scopes: ["read:fronting"] as const,
+    encryptedData: VALID_ENCRYPTED_DATA,
+    encryptedKeyMaterial: VALID_ENCRYPTED_DATA,
+  };
+
+  it("accepts a valid metadata key", () => {
+    expect(CreateApiKeyBodySchema.safeParse(validMetadataBody).success).toBe(true);
+  });
+
+  it("accepts a valid crypto key with encryptedKeyMaterial", () => {
+    expect(CreateApiKeyBodySchema.safeParse(validCryptoBody).success).toBe(true);
+  });
+
+  it("rejects empty scopes array", () => {
+    const result = CreateApiKeyBodySchema.safeParse({ ...validMetadataBody, scopes: [] });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects keyType=crypto without encryptedKeyMaterial", () => {
+    const { encryptedKeyMaterial: _omitted, ...withoutKeyMaterial } = validCryptoBody;
+    void _omitted;
+    const result = CreateApiKeyBodySchema.safeParse(withoutKeyMaterial);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects keyType=metadata WITH encryptedKeyMaterial", () => {
+    const result = CreateApiKeyBodySchema.safeParse({
+      ...validMetadataBody,
+      encryptedKeyMaterial: VALID_ENCRYPTED_DATA,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects unknown scope", () => {
+    const result = CreateApiKeyBodySchema.safeParse({
+      ...validMetadataBody,
+      scopes: ["read:nonsense"],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty encryptedData", () => {
+    const result = CreateApiKeyBodySchema.safeParse({ ...validMetadataBody, encryptedData: "" });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts optional expiresAt as positive integer", () => {
+    const result = CreateApiKeyBodySchema.safeParse({
+      ...validMetadataBody,
+      expiresAt: Date.now() + 86_400_000,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects non-positive expiresAt", () => {
+    const result = CreateApiKeyBodySchema.safeParse({ ...validMetadataBody, expiresAt: 0 });
+    expect(result.success).toBe(false);
   });
 });

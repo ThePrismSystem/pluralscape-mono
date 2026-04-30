@@ -80,7 +80,7 @@ describe("board-message.service (PGlite integration)", () => {
       const result = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         audit,
       );
@@ -103,7 +103,7 @@ describe("board-message.service (PGlite integration)", () => {
       const result = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         noopAudit,
       );
@@ -129,7 +129,7 @@ describe("board-message.service (PGlite integration)", () => {
       const created = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         noopAudit,
       );
@@ -156,7 +156,7 @@ describe("board-message.service (PGlite integration)", () => {
         await createBoardMessage(
           asDb(db),
           systemId,
-          { encryptedData: testEncryptedDataBase64(), sortOrder: i },
+          { encryptedData: testEncryptedDataBase64(), sortOrder: i, pinned: false },
           auth,
           noopAudit,
         );
@@ -171,21 +171,21 @@ describe("board-message.service (PGlite integration)", () => {
       await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 2 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 2, pinned: false },
         auth,
         noopAudit,
       );
       await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         noopAudit,
       );
       await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 1 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 1, pinned: false },
         auth,
         noopAudit,
       );
@@ -208,7 +208,7 @@ describe("board-message.service (PGlite integration)", () => {
       await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 1 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 1, pinned: false },
         auth,
         noopAudit,
       );
@@ -229,7 +229,7 @@ describe("board-message.service (PGlite integration)", () => {
       await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 1 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 1, pinned: false },
         auth,
         noopAudit,
       );
@@ -243,7 +243,7 @@ describe("board-message.service (PGlite integration)", () => {
       const bm = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         noopAudit,
       );
@@ -258,7 +258,7 @@ describe("board-message.service (PGlite integration)", () => {
       const bm = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         noopAudit,
       );
@@ -274,7 +274,7 @@ describe("board-message.service (PGlite integration)", () => {
         await createBoardMessage(
           asDb(db),
           systemId,
-          { encryptedData: testEncryptedDataBase64(), sortOrder: i },
+          { encryptedData: testEncryptedDataBase64(), sortOrder: i, pinned: false },
           auth,
           noopAudit,
         );
@@ -303,7 +303,7 @@ describe("board-message.service (PGlite integration)", () => {
       const created = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         noopAudit,
       );
@@ -326,7 +326,7 @@ describe("board-message.service (PGlite integration)", () => {
       const created = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         noopAudit,
       );
@@ -347,7 +347,7 @@ describe("board-message.service (PGlite integration)", () => {
       const created = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         noopAudit,
       );
@@ -368,7 +368,7 @@ describe("board-message.service (PGlite integration)", () => {
       const created = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         noopAudit,
       );
@@ -415,7 +415,7 @@ describe("board-message.service (PGlite integration)", () => {
       const created = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         noopAudit,
       );
@@ -444,7 +444,7 @@ describe("board-message.service (PGlite integration)", () => {
       const created = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         noopAudit,
       );
@@ -462,7 +462,7 @@ describe("board-message.service (PGlite integration)", () => {
       const created = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         noopAudit,
       );
@@ -542,7 +542,7 @@ describe("board-message.service (PGlite integration)", () => {
       const created = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         noopAudit,
       );
@@ -570,14 +570,14 @@ describe("board-message.service (PGlite integration)", () => {
       const bm1 = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         noopAudit,
       );
       const bm2 = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 1 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 1, pinned: false },
         auth,
         noopAudit,
       );
@@ -620,19 +620,11 @@ describe("board-message.service (PGlite integration)", () => {
       );
     });
 
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      await assertApiError(
-        reorderBoardMessages(asDb(db), systemId, { operations: [] }, auth, noopAudit),
-        "VALIDATION_ERROR",
-        400,
-      );
-    });
-
     it("throws VALIDATION_ERROR for duplicate board message IDs", async () => {
       const bm = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         noopAudit,
       );
@@ -659,14 +651,14 @@ describe("board-message.service (PGlite integration)", () => {
       const bm1 = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         noopAudit,
       );
       const bm2 = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 1 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 1, pinned: false },
         auth,
         noopAudit,
       );
@@ -709,14 +701,14 @@ describe("board-message.service (PGlite integration)", () => {
       const bm1 = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         noopAudit,
       );
       const bm2 = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 1 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 1, pinned: false },
         auth,
         noopAudit,
       );
@@ -752,7 +744,7 @@ describe("board-message.service (PGlite integration)", () => {
       const created = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         noopAudit,
       );
@@ -767,7 +759,7 @@ describe("board-message.service (PGlite integration)", () => {
       const created = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         noopAudit,
       );
@@ -785,7 +777,7 @@ describe("board-message.service (PGlite integration)", () => {
       const created = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         noopAudit,
       );
@@ -806,7 +798,7 @@ describe("board-message.service (PGlite integration)", () => {
       const created = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         noopAudit,
       );
@@ -826,7 +818,7 @@ describe("board-message.service (PGlite integration)", () => {
       const created = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         noopAudit,
       );
@@ -845,7 +837,7 @@ describe("board-message.service (PGlite integration)", () => {
       await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         noopAudit,
       );
@@ -865,7 +857,7 @@ describe("board-message.service (PGlite integration)", () => {
       const created = await createBoardMessage(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
         auth,
         noopAudit,
       );

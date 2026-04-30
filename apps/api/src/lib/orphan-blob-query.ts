@@ -32,6 +32,8 @@ export class OrphanBlobQueryImpl implements OrphanBlobQuery {
         ),
       );
 
-    return rows.map((r) => r.storageKey as StorageKey);
+    // Drop the `ServerInternal<…>` brand on the way to the storage adapter —
+    // `StorageKey` is a peer brand that doesn't intersect with `ServerInternal<…>`.
+    return rows.map((r) => r.storageKey as string as StorageKey);
   }
 }

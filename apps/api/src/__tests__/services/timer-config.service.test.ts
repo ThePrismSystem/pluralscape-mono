@@ -139,14 +139,6 @@ describe("createTimerConfig", () => {
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
-  it("throws 400 for invalid body (missing encryptedData)", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      createTimerConfig(db, SYSTEM_ID, { bad: "data" }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-  });
-
   it("throws 400 for oversized encryptedData", async () => {
     const { db } = mockDb();
     const oversized = Buffer.from(new Uint8Array(70_000)).toString("base64");
@@ -227,23 +219,6 @@ describe("createTimerConfig", () => {
     await expect(
       createTimerConfig(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
     ).rejects.toThrow("Failed to create timer config");
-  });
-
-  it("throws 400 when wakingHoursOnly is true but wakingStart/wakingEnd missing", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      createTimerConfig(
-        db,
-        SYSTEM_ID,
-        {
-          encryptedData: VALID_BLOB_BASE64,
-          wakingHoursOnly: true,
-        },
-        AUTH,
-        mockAudit,
-      ),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 });
 
@@ -573,29 +548,6 @@ describe("updateTimerConfig", () => {
         mockAudit,
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
-  });
-
-  it("throws 400 for invalid body (missing encryptedData)", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      updateTimerConfig(db, SYSTEM_ID, TIMER_ID, { version: 1 }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-  });
-
-  it("throws 400 for missing version", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      updateTimerConfig(
-        db,
-        SYSTEM_ID,
-        TIMER_ID,
-        { encryptedData: VALID_BLOB_BASE64 },
-        AUTH,
-        mockAudit,
-      ),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
   it("recomputes nextCheckInAt when scheduling fields change", async () => {

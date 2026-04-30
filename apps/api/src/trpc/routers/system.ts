@@ -50,13 +50,7 @@ export const systemRouter = router({
     .input(UpdateSystemBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return updateSystemProfile(
-        ctx.db,
-        ctx.systemId,
-        { encryptedData: input.encryptedData, version: input.version },
-        ctx.auth,
-        audit,
-      );
+      return updateSystemProfile(ctx.db, ctx.systemId, input, ctx.auth, audit);
     }),
 
   archive: systemProcedure.use(writeLimiter).mutation(async ({ ctx }) => {

@@ -34,6 +34,10 @@ export interface BucketRotationItemServerMetadata extends BucketRotationItem {
  * JSON-wire representation of a BucketRotationItem. Derived from the domain
  * type via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
  * becomes `number`.
+ *
+ * NB: Wire is derived from the domain type (not
+ * `BucketRotationItemServerMetadata`) because the server row adds the
+ * owning `systemId` FK that the API does not expose.
  */
 export type BucketRotationItemWire = Serialize<BucketRotationItem>;
 

@@ -28,7 +28,6 @@ ImportEntityType:
     - poll
     - timer
     - privacy-bucket
-    - friend
     - system-profile
     - system-settings
     - unknown

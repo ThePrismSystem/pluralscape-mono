@@ -163,14 +163,6 @@ describe("note service", () => {
       expect(result.authorEntityId).toBe("mem_123");
     });
 
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      const { db } = mockDb();
-
-      await expect(createNote(db, SYSTEM_ID, { bad: true }, AUTH, mockAudit)).rejects.toThrow(
-        expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }),
-      );
-    });
-
     it("throws 404 on ownership failure", async () => {
       const { db } = mockDb();
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
@@ -310,14 +302,6 @@ describe("note service", () => {
         chain,
         expect.objectContaining({ eventType: "note.updated" }),
       );
-    });
-
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      const { db } = mockDb();
-
-      await expect(
-        updateNote(db, SYSTEM_ID, NOTE_ID, { bad: true }, AUTH, mockAudit),
-      ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
     });
 
     it("throws CONFLICT on OCC version mismatch", async () => {

@@ -49,7 +49,7 @@ const VALID_BODY = {
   purpose: "avatar",
   mimeType: "image/png",
   sizeBytes: 1024,
-  encryptionTier: "none",
+  encryptionTier: 1,
 };
 
 // ── Tests ────────────────────────────────────────────────────────

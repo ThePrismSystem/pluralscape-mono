@@ -1,6 +1,5 @@
 import { assertAuthKey, assertAuthKeyHash, fromHex, verifyAuthKey } from "@pluralscape/crypto";
 import { accounts, sessions } from "@pluralscape/db/pg";
-import { DeleteAccountBodySchema } from "@pluralscape/validation";
 import { eq } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST } from "../http.constants.js";
@@ -12,7 +11,9 @@ import { withCrossAccountTransaction } from "../lib/rls-context.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
+import type { DeleteAccountBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 /**
  * Permanently delete an account and all associated data.
@@ -31,12 +32,10 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
  */
 export async function deleteAccount(
   db: PostgresJsDatabase,
-  params: unknown,
+  body: z.infer<typeof DeleteAccountBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  const parsed = DeleteAccountBodySchema.parse(params);
-
   assertAccountOwnership(auth.accountId, auth);
 
   await withCrossAccountTransaction(db, async (tx) => {
@@ -52,7 +51,7 @@ export async function deleteAccount(
     }
 
     const authKeyHash = ensureUint8Array(account.authKeyHash);
-    const authKeyBytes = fromHex(parsed.authKey);
+    const authKeyBytes = fromHex(body.authKey);
     assertAuthKey(authKeyBytes);
     assertAuthKeyHash(authKeyHash);
     const valid = verifyAuthKey(authKeyBytes, authKeyHash);

@@ -57,15 +57,15 @@ export const ImportCheckpointStateSchema = z
       .readonly(),
     options: z
       .object({
-        selectedCategories: z.record(z.enum(IMPORT_COLLECTION_TYPES), z.boolean().optional()),
+        selectedCategories: z.partialRecord(z.enum(IMPORT_COLLECTION_TYPES), z.boolean()),
         avatarMode: z.enum(IMPORT_AVATAR_MODES),
       })
       .readonly(),
     totals: z
       .object({
-        perCollection: z.record(
+        perCollection: z.partialRecord(
           z.enum(IMPORT_COLLECTION_TYPES),
-          ImportCollectionTotalsSchema.optional(),
+          ImportCollectionTotalsSchema,
         ),
       })
       .readonly(),
@@ -75,7 +75,7 @@ export const ImportCheckpointStateSchema = z
 export const CreateImportJobBodySchema = z
   .object({
     source: z.enum(IMPORT_SOURCES),
-    selectedCategories: z.record(z.enum(IMPORT_COLLECTION_TYPES), z.boolean().optional()),
+    selectedCategories: z.partialRecord(z.enum(IMPORT_COLLECTION_TYPES), z.boolean()),
     avatarMode: z.enum(IMPORT_AVATAR_MODES),
   })
   .readonly()

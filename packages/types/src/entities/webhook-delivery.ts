@@ -38,5 +38,10 @@ export type WebhookDeliveryServerMetadata = WebhookDelivery & {
  * JSON-wire representation of WebhookDelivery. Derived from the domain
  * type via `Serialize<T>`; branded IDs become plain strings,
  * `UnixMillis` becomes `number`.
+ *
+ * NB: Wire is derived from the domain type (not
+ * `WebhookDeliveryServerMetadata`) because the server row carries the
+ * server-held T3 `encryptedData` payload (used to sign at delivery
+ * time) which the API does not expose.
  */
 export type WebhookDeliveryWire = Serialize<WebhookDelivery>;

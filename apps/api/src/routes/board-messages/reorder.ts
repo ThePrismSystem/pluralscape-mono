@@ -1,11 +1,12 @@
 import { ID_PREFIXES } from "@pluralscape/types";
+import { ReorderBoardMessagesBodySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
 import { HTTP_NO_CONTENT } from "../../http.constants.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
+import { parseBody } from "../../lib/body-parse.js";
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
-import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { reorderBoardMessages } from "../../services/board-message/reorder.js";
 
@@ -16,7 +17,8 @@ export const reorderRoute = new Hono<AuthEnv>();
 reorderRoute.use("*", createCategoryRateLimiter("write"));
 
 reorderRoute.post("/reorder", async (c) => {
-  const body = await parseJsonBody(c);
+  const body = await parseBody(c, ReorderBoardMessagesBodySchema);
+
   const auth = c.get("auth");
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const audit = createAuditWriter(c, auth);

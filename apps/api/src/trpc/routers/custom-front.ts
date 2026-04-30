@@ -30,13 +30,7 @@ export const customFrontRouter = router({
     .input(CreateCustomFrontBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return createCustomFront(
-        ctx.db,
-        ctx.systemId,
-        { encryptedData: input.encryptedData },
-        ctx.auth,
-        audit,
-      );
+      return createCustomFront(ctx.db, ctx.systemId, input, ctx.auth, audit);
     }),
 
   get: systemProcedure
@@ -69,14 +63,7 @@ export const customFrontRouter = router({
     .input(CustomFrontIdSchema.and(UpdateCustomFrontBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return updateCustomFront(
-        ctx.db,
-        ctx.systemId,
-        input.customFrontId,
-        { encryptedData: input.encryptedData, version: input.version },
-        ctx.auth,
-        audit,
-      );
+      return updateCustomFront(ctx.db, ctx.systemId, input.customFrontId, input, ctx.auth, audit);
     }),
 
   archive: systemProcedure

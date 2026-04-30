@@ -24,13 +24,13 @@ describe("parseQuery", () => {
     );
   });
 
-  it("includes validation issues in error details", () => {
+  it("includes validation issues in error details (bare array)", () => {
     try {
       parseQuery(TestSchema, { name: "bad" });
       expect.unreachable("should have thrown");
     } catch (err: unknown) {
-      const error = err as { details: { issues: unknown[] } };
-      expect(error.details.issues).toEqual([{ message: "invalid name" }]);
+      const error = err as { details: unknown[] };
+      expect(error.details).toEqual([{ message: "invalid name" }]);
     }
   });
 });

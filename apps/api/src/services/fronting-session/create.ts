@@ -1,10 +1,9 @@
 import { frontingSessions } from "@pluralscape/db/pg";
 import { brandId, ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
-import { CreateFrontingSessionBodySchema } from "@pluralscape/validation";
 
 import { HTTP_BAD_REQUEST } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
-import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
@@ -18,24 +17,22 @@ import type { FrontingSessionResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { FrontingSessionId, SystemId } from "@pluralscape/types";
+import type { CreateFrontingSessionBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function createFrontingSession(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  params: unknown,
+  body: z.infer<typeof CreateFrontingSessionBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<FrontingSessionResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    CreateFrontingSessionBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
 
-  if (parsed.endTime !== undefined && parsed.endTime <= parsed.startTime) {
+  if (body.endTime !== undefined && body.endTime <= body.startTime) {
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "endTime must be after startTime");
   }
 
@@ -43,18 +40,18 @@ export async function createFrontingSession(
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
-    await validateSubjectIds(tx, systemId, parsed);
+    await validateSubjectIds(tx, systemId, body);
 
     const [row] = await tx
       .insert(frontingSessions)
       .values({
         id: fsId,
         systemId,
-        startTime: toUnixMillis(parsed.startTime),
-        endTime: parsed.endTime !== undefined ? toUnixMillis(parsed.endTime) : null,
-        memberId: parsed.memberId ?? null,
-        customFrontId: parsed.customFrontId ?? null,
-        structureEntityId: parsed.structureEntityId ?? null,
+        startTime: toUnixMillis(body.startTime),
+        endTime: body.endTime !== undefined ? toUnixMillis(body.endTime) : null,
+        memberId: body.memberId ?? null,
+        customFrontId: body.customFrontId ?? null,
+        structureEntityId: body.structureEntityId ?? null,
         encryptedData: blob,
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -74,7 +71,7 @@ export async function createFrontingSession(
     await dispatchWebhookEvent(tx, systemId, "fronting.started", {
       sessionId: brandId<FrontingSessionId>(row.id),
     });
-    if (parsed.endTime !== undefined) {
+    if (body.endTime !== undefined) {
       await audit(tx, {
         eventType: "fronting-session.ended",
         actor: { kind: "account", id: auth.accountId },

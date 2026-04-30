@@ -60,7 +60,12 @@ describe("message.service (PGlite integration)", () => {
     testChannel = await createChannel(
       asDb(db),
       systemId,
-      { encryptedData: testEncryptedDataBase64(), type: "channel", sortOrder: 0 },
+      {
+        encryptedData: testEncryptedDataBase64(),
+        type: "channel",
+        parentId: undefined,
+        sortOrder: 0,
+      },
       auth,
       noopAudit,
     );
@@ -81,7 +86,7 @@ describe("message.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         testChannel.id,
-        { encryptedData: testEncryptedDataBase64(), timestamp: ts },
+        { encryptedData: testEncryptedDataBase64(), timestamp: ts, replyToId: undefined },
         auth,
         audit,
       );
@@ -104,7 +109,7 @@ describe("message.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         testChannel.id,
-        { encryptedData: testEncryptedDataBase64(), timestamp: ts },
+        { encryptedData: testEncryptedDataBase64(), timestamp: ts, replyToId: undefined },
         auth,
         noopAudit,
       );
@@ -131,7 +136,7 @@ describe("message.service (PGlite integration)", () => {
           asDb(db),
           systemId,
           genChannelId(),
-          { encryptedData: testEncryptedDataBase64(), timestamp: Date.now() },
+          { encryptedData: testEncryptedDataBase64(), timestamp: Date.now(), replyToId: undefined },
           auth,
           noopAudit,
         ),
@@ -148,7 +153,7 @@ describe("message.service (PGlite integration)", () => {
           asDb(db),
           systemId,
           testChannel.id,
-          { encryptedData: testEncryptedDataBase64(), timestamp: Date.now() },
+          { encryptedData: testEncryptedDataBase64(), timestamp: Date.now(), replyToId: undefined },
           auth,
           noopAudit,
         ),
@@ -161,7 +166,12 @@ describe("message.service (PGlite integration)", () => {
       const category = await createChannel(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), type: "category", sortOrder: 0 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          type: "category",
+          parentId: undefined,
+          sortOrder: 0,
+        },
         auth,
         noopAudit,
       );
@@ -171,7 +181,7 @@ describe("message.service (PGlite integration)", () => {
           asDb(db),
           systemId,
           category.id,
-          { encryptedData: testEncryptedDataBase64(), timestamp: Date.now() },
+          { encryptedData: testEncryptedDataBase64(), timestamp: Date.now(), replyToId: undefined },
           auth,
           noopAudit,
         ),
@@ -189,7 +199,7 @@ describe("message.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         testChannel.id,
-        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now() },
+        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now(), replyToId: undefined },
         auth,
         noopAudit,
       );
@@ -205,7 +215,7 @@ describe("message.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         testChannel.id,
-        { encryptedData: testEncryptedDataBase64(), timestamp: ts },
+        { encryptedData: testEncryptedDataBase64(), timestamp: ts, replyToId: undefined },
         auth,
         noopAudit,
       );
@@ -231,7 +241,11 @@ describe("message.service (PGlite integration)", () => {
           asDb(db),
           systemId,
           testChannel.id,
-          { encryptedData: testEncryptedDataBase64(), timestamp: baseTs + i * 1000 },
+          {
+            encryptedData: testEncryptedDataBase64(),
+            timestamp: baseTs + i * 1000,
+            replyToId: undefined,
+          },
           auth,
           noopAudit,
         );
@@ -251,7 +265,11 @@ describe("message.service (PGlite integration)", () => {
           asDb(db),
           systemId,
           testChannel.id,
-          { encryptedData: testEncryptedDataBase64(), timestamp: baseTs + i * 1000 },
+          {
+            encryptedData: testEncryptedDataBase64(),
+            timestamp: baseTs + i * 1000,
+            replyToId: undefined,
+          },
           auth,
           noopAudit,
         );
@@ -279,7 +297,7 @@ describe("message.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         testChannel.id,
-        { encryptedData: testEncryptedDataBase64(), timestamp: baseTs },
+        { encryptedData: testEncryptedDataBase64(), timestamp: baseTs, replyToId: undefined },
         auth,
         noopAudit,
       );
@@ -287,7 +305,11 @@ describe("message.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         testChannel.id,
-        { encryptedData: testEncryptedDataBase64(), timestamp: baseTs + 10_000 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          timestamp: baseTs + 10_000,
+          replyToId: undefined,
+        },
         auth,
         noopAudit,
       );
@@ -303,7 +325,12 @@ describe("message.service (PGlite integration)", () => {
       const otherChannel = await createChannel(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), type: "channel", sortOrder: 1 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          type: "channel",
+          parentId: undefined,
+          sortOrder: 1,
+        },
         auth,
         noopAudit,
       );
@@ -311,7 +338,7 @@ describe("message.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         otherChannel.id,
-        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now() },
+        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now(), replyToId: undefined },
         auth,
         noopAudit,
       );
@@ -326,7 +353,7 @@ describe("message.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         testChannel.id,
-        { encryptedData: testEncryptedDataBase64(), timestamp: baseTs },
+        { encryptedData: testEncryptedDataBase64(), timestamp: baseTs, replyToId: undefined },
         auth,
         noopAudit,
       );
@@ -334,7 +361,11 @@ describe("message.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         testChannel.id,
-        { encryptedData: testEncryptedDataBase64(), timestamp: baseTs + 10_000 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          timestamp: baseTs + 10_000,
+          replyToId: undefined,
+        },
         auth,
         noopAudit,
       );
@@ -351,7 +382,7 @@ describe("message.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         testChannel.id,
-        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now() },
+        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now(), replyToId: undefined },
         auth,
         noopAudit,
       );
@@ -367,7 +398,7 @@ describe("message.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         testChannel.id,
-        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now() },
+        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now(), replyToId: undefined },
         auth,
         noopAudit,
       );
@@ -389,7 +420,7 @@ describe("message.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         testChannel.id,
-        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now() },
+        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now(), replyToId: undefined },
         auth,
         noopAudit,
       );
@@ -414,7 +445,7 @@ describe("message.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         testChannel.id,
-        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now() },
+        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now(), replyToId: undefined },
         auth,
         noopAudit,
       );
@@ -451,7 +482,7 @@ describe("message.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         testChannel.id,
-        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now() },
+        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now(), replyToId: undefined },
         auth,
         noopAudit,
       );
@@ -465,7 +496,7 @@ describe("message.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         testChannel.id,
-        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now() },
+        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now(), replyToId: undefined },
         auth,
         noopAudit,
       );
@@ -487,7 +518,7 @@ describe("message.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         testChannel.id,
-        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now() },
+        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now(), replyToId: undefined },
         auth,
         noopAudit,
       );
@@ -507,7 +538,7 @@ describe("message.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         testChannel.id,
-        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now() },
+        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now(), replyToId: undefined },
         auth,
         noopAudit,
       );
@@ -519,7 +550,12 @@ describe("message.service (PGlite integration)", () => {
       const otherChannel = await createChannel(
         asDb(db),
         otherSystemId,
-        { encryptedData: testEncryptedDataBase64(), type: "channel", sortOrder: 0 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          type: "channel",
+          parentId: undefined,
+          sortOrder: 0,
+        },
         otherAuth,
         noopAudit,
       );
@@ -537,7 +573,7 @@ describe("message.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         testChannel.id,
-        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now() },
+        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now(), replyToId: undefined },
         auth,
         noopAudit,
       );
@@ -562,7 +598,7 @@ describe("message.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         testChannel.id,
-        { encryptedData: testEncryptedDataBase64(), timestamp: ts },
+        { encryptedData: testEncryptedDataBase64(), timestamp: ts, replyToId: undefined },
         auth,
         noopAudit,
       );

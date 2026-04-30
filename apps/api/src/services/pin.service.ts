@@ -1,12 +1,7 @@
 import { systemSettings } from "@pluralscape/db/pg";
-import {
-  RemovePinBodySchema,
-  SetPinBodySchema,
-  VerifyPinBodySchema,
-} from "@pluralscape/validation";
 import { eq } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_UNAUTHORIZED } from "../http.constants.js";
+import { HTTP_NOT_FOUND, HTTP_UNAUTHORIZED } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { hashPinOffload, verifyPinOffload } from "../lib/kdf-offload.js";
 import { withTenantTransaction } from "../lib/rls-context.js";
@@ -16,7 +11,13 @@ import { tenantCtx } from "../lib/tenant-context.js";
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { PinHash, SystemId } from "@pluralscape/types";
+import type {
+  RemovePinBodySchema,
+  SetPinBodySchema,
+  VerifyPinBodySchema,
+} from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 /**
  * Dummy Argon2id hash for anti-timing attacks on PIN verification.
@@ -31,18 +32,13 @@ const DUMMY_ARGON2_PIN_HASH =
 export async function setPin(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  params: unknown,
+  body: z.infer<typeof SetPinBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  const parsed = SetPinBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid PIN payload");
-  }
-
   assertSystemOwnership(systemId, auth);
 
-  const pinHash = (await hashPinOffload(parsed.data.pin)) as PinHash;
+  const pinHash = (await hashPinOffload(body.pin)) as PinHash;
 
   await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
@@ -69,15 +65,10 @@ export async function setPin(
 export async function removePin(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  params: unknown,
+  body: z.infer<typeof RemovePinBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  const parsed = RemovePinBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid PIN payload");
-  }
-
   assertSystemOwnership(systemId, auth);
 
   await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -98,7 +89,7 @@ export async function removePin(
     }
 
     // Verify current PIN before removal
-    const valid = await verifyPinOffload(row.pinHash, parsed.data.pin);
+    const valid = await verifyPinOffload(row.pinHash, body.pin);
     if (!valid) {
       throw new ApiHttpError(HTTP_UNAUTHORIZED, "INVALID_PIN", "PIN is incorrect");
     }
@@ -122,15 +113,10 @@ export async function removePin(
 export async function verifyPinCode(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  params: unknown,
+  body: z.infer<typeof VerifyPinBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<{ verified: true }> {
-  const parsed = VerifyPinBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid PIN payload");
-  }
-
   assertSystemOwnership(systemId, auth);
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -142,7 +128,7 @@ export async function verifyPinCode(
 
     // Anti-timing: always run verification even when no PIN is set
     const storedHash = row?.pinHash ?? DUMMY_ARGON2_PIN_HASH;
-    const valid = await verifyPinOffload(storedHash, parsed.data.pin);
+    const valid = await verifyPinOffload(storedHash, body.pin);
 
     if (!row) {
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "System settings not found");

@@ -134,6 +134,18 @@ export default defineConfig({
       },
       {
         test: {
+          name: "eslint-rules",
+          root: "tooling/eslint-config",
+          environment: "node",
+          include: ["rules/**/*.test.js"],
+          globals: false,
+          restoreMocks: true,
+          testTimeout: 5000,
+          hookTimeout: 10000,
+        },
+      },
+      {
+        test: {
           name: "i18n",
           root: "packages/i18n",
           environment: "node",

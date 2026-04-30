@@ -3,7 +3,7 @@ import { now } from "@pluralscape/types";
 import { UpdateSystemBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
-import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../../lib/occ-update.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
@@ -16,19 +16,16 @@ import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function updateSystemProfile(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  params: unknown,
+  body: z.infer<typeof UpdateSystemBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SystemProfileResult> {
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    UpdateSystemBodySchema,
-    MAX_ENCRYPTED_SYSTEM_DATA_BYTES,
-  );
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_SYSTEM_DATA_BYTES);
 
   const timestamp = now();
 
@@ -44,7 +41,7 @@ export async function updateSystemProfile(
         and(
           eq(systems.id, systemId),
           eq(systems.accountId, auth.accountId),
-          eq(systems.version, parsed.version),
+          eq(systems.version, body.version),
           eq(systems.archived, false),
         ),
       )

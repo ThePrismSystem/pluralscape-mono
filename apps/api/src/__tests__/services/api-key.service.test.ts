@@ -164,22 +164,6 @@ describe("createApiKey", () => {
     );
   });
 
-  it("throws VALIDATION_ERROR for invalid keyType", async () => {
-    await expect(
-      createApiKey(
-        {} as never,
-        SYSTEM_ID,
-        {
-          keyType: "invalid_type",
-          scopes: ["read:members"],
-          encryptedData: VALID_BLOB_BASE64,
-        },
-        AUTH,
-        mockAudit,
-      ),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-  });
-
   it("coalesces expiresAt to null when absent", async () => {
     const row = makeApiKeyRow({ expiresAt: null });
     mockTx.returning.mockResolvedValueOnce([row]);

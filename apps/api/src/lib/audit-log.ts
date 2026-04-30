@@ -4,7 +4,13 @@ import { brandId, createId, now } from "@pluralscape/types";
 import { AUDIT_LOG_IP_MAX_LENGTH, AUDIT_LOG_UA_MAX_LENGTH } from "./audit-log.constants.js";
 
 import type { DbAuditActor } from "@pluralscape/db";
-import type { AccountId, AuditEventType, AuditLogEntryId, SystemId } from "@pluralscape/types";
+import type {
+  AccountId,
+  AuditEventType,
+  AuditLogEntryId,
+  ServerInternal,
+  SystemId,
+} from "@pluralscape/types";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 
 /** Parameters for writing an audit log entry. */
@@ -29,7 +35,9 @@ export async function writeAuditLog(
   const timestamp = now();
   await db.insert(auditLog).values({
     id: brandId<AuditLogEntryId>(createId("al_")),
-    accountId: params.accountId,
+    // The DB column is branded `ServerInternal<AccountId>` (server-only join
+    // helper, never on the wire); tag at the insert site.
+    accountId: params.accountId as ServerInternal<AccountId> | null,
     systemId: params.systemId,
     eventType: params.eventType,
     timestamp,

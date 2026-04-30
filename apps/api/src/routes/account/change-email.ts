@@ -1,10 +1,11 @@
+import { ChangeEmailSchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
+import { parseBody } from "../../lib/body-parse.js";
 import { getDb } from "../../lib/db.js";
-import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { getQueue } from "../../lib/queue.js";
 import { extractIpAddress } from "../../lib/request-meta.js";
 import { envelope } from "../../lib/response.js";
@@ -24,7 +25,7 @@ changeEmailRoute.use("*", createCategoryRateLimiter("authHeavy"));
 changeEmailRoute.put("/", async (c) => {
   const auth = c.get("auth");
   const db = await getDb();
-  const body = await parseJsonBody(c);
+  const body = await parseBody(c, ChangeEmailSchema);
   const audit = createAuditWriter(c, auth);
   const ipAddress = extractIpAddress(c);
 

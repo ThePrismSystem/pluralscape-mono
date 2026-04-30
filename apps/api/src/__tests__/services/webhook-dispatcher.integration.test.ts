@@ -59,7 +59,12 @@ describe("webhook-dispatcher (PGlite integration)", () => {
     await createWebhookConfig(
       asDb(db),
       systemId,
-      { url: "https://example.com/a", eventTypes: ["fronting.started"] },
+      {
+        url: "https://example.com/a",
+        eventTypes: ["fronting.started"],
+        enabled: true,
+        cryptoKeyId: undefined,
+      },
       auth,
       noopAudit,
     );
@@ -83,14 +88,24 @@ describe("webhook-dispatcher (PGlite integration)", () => {
     await createWebhookConfig(
       asDb(db),
       systemId,
-      { url: "https://example.com/a", eventTypes: ["fronting.started"] },
+      {
+        url: "https://example.com/a",
+        eventTypes: ["fronting.started"],
+        enabled: true,
+        cryptoKeyId: undefined,
+      },
       auth,
       noopAudit,
     );
     await createWebhookConfig(
       asDb(db),
       systemId,
-      { url: "https://example.com/b", eventTypes: ["fronting.started", "fronting.ended"] },
+      {
+        url: "https://example.com/b",
+        eventTypes: ["fronting.started", "fronting.ended"],
+        enabled: true,
+        cryptoKeyId: undefined,
+      },
       auth,
       noopAudit,
     );
@@ -111,7 +126,12 @@ describe("webhook-dispatcher (PGlite integration)", () => {
     await createWebhookConfig(
       asDb(db),
       systemId,
-      { url: "https://example.com/a", eventTypes: ["fronting.started"], enabled: false },
+      {
+        url: "https://example.com/a",
+        eventTypes: ["fronting.started"],
+        enabled: false,
+        cryptoKeyId: undefined,
+      },
       auth,
       noopAudit,
     );
@@ -126,7 +146,12 @@ describe("webhook-dispatcher (PGlite integration)", () => {
     const wh = await createWebhookConfig(
       asDb(db),
       systemId,
-      { url: "https://example.com/a", eventTypes: ["fronting.started"] },
+      {
+        url: "https://example.com/a",
+        eventTypes: ["fronting.started"],
+        enabled: true,
+        cryptoKeyId: undefined,
+      },
       auth,
       noopAudit,
     );
@@ -146,7 +171,12 @@ describe("webhook-dispatcher (PGlite integration)", () => {
     await createWebhookConfig(
       asDb(db),
       systemId,
-      { url: "https://example.com/a", eventTypes: ["fronting.ended"] },
+      {
+        url: "https://example.com/a",
+        eventTypes: ["fronting.ended"],
+        enabled: true,
+        cryptoKeyId: undefined,
+      },
       auth,
       noopAudit,
     );

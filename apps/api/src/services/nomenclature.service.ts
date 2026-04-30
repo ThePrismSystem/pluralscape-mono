@@ -1,10 +1,9 @@
 import { serializeEncryptedBlob } from "@pluralscape/crypto";
 import { nomenclatureSettings } from "@pluralscape/db/pg";
 import { brandId, now, toUnixMillis } from "@pluralscape/types";
-import { UpdateNomenclatureBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { validateEncryptedBlob } from "../lib/encrypted-blob.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
@@ -14,7 +13,9 @@ import { tenantCtx } from "../lib/tenant-context.js";
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { EncryptedBlob, SystemId, UnixMillis } from "@pluralscape/types";
+import type { UpdateNomenclatureBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -73,18 +74,13 @@ export async function getNomenclatureSettings(
 export async function updateNomenclatureSettings(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  params: unknown,
+  body: z.infer<typeof UpdateNomenclatureBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<NomenclatureSettingsResult> {
-  const parsed = UpdateNomenclatureBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid nomenclature payload");
-  }
-
   assertSystemOwnership(systemId, auth);
 
-  const blob = validateEncryptedBlob(parsed.data.encryptedData);
+  const blob = validateEncryptedBlob(body.encryptedData);
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -98,7 +94,7 @@ export async function updateNomenclatureSettings(
       .where(
         and(
           eq(nomenclatureSettings.systemId, systemId),
-          eq(nomenclatureSettings.version, parsed.data.version),
+          eq(nomenclatureSettings.version, body.version),
         ),
       )
       .returning();

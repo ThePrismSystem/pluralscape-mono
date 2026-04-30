@@ -40,10 +40,13 @@ import type {
   MemberId,
   SystemId,
   SystemStructureEntityAssociationId,
+  SystemStructureEntityId,
   SystemStructureEntityMemberLinkId,
   SystemStructureEntityTypeId,
 } from "@pluralscape/types";
+import type { CreateStructureEntityBodySchema } from "@pluralscape/validation";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
+import type { z } from "zod/v4";
 
 const {
   systemStructureEntities,
@@ -92,11 +95,13 @@ describe("structure-entity-crud.service (PGlite integration)", () => {
     await db.delete(systemStructureEntities);
   });
 
-  function entityParams(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  type CreateBody = z.infer<typeof CreateStructureEntityBodySchema>;
+
+  function entityParams(overrides: Partial<CreateBody> = {}): CreateBody {
     return {
       structureEntityTypeId: entityTypeId,
       encryptedData: testEncryptedDataBase64(),
-      parentEntityId: null,
+      parentEntityId: null as SystemStructureEntityId | null,
       sortOrder: 0,
       ...overrides,
     };
@@ -156,7 +161,11 @@ describe("structure-entity-crud.service (PGlite integration)", () => {
         createStructureEntity(
           asDb(db),
           systemId,
-          entityParams({ structureEntityTypeId: `stet_${crypto.randomUUID()}` }),
+          entityParams({
+            structureEntityTypeId: brandId<SystemStructureEntityTypeId>(
+              `stet_${crypto.randomUUID()}`,
+            ),
+          }),
           auth,
           noopAudit,
         ),

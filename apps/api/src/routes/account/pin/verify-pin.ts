@@ -1,8 +1,10 @@
+import { VerifyPinBodySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
+import {} from "../../../http.constants.js";
 import { createAuditWriter } from "../../../lib/audit-writer.js";
+import { parseBody } from "../../../lib/body-parse.js";
 import { getDb } from "../../../lib/db.js";
-import { parseJsonBody } from "../../../lib/parse-json-body.js";
 import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { verifyAccountPin } from "../../../services/account-pin.service.js";
@@ -14,7 +16,7 @@ export const verifyPinRoute = new Hono<AuthEnv>();
 verifyPinRoute.use("*", createCategoryRateLimiter("authHeavy"));
 
 verifyPinRoute.post("/", async (c) => {
-  const body = await parseJsonBody(c);
+  const body = await parseBody(c, VerifyPinBodySchema);
   const auth = c.get("auth");
   const audit = createAuditWriter(c, auth);
 

@@ -6,7 +6,7 @@ import {
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
 import { QuotaExceededError } from "@pluralscape/storage";
-import { brandId } from "@pluralscape/types";
+import { brandId, toChecksumHex } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -26,13 +26,17 @@ import {
 import { createMockBlobQuota, createMockBlobStorage } from "../helpers/mock-blob-storage.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, BlobId, SystemId } from "@pluralscape/types";
+import type { AccountId, BlobId, BlobPurpose, EncryptionTier, SystemId } from "@pluralscape/types";
+import type { CreateUploadUrlBodySchema } from "@pluralscape/validation";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
+import type { z } from "zod/v4";
 
 const { blobMetadata } = schema;
 
-/** Valid 64-char hex checksum for confirmUpload. */
-const VALID_CHECKSUM = "a".repeat(64);
+/** Valid 64-char hex checksum branded as the canonical ChecksumHex. */
+const VALID_CHECKSUM = toChecksumHex("a".repeat(64));
+
+type CreateUploadUrlBody = z.infer<typeof CreateUploadUrlBodySchema>;
 
 describe("blob.service (PGlite integration)", () => {
   let client: PGlite;
@@ -59,14 +63,20 @@ describe("blob.service (PGlite integration)", () => {
     await db.delete(blobMetadata);
   });
 
-  function uploadParams(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-    return {
-      purpose: "avatar",
+  /**
+   * Build a body matching the canonical service signature. The service now
+   * consumes `z.infer<typeof CreateUploadUrlBodySchema>`, so tests construct
+   * the parsed-body shape directly and skip schema validation that lives at
+   * the route boundary.
+   */
+  function uploadParams(overrides: Partial<CreateUploadUrlBody> = {}): CreateUploadUrlBody {
+    const base: CreateUploadUrlBody = {
+      purpose: "avatar" satisfies BlobPurpose,
       mimeType: "image/png",
       sizeBytes: 1024,
-      encryptionTier: 1,
-      ...overrides,
+      encryptionTier: 1 satisfies EncryptionTier,
     };
+    return { ...base, ...overrides };
   }
 
   /**
@@ -75,7 +85,7 @@ describe("blob.service (PGlite integration)", () => {
   async function createAndConfirmBlob(
     storage: ReturnType<typeof createMockBlobStorage>,
     quota: ReturnType<typeof createMockBlobQuota>,
-    overrides: Record<string, unknown> = {},
+    overrides: Partial<CreateUploadUrlBody> = {},
   ) {
     const upload = await createUploadUrl(
       asDb(db),

@@ -1,5 +1,6 @@
 import type { Plaintext } from "../encryption-primitives.js";
 import type { AccountId, ApiKeyId, AuditLogEntryId, SystemId } from "../ids.js";
+import type { ServerInternal } from "../server-internal.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { Serialize } from "../type-assertions.js";
 
@@ -275,8 +276,12 @@ export interface AuditLogEntryServerMetadata {
    * DB-internal denormalized account reference — avoids joining through
    * `systems` to get the owning account. Nullable because audit logs
    * survive account deletion with references nullified (ON DELETE SET NULL).
+   *
+   * Branded `ServerInternal<…>` so `Serialize<AuditLogEntryServerMetadata>`
+   * strips it from the wire — the denormalized account FK is server-only
+   * scaffolding, never exposed to clients.
    */
-  readonly accountId: AccountId | null;
+  readonly accountId: ServerInternal<AccountId> | null;
   /**
    * Nullable because audit logs survive system deletion with references
    * nullified (ON DELETE SET NULL) — audit history must be preserved.
@@ -294,5 +299,11 @@ export interface AuditLogEntryServerMetadata {
  * JSON-wire representation of an AuditLogEntry. Derived from the domain
  * `AuditLogEntry` type via `Serialize<T>`; branded IDs become plain strings,
  * `UnixMillis` becomes `number`.
+ *
+ * NB: Wire is derived from the domain type (not `AuditLogEntryServerMetadata`)
+ * because the row uses `timestamp` while the API exposes `createdAt` — a
+ * legitimate field rename. The mapping layer in
+ * `apps/api/src/services/audit-log-query.service.ts` projects the row to
+ * the domain shape before serialization.
  */
 export type AuditLogEntryWire = Serialize<AuditLogEntry>;

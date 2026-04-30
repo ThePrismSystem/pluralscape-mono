@@ -150,19 +150,21 @@ export interface ImportJob {
  * Server-visible import job metadata — raw Drizzle row shape.
  *
  * Derived from `ImportJob` by adding `checkpointState`: the resumable
- * import engine state the client writes back to the server between
- * chunks but doesn't expose on the domain view of an import job.
+ * import engine state. The client reads this between chunks to resume
+ * interrupted imports (see ADR-024 import resumability), so it is part
+ * of the client-visible wire shape rather than `ServerInternal<…>`.
  */
 export type ImportJobServerMetadata = ImportJob & {
   readonly checkpointState: ImportCheckpointState | null;
 };
 
 /**
- * JSON-wire representation of ImportJob. Derived from the domain type
- * via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
- * becomes `number`.
+ * JSON-wire representation of ImportJob. Derived from
+ * `ImportJobServerMetadata` via `Serialize<T>`; branded IDs become plain
+ * strings, `UnixMillis` becomes `number`. `checkpointState` is exposed on
+ * the wire so clients can resume interrupted imports.
  */
-export type ImportJobWire = Serialize<ImportJob>;
+export type ImportJobWire = Serialize<ImportJobServerMetadata>;
 
 /** Schema version for `ImportCheckpointState`. Bumped when the shape changes. */
 export type ImportCheckpointSchemaVersion = 2;

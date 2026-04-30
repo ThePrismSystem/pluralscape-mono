@@ -27,11 +27,16 @@ import {
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { PollResult } from "../../services/poll/internal.js";
 import type { AccountId, SystemId } from "@pluralscape/types";
+import type { CastVoteBodySchema, CreatePollBodySchema } from "@pluralscape/validation";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
+import type { z } from "zod/v4";
 
 const { polls, pollVotes } = schema;
 
-function makePollParams(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+type PollBody = z.infer<typeof CreatePollBodySchema>;
+type VoteBody = z.infer<typeof CastVoteBodySchema>;
+
+function makePollParams(overrides: Partial<PollBody> = {}): PollBody {
   return {
     encryptedData: testEncryptedDataBase64(),
     kind: "standard",
@@ -39,11 +44,12 @@ function makePollParams(overrides: Record<string, unknown> = {}): Record<string,
     maxVotesPerMember: 1,
     allowAbstain: false,
     allowVeto: false,
+    createdByMemberId: undefined,
     ...overrides,
   };
 }
 
-function makeVoteParams(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+function makeVoteParams(overrides: Partial<VoteBody> = {}): VoteBody {
   return {
     encryptedData: testEncryptedDataBase64(),
     voter: { entityType: "member", entityId: `mem_${crypto.randomUUID()}` },
@@ -92,7 +98,7 @@ describe("poll-vote.service (PGlite integration)", () => {
   describe("castVote", () => {
     it("casts vote with member voter — returns expected shape", async () => {
       const poll = await createTestPoll();
-      const voter = { entityType: "member", entityId: memberId };
+      const voter = { entityType: "member" as const, entityId: memberId };
       const optionId = `po_${crypto.randomUUID()}`;
 
       const result = await castVote(
@@ -118,7 +124,10 @@ describe("poll-vote.service (PGlite integration)", () => {
 
     it("casts vote with structure-entity voter", async () => {
       const poll = await createTestPoll();
-      const voter = { entityType: "structure-entity", entityId: `ste_${crypto.randomUUID()}` };
+      const voter = {
+        entityType: "structure-entity" as const,
+        entityId: `ste_${crypto.randomUUID()}`,
+      };
 
       const result = await castVote(
         asDb(db),
@@ -191,7 +200,7 @@ describe("poll-vote.service (PGlite integration)", () => {
 
     it("enforces maxVotesPerMember — casts up to limit, rejects at limit", async () => {
       const poll = await createTestPoll({ maxVotesPerMember: 1 });
-      const voter = { entityType: "member", entityId: memberId };
+      const voter = { entityType: "member" as const, entityId: memberId };
 
       // First vote succeeds
       await castVote(
@@ -220,8 +229,8 @@ describe("poll-vote.service (PGlite integration)", () => {
 
     it("different voters can independently vote (per-voter enforcement)", async () => {
       const poll = await createTestPoll({ maxVotesPerMember: 1 });
-      const voterA = { entityType: "member", entityId: `mem_${crypto.randomUUID()}` };
-      const voterB = { entityType: "member", entityId: `mem_${crypto.randomUUID()}` };
+      const voterA = { entityType: "member" as const, entityId: `mem_${crypto.randomUUID()}` };
+      const voterB = { entityType: "member" as const, entityId: `mem_${crypto.randomUUID()}` };
 
       const resultA = await castVote(
         asDb(db),
@@ -293,7 +302,7 @@ describe("poll-vote.service (PGlite integration)", () => {
 
     it("allows multiple votes when maxVotesPerMember > 1", async () => {
       const poll = await createTestPoll({ allowMultipleVotes: true, maxVotesPerMember: 3 });
-      const voter = { entityType: "member", entityId: memberId };
+      const voter = { entityType: "member" as const, entityId: memberId };
 
       for (let i = 0; i < 3; i++) {
         await castVote(
@@ -323,7 +332,7 @@ describe("poll-vote.service (PGlite integration)", () => {
 
     it("enforces allowMultipleVotes=false — rejects second vote", async () => {
       const poll = await createTestPoll({ allowMultipleVotes: false, maxVotesPerMember: 1 });
-      const voter = { entityType: "member", entityId: `mem_${crypto.randomUUID()}` };
+      const voter = { entityType: "member" as const, entityId: `mem_${crypto.randomUUID()}` };
 
       await castVote(
         asDb(db),
@@ -420,7 +429,7 @@ describe("poll-vote.service (PGlite integration)", () => {
 
     it("supports cursor pagination", async () => {
       const poll = await createTestPoll({ allowMultipleVotes: true, maxVotesPerMember: 5 });
-      const voter = { entityType: "member", entityId: memberId };
+      const voter = { entityType: "member" as const, entityId: memberId };
 
       for (let i = 0; i < 3; i++) {
         await castVote(asDb(db), systemId, poll.id, makeVoteParams({ voter }), auth, noopAudit);

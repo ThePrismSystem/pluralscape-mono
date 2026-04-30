@@ -95,14 +95,6 @@ describe("addMember", () => {
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
-  it("throws 400 for invalid body", async () => {
-    const { db } = mockDb();
-
-    await expect(addMember(db, SYSTEM_ID, GROUP_ID, {}, AUTH, mockAudit)).rejects.toThrow(
-      expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }),
-    );
-  });
-
   it("throws 404 for system ownership failure", async () => {
     mockOwnershipFailure(vi.mocked(assertSystemOwnership));
     const { db } = mockDb();

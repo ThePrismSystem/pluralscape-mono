@@ -156,14 +156,6 @@ describe("rotateWebhookSecret", () => {
     );
   });
 
-  it("rejects invalid params (missing version)", async () => {
-    const mockTx = makeReadMockTx([]);
-
-    await expect(
-      rotateWebhookSecret(asDb(mockTx), SYS_ID, WH_ID, {}, AUTH, mockAudit),
-    ).rejects.toThrow("Invalid payload");
-  });
-
   it("generates a secret of the correct byte length", async () => {
     const mockTx = makeRotateMockTx();
 

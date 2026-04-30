@@ -1,5 +1,6 @@
 import type { AccountId, BlobId, BucketId, ExportRequestId, MemberId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 
 /** Status of an export request. */
 export type ExportRequestStatus = "pending" | "processing" | "completed" | "failed";
@@ -50,6 +51,20 @@ export interface ExportRequest {
   readonly updatedAt: UnixMillis;
   readonly completedAt: UnixMillis | null;
 }
+
+/**
+ * `ExportRequestServerMetadata` is the server-side row shape for an
+ * export request. Identity case — the domain already exposes everything
+ * the server tracks; no `ServerInternal<T>` fields needed.
+ */
+export type ExportRequestServerMetadata = ExportRequest;
+
+/**
+ * `ExportRequestWire` is the JSON-serialized HTTP shape returned by
+ * export-request endpoints. Derived from `ExportRequestServerMetadata`
+ * via `Serialize<>` for canonical-chain consistency.
+ */
+export type ExportRequestWire = Serialize<ExportRequestServerMetadata>;
 
 /** Format for member reports. */
 export type ReportFormat = "html" | "pdf";

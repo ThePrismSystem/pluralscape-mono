@@ -1,11 +1,12 @@
+import { RegenerateRecoveryKeySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
 import { HTTP_BAD_REQUEST, HTTP_CREATED, HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
+import { parseBody } from "../../lib/body-parse.js";
 import { getDb } from "../../lib/db.js";
 import { logger } from "../../lib/logger.js";
-import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { getQueue } from "../../lib/queue.js";
 import { envelope } from "../../lib/response.js";
 import { authMiddleware } from "../../middleware/auth.js";
@@ -36,7 +37,7 @@ recoveryKeyRoutes.post(
     const auth = c.get("auth");
     const db = await getDb();
 
-    const body = await parseJsonBody(c);
+    const body = await parseBody(c, RegenerateRecoveryKeySchema);
 
     const audit = createAuditWriter(c, auth);
 

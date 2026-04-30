@@ -2,12 +2,11 @@ import { ID_PREFIXES } from "@pluralscape/types";
 import { RegisterDeviceTokenBodySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
-import { HTTP_BAD_REQUEST, HTTP_CREATED } from "../../http.constants.js";
-import { ApiHttpError } from "../../lib/api-error.js";
+import { HTTP_CREATED } from "../../http.constants.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
+import { parseBody } from "../../lib/body-parse.js";
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
-import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createIdempotencyMiddleware } from "../../middleware/idempotency.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
@@ -24,19 +23,9 @@ registerRoute.post("/", async (c) => {
   const auth = c.get("auth");
   const audit = createAuditWriter(c, auth);
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
-  const body = await parseJsonBody(c);
-
-  const parsed = RegisterDeviceTokenBodySchema.safeParse(body);
-  if (!parsed.success) {
-    throw new ApiHttpError(
-      HTTP_BAD_REQUEST,
-      "VALIDATION_ERROR",
-      "Invalid request body",
-      parsed.error.issues,
-    );
-  }
+  const body = await parseBody(c, RegisterDeviceTokenBodySchema);
 
   const db = await getDb();
-  const result = await registerDeviceToken(db, systemId, parsed.data, auth, audit);
+  const result = await registerDeviceToken(db, systemId, body, auth, audit);
   return c.json(envelope(result), HTTP_CREATED);
 });

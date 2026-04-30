@@ -129,14 +129,7 @@ export const groupRouter = router({
     .input(GroupIdSchema.and(MoveGroupBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return moveGroup(
-        ctx.db,
-        ctx.systemId,
-        input.groupId,
-        { targetParentGroupId: input.targetParentGroupId, version: input.version },
-        ctx.auth,
-        audit,
-      );
+      return moveGroup(ctx.db, ctx.systemId, input.groupId, input, ctx.auth, audit);
     }),
 
   copy: systemProcedure
@@ -144,17 +137,7 @@ export const groupRouter = router({
     .input(GroupIdSchema.and(CopyGroupBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return copyGroup(
-        ctx.db,
-        ctx.systemId,
-        input.groupId,
-        {
-          targetParentGroupId: input.targetParentGroupId,
-          copyMemberships: input.copyMemberships,
-        },
-        ctx.auth,
-        audit,
-      );
+      return copyGroup(ctx.db, ctx.systemId, input.groupId, input, ctx.auth, audit);
     }),
 
   getTree: systemProcedure.use(readHeavyLimiter).query(async ({ ctx }) => {
@@ -166,7 +149,7 @@ export const groupRouter = router({
     .input(ReorderGroupsBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      await reorderGroups(ctx.db, ctx.systemId, { operations: input.operations }, ctx.auth, audit);
+      await reorderGroups(ctx.db, ctx.systemId, input, ctx.auth, audit);
       return { success: true as const };
     }),
 

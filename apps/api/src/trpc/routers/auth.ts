@@ -1,4 +1,9 @@
-import { brandedIdQueryParam } from "@pluralscape/validation";
+import {
+  brandedIdQueryParam,
+  PasswordResetViaRecoveryKeySchema,
+  RegistrationCommitSchema,
+  RegistrationInitiateSchema,
+} from "@pluralscape/validation";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod/v4";
 
@@ -37,12 +42,7 @@ export const authRouter = router({
    */
   registrationInitiate: errorMapProcedure
     .use(authHeavyLimiter)
-    .input(
-      z.object({
-        email: z.email(),
-        accountType: z.enum(["system", "viewer"]).optional(),
-      }),
-    )
+    .input(RegistrationInitiateSchema)
     .mutation(async ({ input, ctx }) => {
       return initiateRegistration(ctx.db, input);
     }),
@@ -54,26 +54,11 @@ export const authRouter = router({
    */
   registrationCommit: errorMapProcedure
     .use(authHeavyLimiter)
-    .input(
-      z.object({
-        accountId: z.string().min(1),
-        authKey: z.string().min(1),
-        encryptedMasterKey: z.string().min(1),
-        encryptedSigningPrivateKey: z.string().min(1),
-        encryptedEncryptionPrivateKey: z.string().min(1),
-        publicSigningKey: z.string().min(1),
-        publicEncryptionKey: z.string().min(1),
-        recoveryEncryptedMasterKey: z.string().min(1),
-        challengeSignature: z.string().min(1),
-        recoveryKeyBackupConfirmed: z.boolean(),
-        recoveryKeyHash: z.string().min(1),
-        platform: PlatformSchema,
-      }),
-    )
+    .input(RegistrationCommitSchema.and(z.object({ platform: PlatformSchema })))
     .mutation(async ({ input, ctx }) => {
-      const { platform, ...params } = input;
+      const { platform, ...body } = input;
       const audit = ctx.createAudit(null);
-      return commitRegistration(ctx.db, params, platform, audit);
+      return commitRegistration(ctx.db, body, platform, audit);
     }),
 
   /**
@@ -120,24 +105,13 @@ export const authRouter = router({
    */
   resetPasswordWithRecoveryKey: errorMapProcedure
     .use(authHeavyLimiter)
-    .input(
-      z.object({
-        email: z.email(),
-        newAuthKey: z.string().min(1),
-        newKdfSalt: z.string().min(1),
-        newEncryptedMasterKey: z.string().min(1),
-        newRecoveryEncryptedMasterKey: z.string().min(1),
-        recoveryKeyHash: z.string().min(1),
-        newRecoveryKeyHash: z.string().min(1),
-        platform: PlatformSchema,
-      }),
-    )
+    .input(PasswordResetViaRecoveryKeySchema.and(z.object({ platform: PlatformSchema })))
     .mutation(async ({ input, ctx }) => {
-      const { platform, ...params } = input;
+      const { platform, ...body } = input;
       const audit = ctx.createAudit(null);
       let result;
       try {
-        result = await resetPasswordWithRecoveryKey(ctx.db, params, platform, audit);
+        result = await resetPasswordWithRecoveryKey(ctx.db, body, platform, audit);
       } catch (err) {
         if (err instanceof NoActiveRecoveryKeyError) {
           throw new TRPCError({

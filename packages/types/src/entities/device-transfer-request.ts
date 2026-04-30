@@ -41,5 +41,10 @@ export interface DeviceTransferRequestServerMetadata extends DeviceTransferReque
  * JSON-wire representation of a DeviceTransferRequest. Derived from the
  * domain `DeviceTransferRequest` type via `Serialize<T>`; branded IDs
  * become plain strings and `UnixMillis` becomes `number`.
+ *
+ * NB: Wire is derived from the domain type (not
+ * `DeviceTransferRequestServerMetadata`) because the row carries the
+ * encrypted key material, code salt, and attempt counter that the API
+ * does not expose to clients.
  */
 export type DeviceTransferRequestWire = Serialize<DeviceTransferRequest>;

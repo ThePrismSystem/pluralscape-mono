@@ -64,6 +64,7 @@ describe("PUT /systems/:systemId/webhook-configs/:webhookId", () => {
     const res = await putJSON(app, `/systems/${SYS_ID}/webhook-configs/${WH_ID}`, {
       url: "https://example.com/webhook-updated",
       eventTypes: ["member.updated"],
+      version: 1,
     });
 
     expect(res.status).toBe(200);
@@ -81,6 +82,7 @@ describe("PUT /systems/:systemId/webhook-configs/:webhookId", () => {
       url: "https://example.com/webhook-updated",
       eventTypes: ["member.updated"],
       enabled: false,
+      version: 1,
     });
 
     expect(updateWebhookConfig).toHaveBeenCalledTimes(1);

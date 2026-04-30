@@ -14,8 +14,8 @@ import {
 import { ApiHttpError } from "../../lib/api-error.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { requireSession } from "../../lib/auth-context.js";
+import { parseBody } from "../../lib/body-parse.js";
 import { getDb } from "../../lib/db.js";
-import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createRateLimiter } from "../../middleware/rate-limit.js";
 import { approveTransfer } from "../../services/device-transfer/approve.js";
@@ -64,27 +64,11 @@ deviceTransferRoute.post("/", async (c) => {
   const auth = c.get("auth");
   const session = requireSession(auth);
   const db = await getDb();
-  const body = await parseJsonBody(c);
+  const body = await parseBody(c, initiateTransferBodySchema);
   const audit = createAuditWriter(c, auth);
 
-  const parseResult = initiateTransferBodySchema.safeParse(body);
-  if (!parseResult.success) {
-    throw new ApiHttpError(
-      HTTP_BAD_REQUEST,
-      "VALIDATION_ERROR",
-      "Invalid request body",
-      parseResult.error.issues,
-    );
-  }
-
   try {
-    const result = await initiateTransfer(
-      db,
-      auth.accountId,
-      session.sessionId,
-      parseResult.data,
-      audit,
-    );
+    const result = await initiateTransfer(db, auth.accountId, session.sessionId, body, audit);
     return c.json(envelope(result), HTTP_CREATED);
   } catch (error: unknown) {
     if (error instanceof TransferValidationError) {
@@ -149,19 +133,9 @@ deviceTransferRoute.post("/:id/complete", async (c) => {
   const auth = c.get("auth");
   const session = requireSession(auth);
   const db = await getDb();
-  const body = await parseJsonBody(c);
+  const body = await parseBody(c, completeTransferBodySchema);
   const audit = createAuditWriter(c, auth);
   const transferId = c.req.param("id");
-
-  const parseResult = completeTransferBodySchema.safeParse(body);
-  if (!parseResult.success) {
-    throw new ApiHttpError(
-      HTTP_BAD_REQUEST,
-      "VALIDATION_ERROR",
-      "Invalid request body",
-      parseResult.error.issues,
-    );
-  }
 
   try {
     const result = await completeTransfer(
@@ -169,7 +143,7 @@ deviceTransferRoute.post("/:id/complete", async (c) => {
       brandId<DeviceTransferRequestId>(transferId),
       auth.accountId,
       session.sessionId,
-      parseResult.data.code,
+      body.code,
       audit,
     );
     return c.json(envelope(result));

@@ -62,6 +62,7 @@ import type {
   Group,
   GroupEncryptedFields,
   GroupWire,
+  ImportEntityRefWire,
   InnerWorldCanvas,
   InnerWorldCanvasEncryptedFields,
   InnerWorldCanvasWire,
@@ -96,9 +97,12 @@ import type {
   SystemStructureEntity,
   SystemStructureEntityAssociation,
   SystemStructureEntityAssociationEncryptedFields,
+  SystemStructureEntityAssociationWire,
   SystemStructureEntityEncryptedFields,
+  SystemStructureEntityLinkWire,
   SystemStructureEntityMemberLink,
   SystemStructureEntityMemberLinkEncryptedFields,
+  SystemStructureEntityMemberLinkWire,
   SystemStructureEntityType,
   SystemStructureEntityTypeEncryptedFields,
   SystemStructureEntityTypeWire,
@@ -250,6 +254,83 @@ expectTypeOf<Equal<components["schemas"]["ApiKeyResponse"], ApiKeyWire>>().toEqu
 // JournalEntryResponse and WikiPageResponse: canonical wire types exist
 // (`JournalEntryWire`, `WikiPageWire`) but no OpenAPI route schema is
 // authored yet. G7 deferred until the routes are added — see types-iupb.
+
+// ── G7 fleet expansion: plaintext-link entities ─────────────────────
+//
+// Structure-entity links / member-links / associations are plaintext
+// junction tables. Their wire types are Serialize-derived directly from
+// the domain shape (no encryption envelope), so the OpenAPI Response
+// schemas equal the wire types once the YAML correctly marks all
+// columns required.
+
+expectTypeOf<
+  Equal<components["schemas"]["StructureEntityLinkResponse"], SystemStructureEntityLinkWire>
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["StructureEntityMemberLinkResponse"],
+    SystemStructureEntityMemberLinkWire
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["StructureEntityAssociationResponse"],
+    SystemStructureEntityAssociationWire
+  >
+>().toEqualTypeOf<true>();
+
+// `ImportEntityRef` is a discriminated union over `sourceEntityType`.
+// Both the OpenAPI Response schema and the canonical wire shape carry
+// the same union of branded → string mappings, so the equality holds
+// once openapi-typescript flattens the discriminator.
+expectTypeOf<
+  Equal<components["schemas"]["ImportEntityRefResponse"], ImportEntityRefWire>
+>().toEqualTypeOf<true>();
+
+// ── G7 fleet expansion: deferred entries ─────────────────────────────
+//
+// The remaining plaintext entities have OpenAPI Response schemas that
+// are intentionally curated subsets of the canonical wire (e.g. omit
+// `accountId`, `version`, `updatedAt`) or include columns the wire
+// strips via `ServerInternal<…>`. Bringing each pair into G7 parity
+// requires one of:
+//
+//   • widening the OpenAPI schema to expose every wire column (e.g.
+//     `WebhookConfigResponse` flips most fields from optional to
+//     required + adds `secret` / audit columns), or
+//   • narrowing the wire shape with explicit allowlists / `ServerInternal<>`
+//     rebrands so the canonical wire matches the curated emission.
+//
+// Both paths are non-trivial cross-package refactors and out of scope
+// for the parity-gate expansion task. Tracked as follow-ups:
+//
+//   • DeviceTokenResponse                  ↔ DeviceTokenWire
+//   • FriendCodeResponse                   ↔ FriendCodeWire
+//   • FriendNotificationPreferenceResponse ↔ FriendNotificationPreferenceWire
+//   • FrontingReportResponse               ↔ FrontingReportWire
+//   • ImportJobResponse                    ↔ ImportJobWire
+//     (checkpointState narrows the entity-type union — needs
+//     `ImportCheckpointStateOpenApi` matching the TS `ImportCollectionType`)
+//   • NotificationConfigResponse           ↔ NotificationConfigWire
+//   • WebhookConfigResponse                ↔ WebhookConfigWire
+//   • WebhookDeliveryResponse              ↔ WebhookDeliveryWire
+//
+// Internal-only entities — no OpenAPI route schema exists, by design:
+//
+//   • Account / AccountWire — `AccountInfo` is a curated read-only
+//     shape; account columns aren't surfaced as a single wire envelope.
+//   • AccountPurgeRequest, AuthKey, BlobMetadata,
+//     BucketKeyRotation, BucketRotationItem, DeviceTransferRequest,
+//     ExportRequest, FieldDefinitionScope, KeyGrant, RecoveryKey,
+//     Session, SyncDocument, SystemSnapshot — currently exposed only
+//     via aggregate / collection wrappers (e.g. `SnapshotResponse`,
+//     `RecoveryKeyStatusResponse`) or admin / internal endpoints.
+//
+// Adding any of those routes triggers the G7 gate above — define the
+// `<X>Response` schema in the corresponding OpenAPI YAML and the
+// regenerated typecheck will require a paired Equal assertion.
 
 // ── OpenAPI ↔ domain parity: RelationshipResponse ──────────────────
 //

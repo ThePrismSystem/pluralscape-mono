@@ -62,7 +62,7 @@ describe("POST /systems/:id/innerworld/entities", () => {
     const res = await createApp().request(BASE_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "Test Entity" }),
+      body: JSON.stringify({ encryptedData: "dGVzdA==" }),
     });
 
     expect(res.status).toBe(201);

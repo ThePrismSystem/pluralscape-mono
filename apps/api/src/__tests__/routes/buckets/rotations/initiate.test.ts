@@ -61,6 +61,7 @@ const MOCK_ROTATION = {
 };
 
 const VALID_BODY = {
+  wrappedNewKey: "deadbeef",
   newKeyVersion: 2,
   friendKeyGrants: [],
 };

@@ -1,10 +1,11 @@
+import { RegistrationCommitSchema, RegistrationInitiateSchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
 import { HTTP_BAD_REQUEST, HTTP_CREATED } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
+import { parseBody } from "../../lib/body-parse.js";
 import { getDb } from "../../lib/db.js";
-import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { extractPlatform } from "../../lib/request-meta.js";
 import { envelope } from "../../lib/response.js";
 import { createIdempotencyMiddleware } from "../../middleware/idempotency.js";
@@ -20,7 +21,8 @@ export const registerRoute = new Hono();
 registerRoute.use("*", createCategoryRateLimiter("authHeavy"));
 
 registerRoute.post("/initiate", async (c) => {
-  const body = await parseJsonBody(c);
+  const body = await parseBody(c, RegistrationInitiateSchema);
+
   const db = await getDb();
 
   const result = await initiateRegistration(db, body);
@@ -35,7 +37,7 @@ registerRoute.post("/initiate", async (c) => {
 });
 
 registerRoute.post("/commit", createIdempotencyMiddleware(), async (c) => {
-  const body = await parseJsonBody(c);
+  const body = await parseBody(c, RegistrationCommitSchema);
 
   const platform = extractPlatform(c);
   const audit = createAuditWriter(c);

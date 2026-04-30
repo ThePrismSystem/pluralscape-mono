@@ -198,14 +198,6 @@ describe("poll-vote service", () => {
       );
     });
 
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      const { db } = mockDb();
-
-      await expect(
-        castVote(db, SYSTEM_ID, POLL_ID, { bad: true }, AUTH, mockAudit),
-      ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-    });
-
     it("throws NOT_FOUND when poll not found", async () => {
       const { db, chain } = mockDb();
       // .limit() → chain, .for() → empty poll data

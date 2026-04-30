@@ -19,7 +19,13 @@ import { accounts } from "./auth.js";
 import { systems } from "./systems.js";
 
 import type { DbAuditActor } from "../../helpers/types.js";
-import type { AccountId, AuditEventType, AuditLogEntryId, SystemId } from "@pluralscape/types";
+import type {
+  AccountId,
+  AuditEventType,
+  AuditLogEntryId,
+  ServerInternal,
+  SystemId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export type { DbAuditActor } from "../../helpers/types.js";
@@ -33,8 +39,13 @@ export const auditLog = pgTable(
     id: brandedId<AuditLogEntryId>("id").notNull(),
     // ON DELETE SET NULL: audit logs survive account/system deletion with nullified references.
     // Intentional exception to the RESTRICT policy — audit history must be preserved.
-    /** Denormalized for query performance — avoids joining through systems to get account. */
-    accountId: brandedId<AccountId>("account_id").references(() => accounts.id, {
+    /**
+     * Denormalized for query performance — avoids joining through systems to
+     * get account. Branded `ServerInternal<AccountId>` so the column is
+     * stripped from the wire envelope: the FK is operational scaffolding,
+     * not part of the client-visible audit-log entry shape.
+     */
+    accountId: brandedId<ServerInternal<AccountId>>("account_id").references(() => accounts.id, {
       onDelete: "set null",
     }),
     systemId: brandedId<SystemId>("system_id").references(() => systems.id, {

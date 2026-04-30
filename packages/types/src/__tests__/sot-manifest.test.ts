@@ -127,7 +127,8 @@ describe("SotEntityManifest", () => {
       | "lastUsedAt"
       | "revokedAt"
       | "expiresAt"
-      | "scopedBucketIds";
+      | "scopedBucketIds"
+      | "encryptedData";
     expectTypeOf<keyof ApiKeyServerVisible>().toEqualTypeOf<ExpectedVisibleKeys>();
   });
 

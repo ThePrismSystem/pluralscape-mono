@@ -5,7 +5,13 @@ import { mockDb } from "./helpers/mock-db.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext, SessionAuthContext } from "../lib/auth-context.js";
-import type { AccountId, EncryptedBlob, SessionId, SystemId } from "@pluralscape/types";
+import type {
+  AccountId,
+  EncryptedBlob,
+  SessionId,
+  SystemId,
+  SystemSnapshotId,
+} from "@pluralscape/types";
 
 // ── Mocks ───────────────────────────────────────────────────────────
 
@@ -30,7 +36,7 @@ const { duplicateSystem } = await import("../services/system-duplicate.service.j
 
 const SYSTEM_ID = brandId<SystemId>("sys_00000000-0000-0000-0000-000000000001");
 const ACCOUNT_ID = brandId<AccountId>("acc_00000000-0000-0000-0000-000000000001");
-const SNAPSHOT_ID = "snap_00000000-0000-0000-0000-000000000001";
+const SNAPSHOT_ID = brandId<SystemSnapshotId>("snap_00000000-0000-0000-0000-000000000001");
 const FAKE_BLOB: EncryptedBlob = {
   tier: 1,
   ciphertext: new Uint8Array([1, 2, 3]),
@@ -127,6 +133,8 @@ describe("duplicateSystem", () => {
   it("rejects invalid body (missing snapshotId)", async () => {
     const { db } = mockDb();
 
-    await expect(duplicateSystem(db, SYSTEM_ID, {}, stubAuth(), stubAudit())).rejects.toThrow();
+    await expect(
+      duplicateSystem(db, SYSTEM_ID, { snapshotId: SNAPSHOT_ID }, stubAuth(), stubAudit()),
+    ).rejects.toThrow();
   });
 });

@@ -1,8 +1,7 @@
 import { boardMessages } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, brandId } from "@pluralscape/types";
-import { CreateBoardMessageBodySchema } from "@pluralscape/validation";
 
-import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
@@ -15,22 +14,20 @@ import type { BoardMessageResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { SystemId, BoardMessageId } from "@pluralscape/types";
+import type { CreateBoardMessageBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function createBoardMessage(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  params: unknown,
+  body: z.infer<typeof CreateBoardMessageBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<BoardMessageResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    CreateBoardMessageBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
 
   const boardMessageId = brandId<BoardMessageId>(createId(ID_PREFIXES.boardMessage));
   const timestamp = now();
@@ -41,8 +38,8 @@ export async function createBoardMessage(
       .values({
         id: boardMessageId,
         systemId,
-        pinned: parsed.pinned,
-        sortOrder: parsed.sortOrder,
+        pinned: body.pinned,
+        sortOrder: body.sortOrder,
         encryptedData: blob,
         createdAt: timestamp,
         updatedAt: timestamp,

@@ -45,7 +45,7 @@ const MOCK_CANVAS = {
   updatedAt: 1000 as never,
 };
 
-const VALID_BODY = { data: { nodes: [], edges: [] } };
+const VALID_BODY = { encryptedData: "dGVzdA==", version: 1 };
 
 // ── Tests ────────────────────────────────────────────────────────
 

@@ -5,7 +5,12 @@ import { mockDb } from "../../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../../helpers/mock-ownership.js";
 import { makeTestAuth } from "../../helpers/test-auth.js";
 
-import type { MemberId, SystemId, SystemStructureEntityMemberLinkId } from "@pluralscape/types";
+import type {
+  MemberId,
+  SystemId,
+  SystemStructureEntityId,
+  SystemStructureEntityMemberLinkId,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
@@ -33,15 +38,6 @@ vi.mock("@pluralscape/types", async (importOriginal) => {
   };
 });
 
-vi.mock("@pluralscape/validation", () => ({
-  CreateStructureEntityMemberLinkBodySchema: {
-    safeParse: vi.fn().mockReturnValue({
-      success: true,
-      data: { parentEntityId: "sse_parent", memberId: "mem_test", sortOrder: 0 },
-    }),
-  },
-}));
-
 vi.mock("drizzle-orm", async (importOriginal) => {
   const actual = await importOriginal<typeof import("drizzle-orm")>();
   return {
@@ -56,7 +52,6 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 // ── Imports after mocks ──────────────────────────────────────────────
 
 const { assertSystemOwnership } = await import("../../../lib/system-ownership.js");
-const { CreateStructureEntityMemberLinkBodySchema } = await import("@pluralscape/validation");
 
 const { createEntityMemberLink, listEntityMemberLinks, deleteEntityMemberLink } =
   await import("../../../services/structure/member-link.js");
@@ -66,6 +61,7 @@ const { createEntityMemberLink, listEntityMemberLinks, deleteEntityMemberLink } 
 const SYSTEM_ID = brandId<SystemId>("sys_test-system");
 const LINK_ID = brandId<SystemStructureEntityMemberLinkId>("seml_test-link");
 const MEMBER_ID = brandId<MemberId>("mem_test");
+const PARENT_ID = brandId<SystemStructureEntityId>("sse_parent");
 const AUTH = makeTestAuth({ systemId: SYSTEM_ID });
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 
@@ -92,7 +88,7 @@ describe("structure-entity-member-link service", () => {
   // ── createEntityMemberLink ────────────────────────────────────
 
   describe("createEntityMemberLink", () => {
-    const validPayload = { parentEntityId: "sse_parent", memberId: MEMBER_ID, sortOrder: 0 };
+    const validPayload = { parentEntityId: PARENT_ID, memberId: MEMBER_ID, sortOrder: 0 };
 
     it("creates a member link and audits the addition", async () => {
       const { db, chain } = mockDb();
@@ -108,19 +104,6 @@ describe("structure-entity-member-link service", () => {
       expect(mockAudit).toHaveBeenCalledWith(
         chain,
         expect.objectContaining({ eventType: "structure-entity-member-link.added" }),
-      );
-    });
-
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      const { db } = mockDb();
-      const schema = vi.mocked(CreateStructureEntityMemberLinkBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: false,
-        error: { issues: [] },
-      });
-
-      await expect(createEntityMemberLink(db, SYSTEM_ID, {}, AUTH, mockAudit)).rejects.toThrow(
-        expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }),
       );
     });
 

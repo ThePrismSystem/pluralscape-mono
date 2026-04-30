@@ -1,6 +1,5 @@
 import { memberPhotos } from "@pluralscape/db/pg";
 import { brandId, now } from "@pluralscape/types";
-import { ReorderPhotosBodySchema } from "@pluralscape/validation";
 import { and, eq, inArray, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../../../http.constants.js";
@@ -16,23 +15,20 @@ import type { MemberPhotoResult } from "./internal.js";
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type { MemberId, MemberPhotoId, SystemId } from "@pluralscape/types";
+import type { ReorderPhotosBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function reorderMemberPhotos(
   db: PostgresJsDatabase,
   systemId: SystemId,
   memberId: MemberId,
-  params: unknown,
+  body: z.infer<typeof ReorderPhotosBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<MemberPhotoResult[]> {
   assertSystemOwnership(systemId, auth);
   await assertMemberActive(db, systemId, memberId);
-
-  const parsed = ReorderPhotosBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid reorder payload");
-  }
 
   const timestamp = now();
 
@@ -51,7 +47,7 @@ export async function reorderMemberPhotos(
 
     const existingIds = new Set<string>(existingPhotos.map((p) => p.id));
 
-    for (const item of parsed.data.order) {
+    for (const item of body.order) {
       if (!existingIds.has(item.id)) {
         throw new ApiHttpError(
           HTTP_BAD_REQUEST,
@@ -62,17 +58,17 @@ export async function reorderMemberPhotos(
     }
 
     // Reorder must include all active photos
-    if (parsed.data.order.length !== existingPhotos.length) {
+    if (body.order.length !== existingPhotos.length) {
       throw new ApiHttpError(
         HTTP_BAD_REQUEST,
         "VALIDATION_ERROR",
-        `Reorder must include all ${String(existingPhotos.length)} active photos, got ${String(parsed.data.order.length)}`,
+        `Reorder must include all ${String(existingPhotos.length)} active photos, got ${String(body.order.length)}`,
       );
     }
 
     // Batch update sort orders with single CASE/WHEN query
-    const targetIds = parsed.data.order.map((item) => brandId<MemberPhotoId>(item.id));
-    const cases = parsed.data.order.map(
+    const targetIds = body.order.map((item) => brandId<MemberPhotoId>(item.id));
+    const cases = body.order.map(
       (item) =>
         sql`WHEN ${memberPhotos.id} = ${brandId<MemberPhotoId>(item.id)} THEN ${item.sortOrder}`,
     );
@@ -91,18 +87,18 @@ export async function reorderMemberPhotos(
       )
       .returning({ id: memberPhotos.id });
 
-    if (updatedRows.length !== parsed.data.order.length) {
+    if (updatedRows.length !== body.order.length) {
       throw new ApiHttpError(
         HTTP_NOT_FOUND,
         "NOT_FOUND",
-        `Failed to update sort order for ${String(parsed.data.order.length - updatedRows.length)} photos`,
+        `Failed to update sort order for ${String(body.order.length - updatedRows.length)} photos`,
       );
     }
 
     await audit(tx, {
       eventType: "member-photo.reordered",
       actor: { kind: "account", id: auth.accountId },
-      detail: `Reordered ${String(parsed.data.order.length)} photos`,
+      detail: `Reordered ${String(body.order.length)} photos`,
       systemId,
     });
 

@@ -5,7 +5,7 @@ import { captureWhereArg, mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
-import type { SystemId, WebhookId } from "@pluralscape/types";
+import type { SystemId, WebhookEventType, WebhookId } from "@pluralscape/types";
 
 // ── Mock external deps ───────────────────────────────────────────────
 
@@ -90,7 +90,12 @@ describe("webhook-config service", () => {
   // ── createWebhookConfig ────────────────────────────────────────────
 
   describe("createWebhookConfig", () => {
-    const validCreatePayload = {
+    const validCreatePayload: {
+      url: string;
+      eventTypes: WebhookEventType[];
+      enabled: boolean;
+      cryptoKeyId: undefined;
+    } = {
       url: "https://example.com/webhook",
       eventTypes: ["member.created"],
       enabled: true,
@@ -111,14 +116,6 @@ describe("webhook-config service", () => {
       expect(result.url).toBe("https://example.com/webhook");
       expect(typeof result.secret).toBe("string");
       expect(mockAudit).toHaveBeenCalledOnce();
-    });
-
-    it("throws VALIDATION_ERROR when payload is invalid", async () => {
-      const { db } = mockDb();
-
-      await expect(
-        createWebhookConfig(db, SYSTEM_ID, { bad: "payload" }, AUTH, mockAudit),
-      ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
     });
 
     it("rejects non-localhost HTTP URL", async () => {
@@ -239,12 +236,7 @@ describe("webhook-config service", () => {
       const result = await createWebhookConfig(
         db,
         SYSTEM_ID,
-        {
-          url: "https://example.com/webhook",
-          eventTypes: ["member.created"],
-          enabled: true,
-          // cryptoKeyId omitted
-        },
+        { ...validCreatePayload },
         AUTH,
         mockAudit,
       );
@@ -447,14 +439,6 @@ describe("webhook-config service", () => {
       expect(mockAudit).toHaveBeenCalledOnce();
     });
 
-    it("throws VALIDATION_ERROR when payload is invalid", async () => {
-      const { db } = mockDb();
-
-      await expect(
-        updateWebhookConfig(db, SYSTEM_ID, WH_ID, { bad: "data" }, AUTH, mockAudit),
-      ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-    });
-
     it("validates URL protocol when url is present in update", async () => {
       const { db } = mockDb();
 
@@ -515,7 +499,14 @@ describe("webhook-config service", () => {
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
       await expect(
-        updateWebhookConfig(db, brandId<SystemId>("sys_other"), WH_ID, {}, AUTH, mockAudit),
+        updateWebhookConfig(
+          db,
+          brandId<SystemId>("sys_other"),
+          WH_ID,
+          { version: 1 },
+          AUTH,
+          mockAudit,
+        ),
       ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
     });
 

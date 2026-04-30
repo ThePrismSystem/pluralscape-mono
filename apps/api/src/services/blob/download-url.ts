@@ -47,7 +47,10 @@ export async function getDownloadUrl(
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Blob not found");
     }
 
-    return row.storageKey as StorageKey;
+    // The DB column is branded `ServerInternal<string>` for wire-strip; drop
+    // the brand on the way to the storage adapter (a `StorageKey` brand is
+    // a peer marker that doesn't intersect with `ServerInternal<…>`).
+    return row.storageKey as string as StorageKey;
   });
 
   const presigned = await storageAdapter.generatePresignedDownloadUrl({ storageKey });

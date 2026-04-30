@@ -1,8 +1,7 @@
 import { polls } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, brandId, toUnixMillis } from "@pluralscape/types";
-import { CreatePollBodySchema } from "@pluralscape/validation";
 
-import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
@@ -15,22 +14,20 @@ import type { PollResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { SystemId, PollId } from "@pluralscape/types";
+import type { CreatePollBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function createPoll(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  params: unknown,
+  body: z.infer<typeof CreatePollBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<PollResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    CreatePollBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
 
   const pollId = brandId<PollId>(createId(ID_PREFIXES.poll));
   const timestamp = now();
@@ -41,15 +38,15 @@ export async function createPoll(
       .values({
         id: pollId,
         systemId,
-        createdByMemberId: parsed.createdByMemberId ?? null,
-        kind: parsed.kind,
+        createdByMemberId: body.createdByMemberId ?? null,
+        kind: body.kind,
         status: POLL_STATUS_OPEN,
         closedAt: null,
-        endsAt: parsed.endsAt !== undefined ? toUnixMillis(parsed.endsAt) : null,
-        allowMultipleVotes: parsed.allowMultipleVotes,
-        maxVotesPerMember: parsed.maxVotesPerMember,
-        allowAbstain: parsed.allowAbstain,
-        allowVeto: parsed.allowVeto,
+        endsAt: body.endsAt !== undefined ? toUnixMillis(body.endsAt) : null,
+        allowMultipleVotes: body.allowMultipleVotes,
+        maxVotesPerMember: body.maxVotesPerMember,
+        allowAbstain: body.allowAbstain,
+        allowVeto: body.allowVeto,
         encryptedData: blob,
         createdAt: timestamp,
         updatedAt: timestamp,

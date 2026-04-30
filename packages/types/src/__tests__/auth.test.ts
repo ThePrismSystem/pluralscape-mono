@@ -1,6 +1,6 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { Account, LoginCredentials } from "../entities/account.js";
+import type { Account } from "../entities/account.js";
 import type { AuthKey, AuthKeyType } from "../entities/auth-key.js";
 import type {
   DeviceTransferPayload,
@@ -99,18 +99,6 @@ describe("RecoveryKey", () => {
     expectTypeOf<RecoveryKey["recoveryKeyHash"]>().toEqualTypeOf<Uint8Array | null>();
     expectTypeOf<RecoveryKey["createdAt"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<RecoveryKey["revokedAt"]>().toEqualTypeOf<UnixMillis | null>();
-  });
-});
-
-describe("LoginCredentials", () => {
-  it("has no id or timestamps", () => {
-    expectTypeOf<LoginCredentials>().not.toHaveProperty("id");
-    expectTypeOf<LoginCredentials>().not.toHaveProperty("createdAt");
-  });
-
-  it("has expected fields", () => {
-    expectTypeOf<LoginCredentials["email"]>().toEqualTypeOf<string>();
-    expectTypeOf<LoginCredentials["authKey"]>().toEqualTypeOf<string>();
   });
 });
 

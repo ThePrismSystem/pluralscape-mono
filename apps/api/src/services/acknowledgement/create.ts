@@ -1,8 +1,7 @@
 import { acknowledgements } from "@pluralscape/db/pg";
 import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
-import { CreateAcknowledgementBodySchema } from "@pluralscape/validation";
 
-import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
@@ -14,22 +13,20 @@ import { toAcknowledgementResult, type AcknowledgementResult } from "./internal.
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { SystemId, AcknowledgementId } from "@pluralscape/types";
+import type { CreateAcknowledgementBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function createAcknowledgement(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  params: unknown,
+  body: z.infer<typeof CreateAcknowledgementBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<AcknowledgementResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    CreateAcknowledgementBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
 
   const ackId = brandId<AcknowledgementId>(createId(ID_PREFIXES.acknowledgement));
   const timestamp = now();
@@ -40,7 +37,7 @@ export async function createAcknowledgement(
       .values({
         id: ackId,
         systemId,
-        createdByMemberId: parsed.createdByMemberId ?? null,
+        createdByMemberId: body.createdByMemberId ?? null,
         confirmed: false,
         encryptedData: blob,
         createdAt: timestamp,
