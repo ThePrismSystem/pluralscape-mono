@@ -39,7 +39,9 @@ interface ImportDataSource {
 
 Sources yield `SourceEvent`s tagged either `"doc"` (a raw document the engine validates and maps) or `"drop"` (a document the source knowingly rejected before producing it — recorded by the engine as a non-fatal `invalid-source-document` error). Transport and parse failures throw and are fatal. Iteration order must be stable across calls so the engine's resume cursor remains meaningful.
 
-`supplyParentIds` is an optional hook the engine invokes after finishing a parent collection, passing the source IDs persisted from that collection to any dependent collection that needs them.
+Before iterating, the engine compares `listCollections()` against `dependencyOrder` and emits two distinct warnings: `dropped-collection` for source-reported collections it does not know how to import, and `source-missing-collection` for collections it expected but the source did not report.
+
+`supplyParentIds` is an optional hook the engine invokes after finishing a parent collection, passing the source IDs persisted from that collection to any dependent collection that needs them. The list includes `created`, `updated`, and `skipped` source IDs — all valid for parent enumeration on dependent endpoints.
 
 ### Checkpoint and resume
 
@@ -77,6 +79,44 @@ Errors thrown by the source's iterator are always treated as fatal — there is 
 
 Each collection is wired to either a `SingleMapperEntry` (document-at-a-time) or a `BatchMapperEntry` (all documents for the collection supplied as one array, enabling cross-document analysis such as converting PK switches into fronting sessions). Mappers return a tagged `MapperResult`: `mapped | skipped | failed`.
 
+Source-specific behaviour that runs once per collection before iteration begins (e.g., SP legacy bucket synthesis) is injected via the optional `beforeCollection` hook on `RunImportEngineArgs`. The hook can mutate checkpoint state and may abort the run.
+
+### Run result
+
+`runImportEngine` resolves with `ImportRunResult`:
+
+```ts
+interface ImportRunResult {
+  readonly finalState: ImportCheckpointState;
+  readonly warnings: readonly MappingWarning[];
+  readonly errors: readonly ImportError[];
+  readonly outcome: "completed" | "aborted";
+}
+```
+
+Aborted outcomes preserve a recoverable checkpoint so callers can resume. `source.close()` runs in a `finally` block; close failures are surfaced as a `source-close-error` warning rather than masking the run result.
+
+### Constants
+
+Exported from `import-core.constants.ts`:
+
+- `CHECKPOINT_CHUNK_SIZE = 50` — documents persisted between checkpoint writes.
+- `MAX_WARNING_BUFFER_SIZE = 1000` — per-run cap on retained mapping warnings.
+- `MAX_IMPORT_FILE_BYTES = 250 MiB` — hard ceiling on file-source inputs.
+
+---
+
+## Source layout
+
+The orchestrator is split across small files to honour the package's ESLint `max-lines` ceiling:
+
+- `import-engine.ts` — public entry point (`runImportEngine`) and dependency-order walk.
+- `import-engine.collection.ts` — per-collection iteration for single and batch mappers.
+- `import-engine.helpers.ts` — small pure helpers (resume index lookup, abort check, `buildPersistableEntity`).
+- `checkpoint.ts`, `engine-errors.ts`, `mapper-dispatch.ts`, `mapper-result.ts`, `context.ts`, `helpers.ts`, `persister.types.ts`, `source.types.ts` — the named abstractions above.
+
+Engine tests under `src/__tests__/` are split per concern: `import-engine-checkpoint`, `import-engine-error-classification`, `import-engine-ordering`, `import-engine-parsing`, `import-engine-persister`, and `import-engine-persister-batch`.
+
 ---
 
 ## Testing helpers
@@ -91,8 +131,9 @@ import { createInMemoryPersister } from "@pluralscape/import-core/testing";
 
 const { persister, snapshot } = createInMemoryPersister();
 // ... run engine ...
-const { entitiesByType, errors, flushCount } = snapshot();
+const { entities, errors, flushCount, entitiesByType, countByType } = snapshot();
 entitiesByType("member"); // readonly StoredEntity[]
+countByType("member"); // number
 ```
 
 ---

@@ -1,6 +1,6 @@
-# Database Schema — Pluralscape (PostgreSQL)
+# Database Schema — Pluralscape
 
-This document contains entity-relationship diagrams for every table in the Pluralscape PostgreSQL schema, organized by domain. Each diagram uses [Mermaid `erDiagram` syntax](https://mermaid.js.org/syntax/entityRelationshipDiagram.html).
+This document contains entity-relationship diagrams for every table in the Pluralscape server PostgreSQL schema, organized by domain. Each diagram uses [Mermaid `erDiagram` syntax](https://mermaid.js.org/syntax/entityRelationshipDiagram.html).
 
 **Conventions used throughout:**
 
@@ -11,7 +11,17 @@ This document contains entity-relationship diagrams for every table in the Plura
 - `T2` — Tier 2 encryption: encrypted with a per-bucket symmetric key; shareable with friends
 - Columns named `version`, `created_at`, `updated_at`, `archived`, `archived_at` appear on most tables via shared helpers and are omitted from diagrams to reduce noise.
 
-**All string IDs** are `varchar(36)` (KSUID/UUID-shaped). Composite foreign keys using `(id, system_id)` pairs are noted as "scoped FK" in descriptions.
+**All string IDs** are `varchar(36)` (KSUID/UUID-shaped) typed via the `brandedId<B>()` Drizzle helper, which preserves the domain-type brand (e.g. `MemberId`, `SystemId`) through `InferSelectModel`. Composite foreign keys using `(id, system_id)` pairs are noted as "scoped FK" in descriptions. Timestamp columns hold branded `UnixMillis` values via the shared `UnixMillis` customType.
+
+## Three Drizzle schema sets
+
+Per [ADR-038](adr/038-three-drizzle-schema-sets.md), the same domain entities have three Drizzle schema sets, all under `packages/db/src/schema/`:
+
+- `pg/` — server PostgreSQL (production hosted API). Encrypted-blob + structural columns. The diagrams below depict this set.
+- `sqlite/` — server SQLite (self-hosted deployments and the queue package). Same shape as PG via shared mixins in `packages/db/src/helpers/entity-shape.{pg,sqlite}.ts`.
+- `sqlite-client-cache/` — mobile/web local cache. Stores **decrypted** plaintext columns projected from CRDT documents; the materializer (`packages/sync/src/materializer/`) writes here and the UI reads via TanStack Query subscriptions.
+
+A three-way parity gate (`schema-three-way-parity.test.ts`) asserts that all three sets stay aligned: PG ≡ server-SQLite columns; server structural columns ≡ cache structural columns; and cache variant columns derive from domain-type fields per the encoding rules in ADR-038.
 
 ---
 

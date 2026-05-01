@@ -209,6 +209,13 @@ Drift on any gate fails CI. The G8 and G9 rules have no allow-list mechanism —
 - Encrypted-field schema decisions (`T1` encrypted vs `T3` plaintext per field) remain judgment calls, not mechanically derived.
 - Full codegen from types → Drizzle/Zod is explicitly rejected (non-goal).
 
+### M9a closeout state (2026-05-01)
+
+- Encrypted-entity chain applied fleet-wide: every encrypted entity in `packages/types/src/entities/` publishes a `ServerMetadata` and an `EncryptedWire<…>`-derived `Result`, with `Wire = Serialize<Result>` (ps-y4tb). `EncryptedWire<T>` (`packages/types/src/encrypted-wire.ts`) is the canonical decrypt-boundary helper across the fleet (types-emid, ps-6lwp, types-cfp6).
+- Plaintext SoT pass closed: all plaintext clusters consolidated under the `X → XServerMetadata → XWire = Serialize<XServerMetadata>` chain, including discriminated `Archivable<T>` for archivable plaintext entities (types-ltel, ps-6phh, types-0e9j). G13 in `plaintext-server-row-parity.type.test.ts` is the fleet-wide bidirectional gate.
+- Brand fleet expansion landed for non-ID branded scalars: `Note.title`/`Note.content` (types-cdr5), `Poll.title`/`PollOption.label` (types-e6n9), `FieldDefinition.name` (types-gkhk), `FrontingSession.comment`/`positionality`/`outtrigger` (types-09m5), and lifecycle-event display brands (types-yxgc). Branded-ID drift cleanup across five surfaces tracked under ps-q8vs.
+- `pnpm types:check-sot` runs G1–G11 + G13 sequentially in CI; drift on any gate fails the build.
+
 ## Cross-links
 
 - ADR-006 — encryption boundary

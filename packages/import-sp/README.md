@@ -217,7 +217,7 @@ mapping.
 
 - [ADR 034](../../docs/adr/034-import-core-extraction.md) — import-core extraction rationale
 - `packages/import-core` — shared orchestration engine (Persister, checkpoint, error classification)
-- `.beans/` — work tracker (prefix `ps-nrg`)
+- `.beans/ps-nrg4` — Simply Plural import epic
 - `packages/types` — `ImportCollectionType`, `ImportError`, `ImportCheckpointState`
 - `packages/db` — `import_jobs`, `import_entity_refs` schema
 
@@ -239,7 +239,7 @@ SP import E2E tests run against a real Simply Plural API instance with seeded te
 
 3. Seed test data (creates deterministic SP entities, triggers export, writes manifest):
    ```bash
-   source .env.sp-test && npx tsx scripts/sp-seed/seed.ts
+   source .env.sp-test && pnpm seed:sp-test
    ```
    The seed script is idempotent — it probes SP for existing entities and reuses them.
    After seeding, manually download the JSON export from the email SP sends.

@@ -10,9 +10,9 @@ CRDT documents are managed with [Automerge](https://automerge.org/). Each logica
 
 Every envelope (change and snapshot) is Ed25519-signed by the author and the signature is verified before decryption. The envelope's `authorPublicKey` is mixed into the AEAD additional data, cryptographically binding the advertised public key to the ciphertext — swapping the public key after the fact produces `KeyBindingMismatchError` on decrypt. Snapshot envelopes additionally commit to a big-endian `snapshotVersion` to prevent cross-version replay. Document access is authorised via the document key resolver, which maps document IDs to bucket keys and refuses unknown buckets with `BucketKeyNotFoundError`.
 
-Conflict resolution happens entirely on-device: Automerge provides last-writer-wins semantics per field for concurrent edits. Post-merge validation runs after each merge to detect application-level inconsistencies (e.g., overlapping fronting sessions) and surfaces them as `ConflictNotification` events rather than silently discarding data. Documents that exceed size or time thresholds are split or compacted automatically.
+Conflict resolution happens entirely on-device: Automerge provides last-writer-wins semantics per field for concurrent edits. Post-merge validation runs after each merge to detect application-level inconsistencies (e.g., overlapping fronting sessions) and surfaces them as `ConflictNotification` events rather than silently discarding data. Validators live under `src/validators/` split by concern (fronting, hierarchy cycles, sort order, check-in, friend connection, timer config, webhook config, tombstones, bucket content tags) and are aggregated by `runAllValidations`. Documents that exceed size or time thresholds are split or compacted automatically.
 
-Incoming changes are materialised into SQLite through per-document materializers. Each merge carries a `dirtyEntityTypes` hint so only entity types whose CRDT fields actually changed are queried and diffed — clean types issue zero SQL. Hot-path entity writes emit `materialized:entity` events for downstream query invalidation.
+Incoming changes are materialised into the local-cache SQLite schema through per-document materializers (ADR-038 three-schema-set split: server PG, client SQLite, local-cache SQLite). Each merge carries a `dirtyEntityTypes` hint so only entity types whose CRDT fields actually changed are queried and diffed — clean types issue zero SQL. Hot-path entity writes emit `materialized:entity` events for downstream query invalidation. The data layer wires the materializer registry into the sync write path via `createMaterializerSubscriber` (in `@pluralscape/data`), which subscribes to `SyncChangesMergedEvent` / `SyncSnapshotAppliedEvent` on the event bus. Brand-aware merge logic uses canonical branded types from `@pluralscape/types`.
 
 ## Key Exports
 
@@ -120,12 +120,14 @@ Nested transactions are rejected synchronously at the driver level — callers m
 **Internal**
 
 - `@pluralscape/crypto` — XChaCha20-Poly1305 encryption, Argon2id key derivation
-- `@pluralscape/types` — shared domain types (`SystemId`, `SyncDocumentId`, etc.)
+- `@pluralscape/db` — local-cache SQLite schema definitions (consumed by materializer DDL)
+- `@pluralscape/types` — canonical branded domain types (`SystemId`, `SyncDocumentId`, etc.)
 - `@pluralscape/validation` — input validation schemas
 
 **External**
 
 - [`@automerge/automerge`](https://automerge.org/) ^3 — CRDT library (MIT)
+- `drizzle-orm` — schema bridge for materializer DDL generation
 - `better-sqlite3-multiple-ciphers` — encrypted SQLite (dev/integration only)
 
 ## Testing

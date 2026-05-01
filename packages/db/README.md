@@ -4,17 +4,34 @@ Drizzle ORM schema, client factory, and query helpers for the Pluralscape databa
 
 ## Overview
 
-This package defines the complete Pluralscape database schema across two SQL dialects:
-PostgreSQL for hosted deployments and SQLite (via `better-sqlite3-multiple-ciphers`) for
-self-hosted deployments. The schema covers all application domains — members, fronting
-sessions, journals, groups, custom fields, communication, innerworld, blob metadata,
-notifications, key rotation, import/export, audit logging, and more — spanning 40+ tables.
+This package defines the Pluralscape database schema as **three Drizzle schema sets**
+(see [ADR-038](../../docs/adr/038-three-drizzle-schema-sets.md)):
 
-Each dialect has its own Drizzle schema definition under `src/schema/pg/` and
-`src/schema/sqlite/`, exported via the `./pg` and `./sqlite` sub-entry points. The main
-entry point (`@pluralscape/db`) exports the client factory, dialect and deployment
-detection utilities, RLS helpers, shared query helpers, enumeration constants, and view
-types that are dialect-agnostic.
+- **`src/schema/pg/`** — hosted production server. PostgreSQL with encrypted blobs and
+  structural columns. Zero-knowledge: the server never sees plaintext entity bodies.
+- **`src/schema/sqlite/`** — self-hosted server and the queue package. Same
+  encrypted-blob shape as PG, on SQLite via `better-sqlite3-multiple-ciphers`.
+- **`src/schema/sqlite-client-cache/`** — mobile/web local cache. Stores plaintext
+  columns projected from CRDT documents by the materializer; the UI reads from here via
+  TanStack Query subscriptions.
+
+The two server schema sets share a structural mixin layer in `src/helpers/entity-shape.{pg,sqlite}.ts`
+(`entityIdentity<TIdBrand>()`, `encryptedPayload()`, `serverEntityChecks()`). The
+client-cache schemas reuse `entityIdentity()` and use per-entity decrypted columns.
+
+The schema covers all application domains — members, fronting sessions, journals,
+groups, custom fields, communication, innerworld, blob metadata, notifications, key
+rotation, import/export, audit logging, and more.
+
+The three sets are exposed as sub-entry points: `./pg`, `./sqlite`, and
+`./sqlite-client-cache`. The main entry point (`@pluralscape/db`) exports the client
+factory, dialect and deployment detection utilities, RLS helpers, shared query helpers,
+enumeration constants, and view types that are dialect-agnostic.
+
+A three-way parity gate in `src/__tests__/schema-three-way-parity.test.ts` asserts that
+PG and server-SQLite columns match, that server structural columns match the cache
+schemas, and that cache decrypted columns track the canonical domain types per the
+encoding rules in ADR-038.
 
 Row-Level Security (RLS) is enforced on the PostgreSQL dialect. Every tenant table is
 protected by policies keyed on `system_id`, `account_id`, or both — including sync
@@ -44,9 +61,16 @@ environment.
 `generateRlsStatements()`, `RLS_TABLE_POLICIES`. Used by the API to set per-request
 tenant context before executing queries.
 
-**Schema sub-entry points** — `@pluralscape/db/pg` and `@pluralscape/db/sqlite` expose
-the full Drizzle table definitions for each dialect. Import from these when constructing
-Drizzle queries directly.
+**Schema sub-entry points** — `@pluralscape/db/pg`, `@pluralscape/db/sqlite`, and
+`@pluralscape/db/sqlite-client-cache` expose the full Drizzle table definitions for each
+schema set. Import from these when constructing Drizzle queries directly.
+
+**Column helpers** — `brandedId<B>()` (`src/columns/{pg,sqlite}.ts`) declares a
+brand-typed id column so `InferSelectModel` returns the domain branded type rather than
+a raw `string`. `pgTimestamp` / `sqliteTimestamp` are `UnixMillis` customTypes — server
+PG stores `timestamptz` (string at the driver, `UnixMillis` at the model), SQLite
+passes the integer through. Cache schemas additionally use `sqliteJsonOf<T>()` to give
+JSON-encoded columns a typed shape.
 
 **Query helpers** — maintenance queries for audit log cleanup (`pgCleanupAuditLog`,
 `sqliteCleanupAuditLog`), orphaned tag cleanup, and device transfer cleanup.
@@ -118,14 +142,16 @@ const rows = await db.drizzle.select().from(members).where(eq(members.systemId, 
 
 ## Migrations
 
-Migration files live in `migrations/pg/` and `migrations/sqlite/`.
+Migration files live in `migrations/pg/` and `migrations/sqlite/`. The
+`sqlite-client-cache` schema does not produce a migration directory: the materializer
+emits its DDL at runtime by introspecting the Drizzle schema (`getTableConfig`).
 
 **Pre-release migration policy:** Pluralscape is pre-production, so generated migration
 files are regularly nuked and regenerated from scratch. The Drizzle schema files under
-`src/schema/pg/` and `src/schema/sqlite/` are the single source of truth for table
-shape — never treat a migration file as authoritative. Changes to column names,
-constraints, or indexes land in the schema files first; migrations are then regenerated
-to reflect them.
+`src/schema/pg/`, `src/schema/sqlite/`, and `src/schema/sqlite-client-cache/` are the
+single source of truth for table shape — never treat a migration file as authoritative.
+Changes to column names, constraints, or indexes land in the schema files first;
+migrations are then regenerated to reflect them.
 
 Generate the Drizzle schema migration after schema changes:
 

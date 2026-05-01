@@ -8,7 +8,7 @@ Pluralscape enforces zero-knowledge encryption: the server never sees plaintext 
 
 Data is encrypted at one of three tiers based on its sensitivity and sharing requirements. **T1** (zero-knowledge) encrypts with a sub-key derived from the system master key — only the account owner can decrypt. **T2** (per-bucket) encrypts with a per-Privacy-Bucket symmetric key distributed asymmetrically to authorized friends — enabling selective sharing without the server ever seeing the bucket key. **T3** is a typed passthrough for non-sensitive metadata fields that remain in plaintext. See [ADR 006](../../docs/adr/006-encryption.md) for the full encryption architecture, including the _Master-Key KDF Profile_ addendum.
 
-The key hierarchy flows from a user password through Argon2id to a 64-byte split derivation — bytes `[0..31]` become the `authKey` (hashed server-side for login, never stored raw) and bytes `[32..63]` become the `passwordKey` (a KEK that wraps the 256-bit random master key on-device). The master key in turn feeds BLAKE2B KDF sub-keys for identity keypairs (X25519 + Ed25519), per-bucket symmetric keys, and the sync-encryption key. Argon2id runs under per-context profiles (`ARGON2ID_PROFILE_MASTER_KEY` for login/PIN, `ARGON2ID_PROFILE_TRANSFER` for device-transfer code stretching) so each workload gets parameters matched to its threat model — see [ADR 037](../../docs/adr/037-argon2id-context-profiles.md). Key recovery uses a generated recovery phrase that rewraps the master key independently of the password. Device transfer uses a QR-scanned ephemeral key to securely bootstrap a new device without a server round-trip. See [ADR 011](../../docs/adr/011-key-recovery.md) and [ADR 014](../../docs/adr/014-lazy-key-rotation.md) for recovery and rotation details.
+The key hierarchy flows from a user password through Argon2id to a 64-byte split derivation — bytes `[0..31]` become the `authKey` (hashed server-side for login, never stored raw) and bytes `[32..63]` become the `passwordKey` (a KEK that wraps the 256-bit random master key on-device). The master key in turn feeds BLAKE2B KDF sub-keys for identity keypairs (X25519 + Ed25519), per-bucket symmetric keys, and the sync-encryption key. Argon2id runs under per-context profiles (`ARGON2ID_PROFILE_MASTER_KEY` for login and PIN; `ARGON2ID_PROFILE_TRANSFER` for device-transfer code stretching) so each workload gets parameters matched to its threat model. Each profile bundles `(opslimit, memlimit)` indivisibly and carries a phantom-typed kind brand so the compiler rejects passing a TRANSFER profile where MASTER_KEY is expected (and vice versa); a runtime guard enforces the OWASP ASVS V2.4 memlimit floor (19 MiB) as defence in depth before the values reach libsodium's `pwhash`. See [ADR 037](../../docs/adr/037-argon2id-context-profiles.md). Key recovery uses a generated recovery phrase that rewraps the master key independently of the password. Device transfer uses a QR-scanned ephemeral key to securely bootstrap a new device without a server round-trip. See [ADR 011](../../docs/adr/011-key-recovery.md) and [ADR 014](../../docs/adr/014-lazy-key-rotation.md) for recovery and rotation details.
 
 ## Key Exports
 
@@ -48,7 +48,7 @@ The key hierarchy flows from a user password through Argon2id to a 64-byte split
 
 **Blob codec** — `serializeEncryptedBlob`, `deserializeEncryptedBlob`
 
-**Argon2id profiles** — `ARGON2ID_PROFILE_MASTER_KEY`, `ARGON2ID_PROFILE_TRANSFER` (see [ADR 037](../../docs/adr/037-argon2id-context-profiles.md))
+**Argon2id profiles** — `ARGON2ID_PROFILE_MASTER_KEY`, `ARGON2ID_PROFILE_TRANSFER`, type `Argon2idProfile` (see [ADR 037](../../docs/adr/037-argon2id-context-profiles.md))
 
 **Errors** — `CryptoError` (base), `DecryptionFailedError`, `KeysLockedError`, `SignatureVerificationError`, `CryptoNotReadyError`, `InvalidInputError`, `BiometricFailedError`, `AlreadyInitializedError`, `InvalidStateTransitionError`, `KeyStorageFailedError`, `UnsupportedOperationError`
 
@@ -112,11 +112,7 @@ const grant = createKeyGrant({ bucketKey, bucketId: "bucket-uuid", recipientPubl
 ## Testing
 
 ```bash
-# Unit tests
 pnpm vitest run --project crypto
-
-# Integration tests
-pnpm vitest run --project crypto-integration
 ```
 
-Unit tests cover individual cryptographic operations (key derivation, encrypt/decrypt, signing, validation). Integration tests exercise the full key lifecycle, recovery flows, and device transfer protocol against real sodium operations. The suite also pins each primitive to its standard via known-answer tests — see `src/__tests__/test-vectors.test.ts` for X25519 (RFC 7748), Ed25519 (RFC 8032), Argon2 (RFC 9106), BLAKE2b (RFC 7693), and NIST/IETF vectors for XChaCha20-Poly1305 — so an accidental algorithm or parameter swap fails the suite rather than silently round-tripping.
+`crypto` is a unit-only project — there is no separate `crypto-integration` project because every test in this package already runs against real libsodium operations via the WASM adapter, so the unit/integration distinction does not apply here. Tests cover individual cryptographic operations (key derivation, encrypt/decrypt, signing, validation) plus the full key lifecycle, recovery flows, password reset, and device transfer protocol. Per ADR 037, `argon2id-profiles.test.ts` locks in profile parameters and the runtime guard that enforces the OWASP memlimit floor. The key-lifecycle test file is split by lifecycle phase (`key-lifecycle-unlock`, `key-lifecycle-lock`, `key-lifecycle-bucket-keys`, `key-lifecycle-timers`) per `crypto-mdzz`. The suite also pins each primitive to its standard via known-answer tests — see `src/__tests__/test-vectors.test.ts` for X25519 (RFC 7748), Ed25519 (RFC 8032), Argon2 (RFC 9106), BLAKE2b (RFC 7693), and NIST/IETF vectors for XChaCha20-Poly1305 — so an accidental algorithm or parameter swap fails the suite rather than silently round-tripping.

@@ -2361,6 +2361,29 @@ paths:
         - $ref: "#/components/parameters/SystemId"
         - $ref: "#/components/parameters/Cursor"
         - $ref: "#/components/parameters/Limit"
+        - name: includeArchived
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Whether to include archived members in the results
+        - name: groupId
+          in: query
+          required: false
+          schema:
+            type: string
+            pattern: ^grp_
+          description: Filter members by group membership
+        - name: fields
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            Sparse fieldset — comma-separated list of fields to include on each
+            member. Allowed: id, systemId, encryptedData, version, createdAt,
+            updatedAt, archived, archivedAt.
       responses:
         "200":
           description: Paginated member list
@@ -12182,17 +12205,19 @@ components:
       type: object
       required:
         - data
-        - hasMore
       properties:
         data:
-          type: array
-          items:
-            $ref: "#/components/schemas/SessionInfo"
-        nextCursor:
-          type: string
-          nullable: true
-        hasMore:
-          type: boolean
+          type: object
+          required:
+            - sessions
+          properties:
+            sessions:
+              type: array
+              items:
+                $ref: "#/components/schemas/SessionInfo"
+            nextCursor:
+              type: string
+              nullable: true
     RegenerateRecoveryKeyRequest:
       type: object
       required:

@@ -171,6 +171,21 @@ Epics:
 - ~~Mobile import glue~~ [COMPLETED] — SP token storage (expo-secure-store), avatar fetcher (API/ZIP/skip modes), 17 entity persisters, import hooks (`useStartImport`, `useImportJob`, `useImportProgress`, etc.)
 - ~~SP and PK seed scripts + E2E test infrastructure~~ [COMPLETED] — `scripts/sp-seed` (deterministic SP test data seeder), `scripts/pk-seed` (PK test data seeder), `.env.sp-test.example`, `.env.pk-test.example`
 
+## Milestone 9a: Closeout Hardening [COMPLETED]
+
+Goal: Closeout pass after M9 to consolidate type SoT, restructure the API service layer, lift DB schema helpers, codify LOC ceilings, finish deferred wiring, and split oversized test files. No new user-facing features; all surface-area work to set up M10 cleanly.
+
+Epics:
+
+- ~~Types as single source of truth~~ [COMPLETED] — `types-ltel` 10-cluster pass (foundation, auth/devices, members/identity, fields, structure, fronting/lifecycle, innerworld, communication/engagement, operational, privacy-social) and `ps-y4tb` canonical type chain across 33 encrypted entities; `EncryptedWire<T>` hardened across decrypt boundaries; branded-ID drift cleaned up across 5 surfaces; brand fleet expanded (note title/content, poll title/option label, field name, fronting comment/positionality/outtrigger, lifecycle-event display brands); plaintext entity SoT consolidation; discriminated `Archivable<T>` chain
+- ~~API service layer per-verb split~~ [COMPLETED] — `api-6l1q`: 26 services moved to per-verb files (Option E, no barrels) under `services/<domain>/<verb>.ts`; shared `checkDependents` helper; ESLint `max-lines:450` cap on `services/**/*.ts`; per-verb service test splits matching the new layout
+- ~~DB schema lifts~~ [COMPLETED] — `brandedId<B>()` Drizzle helper (`db-drq1`); `UnixMillis` customType lift (C11b); three-schema-set split per ADR-038 (server PG, server SQLite, client-local SQLite); SQLite client-cache schemas + materializer DDL refactor (`db-jv3w`); materializer subscriber wired to `SyncEngine` (`sync-xjfi`)
+- ~~LOC ceilings codified~~ [COMPLETED] — `ps-r5p7`: per-package ESLint `max-lines` rules replace ad-hoc enforcement; Tier B ratchet splits across 6 modules (api scope-registry, api ws message-router, queue bullmq adapter, mobile trpc-persister, import-core import-engine, peers)
+- ~~Test maintainability~~ [COMPLETED] — `ps-36rg`: 40+ oversized test files split across api/db/sync/mobile/import-core/import-sp/queue/crypto; service tests split by verb; RLS policy tests split by RLS scope; crypto key-lifecycle tests split by lifecycle phase; BullMQ queue tests split by concern
+- ~~Wiring closeout~~ [COMPLETED] — `materializerRegistry` integrated into the data-layer write path (`sync-xjfi`); `decryptDeviceInfo` wired at the session-list endpoint (`api-bqu4`); `decode-blob` asserts inlined post-friend-dashboard migration (`ps-znp0`); OPFS wa-sqlite driver landed for the web platform adapter
+- ~~Dependency consolidation~~ [COMPLETED] — Renovate batches consolidated; Hono 4.12.15, i18next 26.0.8, pglite 0.4.5, expo monorepo, postcss, nodemailer 8.0.7, `@journeyapps/wa-sqlite` 1.7.0, aws-sdk-js-v3 3.1038.0, tanstack-query 5.100.5; node-gyp install fix
+- ~~ADRs touched~~ [COMPLETED] — ADR-038 (three Drizzle schema sets) added; ADR-023 (Zod type alignment) amended
+
 ## Milestone 10: UI/UX Design
 
 Goal: Mockups for every screen family, establishing visual language, interaction patterns, and layout decisions before React Native code is written.
@@ -285,4 +300,4 @@ These features are tracked but may be deferred past initial launch. Each has a d
 
 For system topology, package dependencies, data flow, encryption boundaries, and the development sequence rationale, see the [Architecture Overview](../architecture.md).
 
-37 accepted ADRs are documented in [`docs/adr/`](../adr/).
+38 accepted ADRs are documented in [`docs/adr/`](../adr/).

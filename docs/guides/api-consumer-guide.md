@@ -1286,11 +1286,12 @@ Supported entity types (21 total): `member`, `group`, `channel`, `message`, `not
 
 **Intersection logic:** if a member is tagged with buckets A and B, a friend must have both A and B assigned to see that member. If the friend only has A, the member is invisible to them. This is the **fail-closed** default: unmapped or errored content defaults to invisible.
 
-**Field-level bucket visibility:** custom field definitions can be assigned bucket visibility, controlling which fields a friend can see on an entity even if they can see the entity itself:
+**Field-level bucket visibility:** custom field definitions can be assigned bucket visibility, controlling which fields a friend can see on an entity even if they can see the entity itself. These routes are nested under the field, not the bucket, and require `read:fields`/`write:fields`/`delete:fields` scopes:
 
 ```
-POST   /buckets/:id/field-visibilities    Set field visible in bucket
-DELETE /buckets/:id/field-visibilities/:id Remove field visibility
+GET    /fields/:fieldDefinitionId/bucket-visibility              List bucket visibilities for a field
+POST   /fields/:fieldDefinitionId/bucket-visibility              Set field visible in a bucket (body: { bucketId })
+DELETE /fields/:fieldDefinitionId/bucket-visibility/:bucketId    Remove field visibility for a bucket
 ```
 
 **Friend assignment** -- assign/unassign buckets to friends:

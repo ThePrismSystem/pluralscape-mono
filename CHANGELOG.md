@@ -4,6 +4,55 @@ All notable changes to this project will be documented in this file.
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), using milestone headers instead of version numbers during pre-production development.
 
+## 2026-05-01 — Milestone 9a closeout
+
+### Types SoT
+
+- types-ltel epic — 10 plaintext type clusters consolidated as the single source of truth: foundation (Account, System, SystemSettings, SystemSnapshot, Nomenclature), auth/devices, members/identity, fields, structure, fronting/lifecycle, innerworld, communication/engagement, operational, privacy-social.
+- ps-y4tb epic — canonical type chain established for 33 encrypted entities, with ServerMetadata/Wire/parity discipline applied uniformly across the surface.
+- `EncryptedWire<T>` hardening across types-emid, ps-6lwp, and types-cfp6 closes drift between server payloads and client decoders.
+- Branded-ID drift cleanup (ps-q8vs) across five surfaces, plus a `BucketContentTag` discriminated union and a discriminated `Archivable<T>` chain for plaintext entities (types-0e9j).
+- Brand fleet expansion — `Note.title`/`content`, `Poll.title`/`PollOption.label`, `FieldDefinition.name`, `FrontingSession.comment`/`positionality`/`outtrigger`, and lifecycle-event display brands now flow through the types SoT.
+
+### API Service Layer
+
+- 26 services split into per-verb files (Option E, no barrels) under `services/<domain>/<verb>.ts`, with callers importing the verb file directly.
+- Shared `checkDependents` helper consolidates the 409 HAS_DEPENDENTS path used across delete verbs.
+- ESLint `max-lines: 450` cap enforced on `services/**/*.ts` (skipping blanks/comments) — splits required at the threshold rather than override comments.
+- Per-verb service test splits track the new file layout, replacing the prior single-file-per-domain test files.
+
+### DB Schema Lifts
+
+- `brandedId<B>()` Drizzle helper (db-drq1) and a `UnixMillis` customType lift (C11b) replace ad-hoc column-type wiring with reusable primitives.
+- Three-schema-set split landed (ADR 038): server PG, client SQLite, and local-cache SQLite are now distinct schema sets with their own generators and parity gates.
+- SQLite client-cache schemas plus a materializer DDL refactor (db-jv3w) align local materialization with the new split.
+- Materializer subscriber wired to `SyncEngine` (sync-xjfi), closing the data-layer write path through the registry.
+
+### LOC Ceilings
+
+- Per-package LOC ceilings codified as ESLint `max-lines` rules (ps-r5p7), replacing the prior ad-hoc enforcement.
+- Tier B ratchet splits across six modules: api/lib scope-registry, api/ws message-router, queue bullmq, mobile/src trpc-persister-api, import-core import-engine, and one peer.
+
+### Test Maintainability
+
+- 40+ oversized test files split by concern across api, db, sync, mobile, import-core, import-sp, queue, and crypto (ps-36rg).
+- Service tests split by verb to match the api-6l1q layout.
+- RLS policy tests split by RLS scope; crypto key-lifecycle tests split by lifecycle phase; BullMQ queue tests split by concern.
+
+### Wiring Closeout
+
+- `materializerRegistry` wired into the data-layer write path (sync-xjfi) so client-cache projections track sync events end-to-end.
+- `decryptDeviceInfo` wired at the session-list endpoint (api-bqu4), removing the last server-side plaintext device-info path.
+- `decode-blob` asserts inlined post-friend-dashboard migration (ps-znp0).
+- OPFS `wa-sqlite` driver landed for the web platform adapter, completing the storage-driver surface across native and web.
+
+### CI / Deps
+
+- Renovate batches consolidated — one PR rolled up seven prior batches plus eight awaiting-schedule bumps.
+- Hono 4.12.15, i18next 26.0.8, pglite 0.4.5, and the Expo monorepo bumped in lockstep with the supported SDK line.
+- `@journeyapps/wa-sqlite` 1.7.0, `aws-sdk-js-v3` 3.1038.0, and `@tanstack/react-query` 5.100.5 land alongside a postcss bump.
+- node-gyp install fix and `nodemailer` 8.0.7 round out the dependency window.
+
 ## 2026-04-21 — Milestone 9 closeout
 
 ### Imports

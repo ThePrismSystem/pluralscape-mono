@@ -17,13 +17,15 @@ Pluralscape helps plural systems (DID, OSDD, and beyond) manage identity trackin
 
 ## Status
 
-**Active development — Milestones 0-9 complete, Milestone 10 (UI/UX Design) next.**
+**Active development — Milestones 0-9a complete, Milestone 10 (UI/UX Design) next.**
 
 Milestones 0-7 built the full backend: data layer, API, sync, fronting, communication, privacy, and data portability. The REST API covers 317 operations across 32 route domains ([OpenAPI spec](docs/openapi/openapi.yaml)), with a type-safe tRPC layer mirroring the full surface for the Expo mobile client ([ADR 032](docs/adr/032-trpc-parity-enforcement.md)).
 
 Milestone 8 delivered the complete client foundation: Expo app shell with auth-gated routing, a 14-provider initialization tree (platform detection, auth state machine, encryption, sync), offline-first local data layer (SQLite + FTS5 search), 50+ domain data hooks via factory pattern (`useOfflineFirstQuery`/`useOfflineFirstInfiniteQuery`), web platform adapter (OPFS/IndexedDB), and CRDT sync coverage for all entity types.
 
-Milestone 9 delivered data import: a shared import-core orchestration engine (`packages/import-core`) with checkpoint resume and pluggable Persister interface, Simply Plural import (`packages/import-sp`) covering 15 collections with file and API source modes, PluralKit import (`packages/import-pk`) for members/groups/fronting sessions, import API endpoints (REST + tRPC), mobile glue with 17 entity persisters, and E2E test infrastructure with deterministic seed scripts. See the [CHANGELOG](CHANGELOG.md) for details, the [milestone roadmap](docs/planning/milestones.md) for the full plan, the [architecture overview](docs/architecture.md) for system design, and the [mobile developer guide](docs/guides/mobile-developer-guide.md) for client internals.
+Milestone 9 delivered data import: a shared import-core orchestration engine (`packages/import-core`) with checkpoint resume and pluggable Persister interface, Simply Plural import (`packages/import-sp`) covering 15 collections with file and API source modes, PluralKit import (`packages/import-pk`) for members/groups/fronting sessions, import API endpoints (REST + tRPC), mobile glue with 17 entity persisters, and E2E test infrastructure with deterministic seed scripts.
+
+Milestone 9a closed out the post-M9 hardening pass: types as the single source of truth across the canonical encrypted-entity chain (33 entities) and 10 plaintext clusters, the API service layer split per-verb under `services/<domain>/<verb>.ts` (Option E, ESLint-capped at 450 LOC), a three-schema-set Drizzle split ([ADR 038](docs/adr/038-three-drizzle-schema-sets.md)) covering server PG, client SQLite, and local-cache SQLite, codified per-package LOC ceilings as ESLint `max-lines` rules, and 40+ oversized test files split by concern. See the [CHANGELOG](CHANGELOG.md) for details, the [milestone roadmap](docs/planning/milestones.md) for the full plan, the [architecture overview](docs/architecture.md) for system design, and the [mobile developer guide](docs/guides/mobile-developer-guide.md) for client internals.
 
 ## Test Suite
 
@@ -86,7 +88,7 @@ ui-design/
 docs/
   openapi/         OpenAPI 3.1 spec (multi-file source, Redocly CLI)
   openapi.yaml     Bundled single-file OpenAPI spec (generated)
-  adr/             Architecture Decision Records (37 accepted)
+  adr/             Architecture Decision Records (38 accepted)
   audits/          Codebase audit reports
   planning/        Specifications, milestones, feature planning
   future-features/ Unscheduled feature design documents
@@ -106,7 +108,7 @@ docs/
 | Media        | S3-compatible (MinIO for self-hosted)           | [ADR 009](docs/adr/009-blob-media-storage.md) |
 | Job Queue    | BullMQ (Valkey) / SQLite (self-hosted fallback) | [ADR 010](docs/adr/010-background-jobs.md)    |
 
-All dependencies verified AGPL-3.0 compatible — see [license audit](docs/audits/001-license-compatibility.md). Architecture decisions documented in [37 ADRs](docs/adr/).
+All dependencies verified AGPL-3.0 compatible — see [license audit](docs/audits/001-license-compatibility.md). Architecture decisions documented in [38 ADRs](docs/adr/).
 
 ## Key Libraries
 
@@ -207,7 +209,7 @@ Domain prefixes: `ps-`, `api-`, `mobile-`, `db-`, `crypto-`, `sync-`, `types-`, 
 
 ## Architecture Decision Records
 
-Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 37 accepted ADRs cover the full stack from licensing through import engine architecture. See the [ADR template](docs/adr/000-template.md) for the format.
+Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 38 accepted ADRs cover the full stack from licensing through three-schema-set Drizzle split. See the [ADR template](docs/adr/000-template.md) for the format.
 
 ## License
 

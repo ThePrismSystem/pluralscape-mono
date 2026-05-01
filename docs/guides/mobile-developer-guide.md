@@ -1,6 +1,6 @@
 # Mobile Developer Guide
 
-This guide covers the Pluralscape mobile app (`apps/mobile/`), built with Expo and React Native. It serves two audiences: contributors working on the mobile codebase, and API consumers or self-hosters who want to understand how the client operates.
+This guide covers the Pluralscape mobile app (`apps/mobile/`), built with Expo (SDK 55) and React Native, with `expo-router` for file-based routing. It serves two audiences: contributors working on the mobile codebase, and API consumers or self-hosters who want to understand how the client operates.
 
 For overall system architecture, see [`../architecture.md`](../architecture.md). For the sync protocol, see [`sync-protocol.md`](sync-protocol.md).
 
@@ -195,6 +195,10 @@ export function useUpdateMember(): TRPCMutation<
 3. Decrypt functions live in `@pluralscape/data/transforms/` (shared with the API)
 4. The `useRemote` callback is a thin wrapper around the tRPC hook -- the factory cannot call tRPC hooks directly because each entity has unique procedure types
 
+### File size ceilings
+
+ESLint enforces `max-lines: 500` on all files under `apps/mobile/src/**` (`tooling/eslint-config/loc-rules.js`). When a module hits the cap, split by concern -- do not add per-file overrides. The Simply Plural import persister is the canonical example: the original `apps/mobile/src/features/import-sp/trpc-persister-api.ts` was split (mobile-62f6) into focused modules under `apps/mobile/src/features/import-sp/trpc-persister-builders/` and the `persister/` subdirectory, with shared types in `trpc-persister-api.types.ts`. Test files follow the same split pattern (`__tests__/trpc-persister-api-{bulk,fronting,comms,core}.test.ts`).
+
 ### Platform Abstraction
 
 The platform layer (`apps/mobile/src/platform/`) detects the runtime environment and provides appropriate drivers via `PlatformContext`:
@@ -212,8 +216,8 @@ The platform layer (`apps/mobile/src/platform/`) detects the runtime environment
 **Storage drivers:**
 
 - **Native**: `expo-sqlite` via `createExpoSqliteDriver()` -- full SQLite with WAL mode
-- **Web with OPFS**: `createOpfsSqliteDriver()` -- SQLite compiled to WASM, backed by Origin Private File System
-- **Web without OPFS**: `IndexedDB` adapters for storage and offline queue (no local SQLite queries -- hooks fall back to remote mode)
+- **Web with OPFS**: `createOpfsSqliteDriver()` -- `@journeyapps/wa-sqlite` compiled to WASM, backed by Origin Private File System (worker-hosted, async-only API surface)
+- **Web without OPFS**: `IndexedDB` adapters for storage and offline queue (no local SQLite queries -- hooks fall back to remote mode); `storageFallbackReason` records why OPFS was skipped (capability missing vs. init failure)
 
 **Crypto adapters:**
 

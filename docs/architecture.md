@@ -68,6 +68,16 @@ Materializer  ──▶  React Query invalidation  ──▶  UI re-render
 
 The server persists and relays ciphertext it cannot decrypt. All plaintext lives exclusively on the client.
 
+### Three Drizzle Schema Sets
+
+Domain entities have three on-disk representations, each a Drizzle schema in `packages/db/src/schema/` — see [adr/038-three-drizzle-schema-sets.md](adr/038-three-drizzle-schema-sets.md):
+
+- `schema/pg/` — server PostgreSQL. Encrypted-blob + structural columns; zero-knowledge.
+- `schema/sqlite/` — server SQLite for self-hosted deployments and the queue package. Same shape as PG.
+- `schema/sqlite-client-cache/` — mobile/web local cache. Plaintext columns projected from CRDT documents by the materializer; the UI reads via TanStack Query subscriptions.
+
+A shared mixin layer (`packages/db/src/helpers/entity-shape.{sqlite,pg}.ts`) supplies structural columns and indexes across all three sets.
+
 ---
 
 ## 2. Package Dependency Graph
@@ -220,6 +230,16 @@ Offline queue  ──▶  CRDT merge (conflict resolution)
 
 Per-bucket symmetric keys are derived client-side. The server never holds T1 key material.
 
+### Service Layer Structure
+
+API services live in `apps/api/src/services/<domain>/<verb>.ts` (Option E — per-verb file layout, no barrels). Callers import directly from the verb file (e.g., `services/member/create.ts`); there is no `services/<domain>/index.ts` re-export. Shared types and helpers live in `services/<domain>/internal.ts` only when consumed by two or more verb files; single-consumer helpers stay local. The service tree mirrors `apps/api/src/routes/`.
+
+A shared `checkDependents` helper enforces the deliberate-data-lifecycle 409 contract uniformly across verbs.
+
+### LOC Ceilings
+
+File-size limits are codified as ESLint `max-lines` rules in `tooling/eslint-config/loc-rules.js` rather than enforced ad-hoc. Notable ceilings: `services/**/*.ts` 450, `routes/**/*.ts` 200, `trpc/**/*.ts` 350, `middleware/**/*.ts` 200, `mobile/src/**` 500, `packages/types/src/**` 450, `packages/sync/src/**` 750. CI fails on overflow; the fix is to split the file along its natural seams, never to add an override comment.
+
 ### Canonical type chain (types-as-SoT)
 
 Every encrypted entity exposes a six-link chain from `@pluralscape/types`:
@@ -265,6 +285,8 @@ Runtime validation of decrypted blobs is delegated to
 | i18n OTA delivery   | `i18next-chained-backend` (bundled + HTTP), API proxies Crowdin with 24h TTL                       | [adr/035-i18n-ota-delivery.md](adr/035-i18n-ota-delivery.md)                       |
 | Crowdin automation  | Config-as-code glossary, DeepL+Google MT, TM+MT pre-translate, auto-merge for translation-only PRs | [adr/036-crowdin-automation.md](adr/036-crowdin-automation.md)                     |
 | Argon2id profiles   | Context-specific profiles (`TRANSFER`, `MASTER_KEY`) replacing the unified parameter set           | [adr/037-argon2id-context-profiles.md](adr/037-argon2id-context-profiles.md)       |
+| Three schema sets   | Server-PG, server-SQLite, client-SQLite-cache as parallel Drizzle schemas with shared mixins       | [adr/038-three-drizzle-schema-sets.md](adr/038-three-drizzle-schema-sets.md)       |
+| Types as SoT        | `packages/types` is canonical for every domain entity; Drizzle, Zod, and OpenAPI parity-gated      | [adr/023-zod-type-alignment.md](adr/023-zod-type-alignment.md)                     |
 
 ---
 
@@ -281,6 +303,10 @@ Per-bucket symmetric keys are generated client-side and exchanged between device
 ### Fail-Closed Privacy
 
 Privacy bucket membership is evaluated client-side using intersection logic. If bucket data is unavailable, corrupted, or unmapped, access defaults to maximum restriction — the system's data is never accidentally exposed. This principle extends to the API: missing or erroneous privacy context is treated as "deny".
+
+### RLS Context Wrappers
+
+All API queries against RLS-protected tables go through `withTenantRead` or `withTenantTransaction` (`apps/api/src/lib/rls-context.ts`), which set `app.current_system_id` and `app.current_account_id` as transaction-local GUCs before running the callback. Read variants additionally enforce `SET TRANSACTION READ ONLY` so accidental writes are rejected at the database. Bare `db.execute(...)` or `db.transaction(...)` outside these wrappers is an ESLint error; the rare cross-account paths use `withCrossAccountRead` / `withCrossAccountTransaction`. An integration regression test locks in fail-silent behavior: an un-contexted query returns an empty result set rather than rows from another tenant.
 
 ### Trust Boundary
 
