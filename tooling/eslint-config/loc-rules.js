@@ -22,7 +22,7 @@ export const locRules = [
   { files: ["apps/api/src/lib/**/*.ts"], rules: { "max-lines": ["error", { max: 500 }] } },
   { files: ["apps/api/src/ws/**/*.ts"], rules: { "max-lines": ["error", { max: 500 }] } },
   { files: ["apps/mobile/src/**/*.{ts,tsx}"], rules: { "max-lines": ["error", { max: 850 }] } },
-  { files: ["packages/sync/src/**/*.ts"], rules: { "max-lines": ["error", { max: 1100 }] } },
+  { files: ["packages/sync/src/**/*.ts"], rules: { "max-lines": ["error", { max: 750 }] } },
   { files: ["packages/queue/src/**/*.ts"], rules: { "max-lines": ["error", { max: 500 }] } },
   { files: ["packages/import-core/src/**/*.ts"], rules: { "max-lines": ["error", { max: 500 }] } },
 
