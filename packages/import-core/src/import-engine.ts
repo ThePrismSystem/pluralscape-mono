@@ -11,7 +11,6 @@
  *  - {@link runImportEngine} — the orchestrator entry point.
  *  - {@link RunImportEngineArgs}, {@link ImportRunResult} — argument and result
  *    shapes the API service uses to bridge the engine to `import_jobs`.
- *  - {@link buildPersistableEntity} — narrowing helper for dispatch results.
  *
  * Design notes:
  *  - The engine is source-agnostic. Source-specific behaviour (SP legacy
@@ -37,11 +36,7 @@ import {
   runSingleCollection,
   type EngineRunContext,
 } from "./import-engine.collection.js";
-import {
-  buildPersistableEntity,
-  indexOfResumeCollection,
-  isAborted,
-} from "./import-engine.helpers.js";
+import { indexOfResumeCollection, isAborted } from "./import-engine.helpers.js";
 import { isBatchMapper, type MapperDispatchEntry } from "./mapper-dispatch.js";
 
 import type { ErrorClassifier } from "./engine-errors.js";
@@ -54,8 +49,6 @@ import type {
   ImportError,
   ImportSourceFormat,
 } from "@pluralscape/types";
-
-export { buildPersistableEntity };
 
 export interface BeforeCollectionArgs {
   readonly collection: string;

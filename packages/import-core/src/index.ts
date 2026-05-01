@@ -49,4 +49,5 @@ export type {
   BeforeCollectionArgs,
   BeforeCollectionResult,
 } from "./import-engine.js";
-export { runImportEngine, buildPersistableEntity } from "./import-engine.js";
+export { runImportEngine } from "./import-engine.js";
+export { buildPersistableEntity } from "./import-engine.helpers.js";

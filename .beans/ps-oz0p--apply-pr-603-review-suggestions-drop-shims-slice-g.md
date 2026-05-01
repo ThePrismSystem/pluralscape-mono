@@ -5,7 +5,7 @@ status: in-progress
 type: task
 priority: normal
 created_at: 2026-05-01T19:06:56Z
-updated_at: 2026-05-01T19:10:27Z
+updated_at: 2026-05-01T19:12:09Z
 ---
 
 Apply all suggestions from /review-pr on PR #603 (refactor/tier-b-loc-ratchet-splits). No critical/important issues; all suggestions.
@@ -15,12 +15,12 @@ Apply all suggestions from /review-pr on PR #603 (refactor/tier-b-loc-ratchet-sp
 - [x] **Cluster 1 — Sync shim removal**
   - [x] Migrate 11 sync test files + 1 engine module to import per-validator helpers from `validators/<name>.js` (2 `import *` files keep namespace import for vi.spyOn)
   - [x] Delete re-export block at `packages/sync/src/post-merge-validator.ts:38-53`
-- [ ] **Cluster 2 — Import-core shim removal**
-  - [ ] Update `packages/import-core/src/index.ts:52` barrel to re-export `buildPersistableEntity` from helpers
-  - [ ] Migrate `packages/import-core/src/__tests__/import-engine-parsing.test.ts:14`
-  - [ ] Migrate `packages/import-sp/src/__tests__/engine/import-engine-errors.test.ts:3`
-  - [ ] Delete re-export at `packages/import-core/src/import-engine.ts:58`
-  - [ ] Update stale JSDoc in `packages/import-core/src/import-engine.helpers.ts:7`
+- [x] **Cluster 2 — Import-core shim removal**
+  - [x] Update package barrel to re-export `buildPersistableEntity` from helpers directly
+  - [x] Migrate `packages/import-core/src/__tests__/import-engine-parsing.test.ts`
+  - [x] (skipped) import-sp test imports from SP-side engine re-export, not core shim — out of scope for this PR
+  - [x] Delete re-export at `packages/import-core/src/import-engine.ts` + JSDoc cleanup
+  - [x] Update stale JSDoc in `packages/import-core/src/import-engine.helpers.ts`
 - [ ] **Cluster 3 — Mobile import-sp cleanup**
   - [ ] Slice `TRPCClientSubset` into per-builder `Pick` types (4 builders)
   - [ ] Un-export `Query`/`Mutation` generics in `trpc-persister-api.types.ts`

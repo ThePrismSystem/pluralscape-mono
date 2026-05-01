@@ -2,9 +2,8 @@
  * Pure helper utilities used by the import engine orchestrator.
  *
  * Extracted from `import-engine.ts` to keep the orchestrator file under the
- * area LOC ceiling. Nothing in this module is part of the public package
- * surface — consumers should import from `import-engine.js`, which
- * re-exports `buildPersistableEntity` for downstream callers.
+ * area LOC ceiling. `buildPersistableEntity` is re-exported from the package
+ * barrel (`./index.js`); other helpers are internal to the engine.
  */
 import { resumeStartCollection, type AdvanceDelta } from "./checkpoint.js";
 
