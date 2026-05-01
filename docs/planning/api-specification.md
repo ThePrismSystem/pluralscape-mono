@@ -2,7 +2,7 @@
 
 Concrete operational parameters for the Pluralscape API. All numbers are defaults for the hosted deployment; self-hosted operators can override via environment variables where noted.
 
-This document is the **single source of truth** for values that appear in both documentation and code. The corresponding constants file (`packages/types/src/api-constants.ts`) re-exports these numbers for use in implementation.
+This document is the **single source of truth** for values that appear in both documentation and code. The corresponding constants module (`packages/types/src/api-constants/`, split into `api-limits.ts`, `error-codes.ts`, `rate-limits.ts`, and `time-constants.ts`) re-exports these numbers for use in implementation.
 
 ---
 
