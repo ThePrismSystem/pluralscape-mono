@@ -19,7 +19,7 @@
  */
 export const locRules = [
   // Tier B — Lockstep (cap = current max + ~3% buffer)
-  { files: ["apps/api/src/lib/**/*.ts"], rules: { "max-lines": ["error", { max: 775 }] } },
+  { files: ["apps/api/src/lib/**/*.ts"], rules: { "max-lines": ["error", { max: 500 }] } },
   { files: ["apps/api/src/ws/**/*.ts"], rules: { "max-lines": ["error", { max: 725 }] } },
   { files: ["apps/mobile/src/**/*.{ts,tsx}"], rules: { "max-lines": ["error", { max: 850 }] } },
   { files: ["packages/sync/src/**/*.ts"], rules: { "max-lines": ["error", { max: 1100 }] } },
