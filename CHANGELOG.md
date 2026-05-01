@@ -9,7 +9,7 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 ### Types SoT
 
 - types-ltel epic — 10 plaintext type clusters consolidated as the single source of truth: foundation (Account, System, SystemSettings, SystemSnapshot, Nomenclature), auth/devices, members/identity, fields, structure, fronting/lifecycle, innerworld, communication/engagement, operational, privacy-social.
-- ps-y4tb epic — canonical type chain established for 28 encrypted entities, with ServerMetadata/Wire/parity discipline applied uniformly across the surface.
+- ps-y4tb epic — canonical type chain established for 33 encrypted entities, with ServerMetadata/Wire/parity discipline applied uniformly across the surface.
 - `EncryptedWire<T>` hardening across types-emid, ps-6lwp, and types-cfp6 closes drift between server payloads and client decoders.
 - Branded-ID drift cleanup (ps-q8vs) across five surfaces, plus a `BucketContentTag` discriminated union and a discriminated `Archivable<T>` chain for plaintext entities (types-0e9j).
 - Brand fleet expansion — `Note.title`/`content`, `Poll.title`/`PollOption.label`, `FieldDefinition.name`, `FrontingSession.comment`/`positionality`/`outtrigger`, and lifecycle-event display brands now flow through the types SoT.
