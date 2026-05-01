@@ -7,7 +7,7 @@
  */
 import { vi } from "vitest";
 
-import type { TRPCClientSubset } from "../../trpc-persister-api.js";
+import type { TRPCClientSubset } from "../../trpc-persister-api.types.js";
 import type { Mock } from "vitest";
 
 interface MockQuery<TInput, TOutput> {

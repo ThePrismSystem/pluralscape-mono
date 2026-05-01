@@ -10,7 +10,7 @@ import { DocumentTypeMismatchError, NoActiveSessionError } from "../errors.js";
 import { createDocument } from "../factories/document-factory.js";
 import { mapConcurrent } from "../map-concurrent.js";
 import { replayOfflineQueue } from "../offline-queue-manager.js";
-import { getEntityTypeByFieldName, runAllValidations } from "../post-merge-validator.js";
+import { runAllValidations } from "../post-merge-validator.js";
 import { filterManifest } from "../subscription-filter.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 import {
@@ -19,6 +19,7 @@ import {
   HYDRATION_CONCURRENCY,
   MAX_CONFLICT_RETRY_BATCHES,
 } from "../sync.constants.js";
+import { getEntityTypeByFieldName } from "../validators/internal.js";
 
 import type { SyncNetworkAdapter } from "../adapters/network-adapter.js";
 import type { OfflineQueueAdapter } from "../adapters/offline-queue-adapter.js";

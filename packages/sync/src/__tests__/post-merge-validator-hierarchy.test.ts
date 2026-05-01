@@ -11,9 +11,9 @@ import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createSystemCoreDocument } from "../factories/document-factory.js";
-import { detectHierarchyCycles } from "../post-merge-validator.js";
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession, syncThroughRelay } from "../sync-session.js";
+import { detectHierarchyCycles } from "../validators/hierarchy-cycles.js";
 
 import {
   makeGroup,

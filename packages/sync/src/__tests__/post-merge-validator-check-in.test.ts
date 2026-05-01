@@ -14,9 +14,10 @@ import {
   createFrontingDocument,
   createPrivacyConfigDocument,
 } from "../factories/document-factory.js";
-import { normalizeCheckInRecord, runAllValidations } from "../post-merge-validator.js";
+import { runAllValidations } from "../post-merge-validator.js";
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession, syncThroughRelay } from "../sync-session.js";
+import { normalizeCheckInRecord } from "../validators/check-in.js";
 
 import { makeKeys, makeSessions, s, setSodium } from "./helpers/validator-fixtures.js";
 import { asCheckInRecordId, asSyncDocId } from "./test-crypto-helpers.js";

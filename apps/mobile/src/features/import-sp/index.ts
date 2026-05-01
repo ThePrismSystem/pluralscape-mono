@@ -33,18 +33,11 @@ export type {
 } from "./import-runner.js";
 
 // ── React hooks ──────────────────────────────────────────────────────
-export {
-  useCancelImport,
-  useImportJob,
-  useImportProgress,
-  useImportSummary,
-  useResumeActiveImport,
-  useStartImport,
-} from "./import.hooks.js";
+export { useImportJob, useImportProgress, useImportSummary } from "./import-progress.hooks.js";
+export type { ImportProgressSnapshot, ImportSummary } from "./import-progress.hooks.js";
+export { useCancelImport, useResumeActiveImport, useStartImport } from "./import.hooks.js";
 export type {
   DocumentPickerAsset,
-  ImportProgressSnapshot,
-  ImportSummary,
   StartWithFileArgs,
   StartWithTokenArgs,
   UseCancelImportReturn,

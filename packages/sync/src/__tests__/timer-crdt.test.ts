@@ -11,10 +11,11 @@ import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createFrontingDocument, createSystemCoreDocument } from "../factories/document-factory.js";
-import { normalizeCheckInRecord, normalizeTimerConfig } from "../post-merge-validator.js";
 import { EncryptedRelay } from "../relay.js";
 import { ENTITY_CRDT_STRATEGIES } from "../strategies/crdt-strategies.js";
 import { EncryptedSyncSession, syncThroughRelay } from "../sync-session.js";
+import { normalizeCheckInRecord } from "../validators/check-in.js";
+import { normalizeTimerConfig } from "../validators/timer-config.js";
 
 import { asCheckInRecordId, asSyncDocId, asTimerId } from "./test-crypto-helpers.js";
 

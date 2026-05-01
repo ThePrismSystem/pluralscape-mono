@@ -16,15 +16,13 @@ import {
   createPrivacyConfigDocument,
   createSystemCoreDocument,
 } from "../factories/document-factory.js";
-import {
-  ENTITY_FIELD_MAP,
-  enforceTombstones,
-  runAllValidations,
-  validateBucketContentTags,
-} from "../post-merge-validator.js";
+import { runAllValidations } from "../post-merge-validator.js";
 import { EncryptedRelay } from "../relay.js";
 import { ENTITY_CRDT_STRATEGIES } from "../strategies/crdt-strategies.js";
 import { EncryptedSyncSession, syncThroughRelay } from "../sync-session.js";
+import { validateBucketContentTags } from "../validators/bucket-content-tags.js";
+import { ENTITY_FIELD_MAP } from "../validators/internal.js";
+import { enforceTombstones } from "../validators/tombstones.js";
 
 import {
   makeArchivedMember,

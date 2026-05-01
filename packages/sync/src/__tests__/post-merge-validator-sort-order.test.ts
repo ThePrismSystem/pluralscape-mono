@@ -14,8 +14,8 @@ import {
   createPrivacyConfigDocument,
   createSystemCoreDocument,
 } from "../factories/document-factory.js";
-import { normalizeSortOrder } from "../post-merge-validator.js";
 import { EncryptedSyncSession } from "../sync-session.js";
+import { normalizeSortOrder } from "../validators/sort-order.js";
 
 import { makeGroup, makeKeys, s, setSodium } from "./helpers/validator-fixtures.js";
 import { asGroupId, asSyncDocId, asSystemStructureEntityLinkId } from "./test-crypto-helpers.js";

@@ -11,7 +11,8 @@
 
 import { describe, expect, it } from "vitest";
 
-import { runImportEngine, buildPersistableEntity } from "../import-engine.js";
+import { buildPersistableEntity } from "../import-engine.helpers.js";
+import { runImportEngine } from "../import-engine.js";
 
 import {
   SIMPLE_DEPENDENCY_ORDER,
