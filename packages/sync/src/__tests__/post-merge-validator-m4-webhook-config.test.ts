@@ -11,7 +11,8 @@
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { normalizeWebhookConfigs, runAllValidations } from "../post-merge-validator.js";
+import { runAllValidations } from "../post-merge-validator.js";
+import { normalizeWebhookConfigs } from "../validators/webhook-config.js";
 
 import {
   makeKeys,

@@ -15,9 +15,10 @@ import {
   createPrivacyConfigDocument,
   createSystemCoreDocument,
 } from "../factories/document-factory.js";
-import { normalizeFriendConnection, runAllValidations } from "../post-merge-validator.js";
+import { runAllValidations } from "../post-merge-validator.js";
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession, syncThroughRelay } from "../sync-session.js";
+import { normalizeFriendConnection } from "../validators/friend-connection.js";
 
 import { makeKeys, makeSessions, s, setSodium } from "./helpers/validator-fixtures.js";
 import { asBucketId, asFriendConnectionId, asSyncDocId } from "./test-crypto-helpers.js";

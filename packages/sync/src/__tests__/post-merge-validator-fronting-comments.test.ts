@@ -12,8 +12,9 @@ import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createFrontingDocument, createSystemCoreDocument } from "../factories/document-factory.js";
-import { normalizeFrontingCommentAuthors, runAllValidations } from "../post-merge-validator.js";
+import { runAllValidations } from "../post-merge-validator.js";
 import { EncryptedSyncSession } from "../sync-session.js";
+import { normalizeFrontingCommentAuthors } from "../validators/fronting.js";
 
 import { makeKeys, newCommentId, s, setSodium } from "./helpers/validator-fixtures.js";
 import { asSyncDocId } from "./test-crypto-helpers.js";

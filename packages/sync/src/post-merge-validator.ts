@@ -18,7 +18,6 @@ import {
   normalizeFrontingSessions,
 } from "./validators/fronting.js";
 import { detectHierarchyCycles } from "./validators/hierarchy-cycles.js";
-import { ENTITY_FIELD_MAP, getEntityTypeByFieldName } from "./validators/internal.js";
 import { normalizeSortOrder } from "./validators/sort-order.js";
 import { normalizeTimerConfig } from "./validators/timer-config.js";
 import { enforceTombstones } from "./validators/tombstones.js";
@@ -34,23 +33,6 @@ import type {
   SortOrderPatch,
 } from "./types.js";
 import type { DocRecord } from "./validators/internal.js";
-
-// Re-export individual validators so existing test imports
-// (`../post-merge-validator.js`) continue to resolve unchanged.
-export {
-  detectHierarchyCycles,
-  enforceTombstones,
-  ENTITY_FIELD_MAP,
-  getEntityTypeByFieldName,
-  normalizeCheckInRecord,
-  normalizeFriendConnection,
-  normalizeFrontingCommentAuthors,
-  normalizeFrontingSessions,
-  normalizeSortOrder,
-  normalizeTimerConfig,
-  normalizeWebhookConfigs,
-  validateBucketContentTags,
-};
 
 /**
  * Run all post-merge validations and return aggregate results.

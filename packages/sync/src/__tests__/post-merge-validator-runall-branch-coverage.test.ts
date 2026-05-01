@@ -23,8 +23,9 @@ import {
   createPrivacyConfigDocument,
   createSystemCoreDocument,
 } from "../factories/document-factory.js";
-import { normalizeTimerConfig, normalizeWebhookConfigs } from "../post-merge-validator.js";
 import { EncryptedSyncSession } from "../sync-session.js";
+import { normalizeTimerConfig } from "../validators/timer-config.js";
+import { normalizeWebhookConfigs } from "../validators/webhook-config.js";
 
 import {
   makeKeys,
