@@ -18,6 +18,18 @@ REST/tRPC parity is enforced in CI (`pnpm trpc:parity`). Every tRPC procedure mu
 corresponding REST route and vice versa. Both interfaces stay in sync with the server by
 design — neither is a secondary or optional path.
 
+Both surfaces carry brand-aware request and response types end to end. The OpenAPI-derived
+`paths` and the inferred `RouterInput` / `RouterOutput` resolve through `@pluralscape/types`
+(transitively, via the API server), so:
+
+- Branded IDs (`SystemId`, `MemberId`, etc.) flow through path params, request bodies, and
+  responses without manual casts.
+- Encrypted entities use the canonical `ServerMetadata` / `Wire` shapes as the wire contract
+  and `EncryptedWire<T>` at decrypt boundaries — clients see these shapes verbatim.
+- Brand-fleet fields (member/group display names, note title and content, poll title and
+  options, field-definition names, fronting-session comments and lifecycle-event display
+  values) round-trip as branded strings on both surfaces.
+
 ## Key Exports
 
 **Main entry (`@pluralscape/api-client`)**
@@ -154,8 +166,11 @@ Unit tests only — no integration variant exists for this package.
 pnpm vitest run --project api-client
 ```
 
-Tests cover `createApiClient` construction, `Authorization` header attachment for both
-synchronous and `Promise`-returning `getToken` callbacks, omission of the header when
-`getToken` returns `null`, and the `429` retry middleware (single-retry guarantee,
-`Retry-After` seconds parsing, default-delay fallback, non-`429` pass-through, and original
-response preservation when the retry fetch throws).
+Tests are split by concern:
+
+- `src/__tests__/index.test.ts` — `createApiClient` construction, `Authorization` header
+  attachment for both synchronous and `Promise`-returning `getToken` callbacks, and
+  omission of the header when `getToken` returns `null`.
+- `src/__tests__/rest-client-retry.test.ts` — the `429` retry middleware: single-retry
+  guarantee, `Retry-After` seconds parsing, default-delay fallback, non-`429` pass-through,
+  and original-response preservation when the retry fetch throws.
