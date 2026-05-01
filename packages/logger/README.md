@@ -6,7 +6,7 @@ Currently ships the mobile (React Native / Expo / Hermes) logger. The API runtim
 
 ## Overview
 
-`Logger` is the structured-logging contract used across the app. It exposes `info`, `warn`, and `error` methods that accept a message and an optional JSON-serializable payload. This package produces runtime-specific implementations of that contract.
+`Logger` is the structured-logging contract used across the app. Defined in `@pluralscape/types` as three methods — `info`, `warn`, `error` — each taking a `message: string` and optional `data?: Record<string, unknown>`. This package produces runtime-specific implementations of that contract.
 
 Every logger factory in this package applies **PII redaction** by default. Callers can supply a custom redactor or opt out with `null` after manually sanitizing values. The default redactor walks the payload recursively, masking values under PII-adjacent keys, and breaks cycles with a `WeakSet` guard so self-referential payloads never crash the call site.
 
@@ -23,11 +23,13 @@ Every logger factory in this package applies **PII redaction** by default. Calle
 
 ### Mobile entry (`@pluralscape/logger/mobile`)
 
-Same exports as the root; kept as a distinct subpath so platform-specific bundlers can split runtime-specific code.
+Direct subpath into `src/mobile.ts`, kept distinct so platform-specific bundlers can split runtime-specific code. Surfaces the redaction internals that the root barrel does not re-export.
 
 | Export                | Kind     | Purpose                                                               |
 | --------------------- | -------- | --------------------------------------------------------------------- |
 | `createMobileLogger`  | function | Factory returning a `Logger` that writes through `globalThis.console` |
+| `MobileLoggerOptions` | type     | Options bag for `createMobileLogger`                                  |
+| `MobileLoggerPayload` | type     | `Record<string, unknown>` — structured payload shape                  |
 | `defaultRedact`       | function | Recursive PII masking — used as the default payload transform         |
 | `DEFAULT_REDACT_KEYS` | const    | Case-insensitive substrings that trigger redaction                    |
 
@@ -79,7 +81,7 @@ The walk is recursive and handles arrays, nested objects, and cycles (substitute
 Unit tests in `src/__tests__/` cover:
 
 - `defaultRedact` — key matching (exact, substring, case-insensitive), nested objects, arrays, cycles.
-- `createMobileLogger` — message passthrough, payload redaction, custom redactor override, `redact: null` opt-out, console target swap, unserializable payload handling.
+- `createMobileLogger` — message passthrough, bare-message (no payload) formatting, custom redactor override, default-redaction of top-level / nested / array PII keys, case-insensitive substring matching, `redact: null` opt-out, `globalThis.console` fallback, circular payload survival, BigInt (unserializable) payload survival.
 
 Run via `pnpm vitest run --project logger`.
 

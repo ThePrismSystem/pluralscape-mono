@@ -32,8 +32,8 @@ ADR 030 (Email Provider Selection) for design rationale.
 | Export                    | Kind      | Purpose                                                                |
 | ------------------------- | --------- | ---------------------------------------------------------------------- |
 | `EmailAdapter`            | interface | Common adapter contract (`providerName`, `send`)                       |
-| `EmailSendParams`         | type      | Input to `send` (`to`, `subject`, `html`, `text`, `from?`, `replyTo?`) |
-| `EmailSendResult`         | type      | Output of `send` (`messageId: string \| null`)                         |
+| `EmailSendParams`         | interface | Input to `send` (`to`, `subject`, `html`, `text`, `from?`, `replyTo?`) |
+| `EmailSendResult`         | interface | Output of `send` (`messageId: string \| null`)                         |
 | `StubEmailAdapter`        | class     | No-op adapter, safe as a production fallback                           |
 | `EmailDeliveryError`      | class     | Provider rejected the message                                          |
 | `EmailConfigurationError` | class     | Adapter is misconfigured (bad API key, SMTP connection failure)        |
