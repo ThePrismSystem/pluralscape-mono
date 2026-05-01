@@ -6,12 +6,19 @@ import type {
 import type { TRPCClientSubset } from "../trpc-persister-api.types.js";
 import type { FieldType, SystemId } from "@pluralscape/types";
 
+type SystemAndBucketsClientSlice = Pick<
+  TRPCClientSubset,
+  "system" | "systemSettings" | "bucket" | "field" | "customFront" | "member"
+>;
+
 type SystemAndBucketsSection = Pick<
   PersisterApi,
   "system" | "systemSettings" | "bucket" | "field" | "customFront" | "member" | "friend"
 >;
 
-export function buildSystemAndBucketsSection(client: TRPCClientSubset): SystemAndBucketsSection {
+export function buildSystemAndBucketsSection(
+  client: SystemAndBucketsClientSlice,
+): SystemAndBucketsSection {
   return {
     system: {
       getCurrentVersion: async (sysId: SystemId) => {

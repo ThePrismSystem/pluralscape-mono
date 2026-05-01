@@ -1,13 +1,30 @@
-import { sha256Hex } from "../trpc-persister-api.helpers.js";
-import { AVATAR_ENCRYPTION_TIER } from "../trpc-persister-api.types.js";
+import { AVATAR_ENCRYPTION_TIER } from "../import-sp-mobile.constants.js";
 
 import type { PersisterApi } from "../persister/persister.types.js";
 import type { FetchFn, TRPCClientSubset } from "../trpc-persister-api.types.js";
 
+type BlobAndRefsClientSlice = Pick<TRPCClientSubset, "blob" | "importEntityRef">;
+
 type BlobAndRefsSection = Pick<PersisterApi, "blob" | "importEntityRef">;
 
+/**
+ * SHA-256 hex digest. Copies `bytes` into a fresh `ArrayBuffer` because the TS
+ * lib types `Uint8Array.buffer` as `ArrayBufferLike` (includes
+ * `SharedArrayBuffer`), which is incompatible with `SubtleCrypto`'s
+ * `BufferSource` parameter.
+ */
+async function sha256Hex(bytes: Uint8Array): Promise<string> {
+  const copy = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(copy).set(bytes);
+  const digest = await crypto.subtle.digest("SHA-256", copy);
+  const arr = new Uint8Array(digest);
+  return Array.from(arr)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 export function buildBlobAndRefsSection(
-  client: TRPCClientSubset,
+  client: BlobAndRefsClientSlice,
   doFetch: FetchFn,
 ): BlobAndRefsSection {
   return {

@@ -5,7 +5,7 @@ status: in-progress
 type: task
 priority: normal
 created_at: 2026-05-01T19:06:56Z
-updated_at: 2026-05-01T19:12:09Z
+updated_at: 2026-05-01T19:17:47Z
 ---
 
 Apply all suggestions from /review-pr on PR #603 (refactor/tier-b-loc-ratchet-splits). No critical/important issues; all suggestions.
@@ -21,16 +21,7 @@ Apply all suggestions from /review-pr on PR #603 (refactor/tier-b-loc-ratchet-sp
   - [x] (skipped) import-sp test imports from SP-side engine re-export, not core shim — out of scope for this PR
   - [x] Delete re-export at `packages/import-core/src/import-engine.ts` + JSDoc cleanup
   - [x] Update stale JSDoc in `packages/import-core/src/import-engine.helpers.ts`
-- [ ] **Cluster 3 — Mobile import-sp cleanup**
-  - [ ] Slice `TRPCClientSubset` into per-builder `Pick` types (4 builders)
-  - [ ] Un-export `Query`/`Mutation` generics in `trpc-persister-api.types.ts`
-  - [ ] Move `AVATAR_ENCRYPTION_TIER` from `.types.ts` to `import-sp-mobile.constants.ts`
-  - [ ] Inline `defaultFetch` into `trpc-persister-api.ts`, inline `sha256Hex` into `blob-and-refs.ts`
-  - [ ] Delete `trpc-persister-api.helpers.ts`
-  - [ ] Migrate `import.hooks.ts:42` and `__tests__/helpers/trpc-mock-client.ts:10` to import types from `.types.ts`
-  - [ ] Delete shim at `trpc-persister-api.ts:21`
-  - [ ] Migrate consumers of `useImportJob`/`useImportProgress`/`useImportSummary`/`ImportProgressSnapshot`/`ImportSummary` to import from `import-progress.hooks.js`
-  - [ ] Delete orphaned re-export block at `import.hooks.ts:342-356`
+- [x] **Cluster 3 — Mobile import-sp cleanup** (all done)
 - [ ] **Verification**
   - [ ] Targeted vitest projects (sync, import-core, mobile)
   - [ ] /verify full suite (format, lint, typecheck, unit, integration, e2e)

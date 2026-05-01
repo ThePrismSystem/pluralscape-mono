@@ -6,13 +6,18 @@ import type {
 import type { TRPCClientSubset } from "../trpc-persister-api.types.js";
 import type { PollKind, SystemId } from "@pluralscape/types";
 
+type FrontingAndContentClientSlice = Pick<
+  TRPCClientSubset,
+  "frontingSession" | "frontingComment" | "note" | "poll"
+>;
+
 type FrontingAndContentSection = Pick<
   PersisterApi,
   "frontingSession" | "frontingComment" | "note" | "poll"
 >;
 
 export function buildFrontingAndContentSection(
-  client: TRPCClientSubset,
+  client: FrontingAndContentClientSlice,
 ): FrontingAndContentSection {
   return {
     frontingSession: {

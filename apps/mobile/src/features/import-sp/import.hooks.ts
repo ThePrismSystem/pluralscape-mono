@@ -6,12 +6,13 @@
  * - `useStartImport` — begins a new import run (either from an SP API token
  *   or an uploaded export file) and kicks `runSpImport` off as a
  *   fire-and-forget promise.
- * - `useImportJob` — reads a single job row by id via
- *   `trpc.importJob.get.useQuery`.
  * - `useResumeActiveImport` — discovers and resumes an in-flight import
  *   from the persisted checkpoint.
  * - `useCancelImport` — aborts a running import and marks the job as
  *   cancelled.
+ *
+ * Read-side hooks (`useImportJob`, `useImportProgress`, `useImportSummary`)
+ * live in the sibling `./import-progress.hooks.js` module.
  *
  * Design notes:
  *
@@ -39,7 +40,8 @@ import {
 } from "./import-runner.js";
 import { createMobilePersister } from "./mobile-persister.js";
 import { createSpTokenStorage } from "./sp-token-storage.js";
-import { createTRPCPersisterApi, type TRPCClientSubset } from "./trpc-persister-api.js";
+import { createTRPCPersisterApi } from "./trpc-persister-api.js";
+import { type TRPCClientSubset } from "./trpc-persister-api.types.js";
 
 import type { PersisterApi } from "./persister/persister.types.js";
 import type { AppRouter, RouterOutput } from "@pluralscape/api-client/trpc";
@@ -338,22 +340,6 @@ export function useStartImport(): UseStartImportReturn {
     abortControllerRef,
   };
 }
-
-// ── useImportJob ─────────────────────────────────────────────────────
-
-/**
- * Read a single import job row by id. Returns a disabled query when
- * `jobId` is `null` so callers can gracefully render a pre-start state.
- */
-// Re-exported from `./import-progress.hooks.js` so callers that import the
-// whole `import.hooks.js` module continue to see the full surface.
-export {
-  useImportJob,
-  useImportProgress,
-  useImportSummary,
-  type ImportProgressSnapshot,
-  type ImportSummary,
-} from "./import-progress.hooks.js";
 
 // ── useResumeActiveImport ────────────────────────────────────────────
 

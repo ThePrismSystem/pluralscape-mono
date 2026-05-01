@@ -56,3 +56,6 @@ export const IMPORT_PROGRESS_POLL_INTERVAL_MS = 1_500;
  * can preserve each system's import credential independently.
  */
 export const SP_TOKEN_KEY_PREFIX = "pluralscape_sp_token_";
+
+/** Encryption tier for avatar blobs (tier 1 = system-key encrypted). */
+export const AVATAR_ENCRYPTION_TIER = 1;

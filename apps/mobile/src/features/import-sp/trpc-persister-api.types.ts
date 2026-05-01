@@ -7,11 +7,11 @@
 import type { VersionedEntityRef } from "./persister/persister.types.js";
 import type { FieldType, PollKind, SystemId } from "@pluralscape/types";
 
-export interface Query<TInput, TOutput> {
+interface Query<TInput, TOutput> {
   readonly query: (input: TInput) => Promise<TOutput>;
 }
 
-export interface Mutation<TInput, TOutput> {
+interface Mutation<TInput, TOutput> {
   readonly mutate: (input: TInput) => Promise<TOutput>;
 }
 
@@ -287,6 +287,3 @@ export type FetchFn = (
   url: string,
   init: { method: string; body: Uint8Array; headers: Record<string, string> },
 ) => Promise<{ ok: boolean; status: number }>;
-
-/** Encryption tier for avatar blobs (tier 1 = system-key encrypted). */
-export const AVATAR_ENCRYPTION_TIER = 1;

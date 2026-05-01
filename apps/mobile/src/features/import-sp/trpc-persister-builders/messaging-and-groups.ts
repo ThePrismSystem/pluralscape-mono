@@ -6,13 +6,18 @@ import type {
 import type { TRPCClientSubset } from "../trpc-persister-api.types.js";
 import type { SystemId } from "@pluralscape/types";
 
+type MessagingAndGroupsClientSlice = Pick<
+  TRPCClientSubset,
+  "channel" | "message" | "boardMessage" | "group"
+>;
+
 type MessagingAndGroupsSection = Pick<
   PersisterApi,
   "channel" | "message" | "boardMessage" | "group"
 >;
 
 export function buildMessagingAndGroupsSection(
-  client: TRPCClientSubset,
+  client: MessagingAndGroupsClientSlice,
 ): MessagingAndGroupsSection {
   return {
     channel: {
