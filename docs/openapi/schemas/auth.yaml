@@ -282,17 +282,19 @@ SessionInfo:
 
 SessionListResponse:
   type: object
-  required: [data, hasMore]
+  required: [data]
   properties:
     data:
-      type: array
-      items:
-        $ref: "#/SessionInfo"
-    nextCursor:
-      type: string
-      nullable: true
-    hasMore:
-      type: boolean
+      type: object
+      required: [sessions]
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: "#/SessionInfo"
+        nextCursor:
+          type: string
+          nullable: true
 
 RegenerateRecoveryKeyRequest:
   type: object
