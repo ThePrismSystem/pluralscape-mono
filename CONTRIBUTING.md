@@ -47,6 +47,7 @@ type(scope): description
 Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `style`, `perf`, `ci`, `build`
 
 - Imperative mood, 72 characters max, no trailing period
+- Subject must start lowercase — commitlint extends `@commitlint/config-conventional`, which enforces sentence/start-case rejection. `feat: Add foo` fails the hook; `feat: add foo` passes.
 - Branch naming: `type/short-desc` (50 chars max)
 
 ## Architecture Decisions
@@ -219,6 +220,40 @@ Services live in `apps/api/src/services/` and follow a per-verb-file layout — 
 - **Shared helpers**: put shared types/helpers in `services/<domain>/internal.ts` **only if consumed by ≥2 verb files**. Single-consumer helpers stay local to the verb file.
 - **No barrels**: do not create `services/<domain>/index.ts` or a sibling `services/<domain>.ts` re-export. The `moduleResolution: "Bundler"` setting does not resolve `./foo.js` → `./foo/index.ts` by design, and barrels defeat the tree-shaking and static analysis benefits of explicit imports.
 - **Hard cap**: ESLint enforces `max-lines: 450` on `src/services/**/*.ts` (skipping blanks/comments). If you hit it, split the file — do not raise the cap or add an override comment.
+
+### File-size ceilings (ESLint `max-lines`)
+
+LOC ceilings are codified per area in `tooling/eslint-config/loc-rules.js` and enforced by `pnpm lint` (and `pnpm lint:loc` at the root). Counts are ESLint default — all lines including blanks and comments, matching `wc -l`. The rule is **split, don't override**: when you hit a cap, decompose the file. Never raise the cap or suppress the rule with a directive comment.
+
+| Area glob                              | Cap |
+| -------------------------------------- | --- |
+| `apps/api/src/routes/**/*.{ts,tsx}`    | 200 |
+| `apps/api/src/middleware/**/*.ts`      | 200 |
+| `apps/api/src/jobs/**/*.ts`            | 200 |
+| `apps/api/src/trpc/**/*.ts`            | 350 |
+| `apps/api/src/services/**/*.ts`        | 450 |
+| `apps/api/src/lib/**/*.ts`             | 500 |
+| `apps/api/src/ws/**/*.ts`              | 500 |
+| `apps/mobile/src/**/*.{ts,tsx}`        | 500 |
+| `apps/mobile/app/**/*.{ts,tsx}`        | 400 |
+| `packages/types/src/**/*.ts`           | 450 |
+| `packages/sync/src/**/*.ts`            | 750 |
+| `packages/queue/src/**/*.ts`           | 500 |
+| `packages/import-core/src/**/*.ts`     | 500 |
+| Other `packages/*/src/**/*.ts`         | 500 |
+| `**/*.constants.ts`                    | 300 |
+| Tests (`**/*.test.ts`, `__tests__/**`) | 750 |
+
+Tier B caps (api/lib, api/ws, mobile/src, sync, queue, import-core) are lockstep — they currently sit at the value above with a small buffer over the largest in-tree file, and ratchet downward as the tree shrinks. Tier A caps (routes, middleware, trpc, services, types) are target standards. Both are hard errors in CI; treat the cap as a design signal, not a number to negotiate with.
+
+### RLS-context wrappers
+
+Every database query against an RLS-protected table must go through the wrapper helpers in `apps/api/src/lib/rls-context.ts`:
+
+- `withTenantRead(systemId, fn)` — runs `fn` with `app.current_system_id` set to `systemId` on a read-only connection.
+- `withTenantTransaction(systemId, fn)` — same, inside a transaction.
+
+Bare `db.execute(...)` or `db.transaction(...)` outside the wrapper helpers (and the `cross-account-*.ts` helpers, which are the explicit exception for cross-account flows) is an ESLint error. The rule is configured in `apps/api/eslint.config.js`. The integration test `rls-unset-context.integration.test.ts` locks in the fail-silent behavior as a regression trap: un-contexted queries return `[]` rather than rows, so a missed wrapper is a privacy bug that returns empty results rather than the wrong system's data — but a privacy bug nonetheless.
 
 ### Typed auth context
 
