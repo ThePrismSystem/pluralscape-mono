@@ -2,6 +2,8 @@
 
 Pluralscape signs every outgoing webhook delivery with an HMAC-SHA256 signature so you can verify that the payload originated from Pluralscape and was not tampered with in transit.
 
+> **Payload protection at rest.** Webhook delivery payloads are stored on the server as Class E (server-held T3) ciphertext using XChaCha20-Poly1305 with a server-managed key (`WEBHOOK_PAYLOAD_ENCRYPTION_KEY`). Plaintext is reconstituted only at delivery time inside the worker (`apps/api/src/services/webhook-payload-encryption.ts`); your endpoint sees the same JSON body that signed content was computed over. The signature scheme below is unaffected.
+
 ## Headers
 
 | Header                    | Description                                    |

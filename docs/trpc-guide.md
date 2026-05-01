@@ -33,6 +33,26 @@ await utils.member.list.invalidate();
 
 React Query handles deduplication and retry. Do not add manual idempotency keys to tRPC calls.
 
+### Encrypted-entity result shape
+
+Procedures returning encrypted entities (members, groups, notes, polls, channels, messages, custom fronts, fronting sessions, etc.) are typed as `EncryptedWire<T>` from `@pluralscape/types`. The wire envelope:
+
+- Replaces the domain `encryptedData: EncryptedBlob` field with branded base64 (`EncryptedBase64`).
+- Strips every top-level field marked `ServerInternal<…>` so server-fill-only fields never leave the server.
+
+Clients must base64-decode `encryptedData` and decrypt with the appropriate T1 master key or T2 bucket key before reading plaintext fields. See ADR 023 and `packages/types/src/encrypted-wire.ts`.
+
+### Subscriptions
+
+A subset of routers expose real-time `subscription` procedures (async generators over SSE) for live UI updates. Currently:
+
+- `acknowledgement.onChange`
+- `boardMessage.onChange`
+- `message.onChange`
+- `poll.onChange`
+
+Subscriptions are emitted by the same service-layer commit hooks that drive sync; clients consume them via `trpc.<router>.onChange.useSubscription(...)`. Subscriptions for the remaining real-time domains land in M11 wiring work.
+
 ### Available routers
 
 Router keys match the object composed in `apps/api/src/trpc/root.ts` — use them as-written on the client (`trpc.frontingSession.list.useQuery(...)`).
@@ -84,7 +104,7 @@ Router keys match the object composed in `apps/api/src/trpc/root.ts` — use the
 - **Protected** — valid session required
 - **System-scoped** — session must belong to the system that owns the resource; enforced by middleware on every mutating procedure
 
-API key requests additionally pass through the fail-closed scope gate (`scopeGateMiddleware`), which looks up each procedure path in the shared `SCOPE_REGISTRY.trpc`. Procedures with no registry entry are rejected with `FORBIDDEN` — the same registry powers REST per-endpoint scope enforcement.
+API key requests additionally pass through the fail-closed scope gate (`scopeGateMiddleware`), which looks up each procedure path in the shared `SCOPE_REGISTRY.trpc` (defined in `apps/api/src/lib/scope-registry/trpc-entries.ts`; REST entries live alongside it in `rest-entries.ts`). Procedures with no registry entry are rejected with `FORBIDDEN` — the same registry powers REST per-endpoint scope enforcement.
 
 ---
 

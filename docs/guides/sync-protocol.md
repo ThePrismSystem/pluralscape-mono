@@ -251,6 +251,8 @@ After the handshake, the change submission cycle is:
 
 **Rate limiting:** see [`docs/api-limits.md`](../api-limits.md#websocket-sync-limits) for WebSocket rate limits. After 10 consecutive rate limit strikes, the server closes the connection.
 
+**Client-side materialization:** decrypted Automerge state is projected into a local SQLite **client cache** for query access. The client-cache schema is one of the three Drizzle schema sets defined in [ADR-038](../adr/038-three-drizzle-schema-sets.md) (server PG, server SQLite, client-cache SQLite); cache tables hold the decrypted projection plus FTS5 indexes for search. The materializer registry (`packages/sync/src/materializer/materializer-registry.ts`) maps each `docType` to a domain materializer, and `createMaterializerSubscriber` (in `@pluralscape/data`) subscribes to the sync engine and writes into the cache on every applied change. Materialization runs in the data-layer write path -- the same observer feeds the React Query invalidator so UI updates flow without manual refetch.
+
 ## 9. Offline Queue
 
 When the client is disconnected, local changes are queued in an offline queue (SQLite-backed on mobile). On reconnect:
@@ -281,6 +283,8 @@ Automerge handles structural merge automatically (concurrent edits to different 
 **Conflict notifications:** all auto-resolved conflicts generate ephemeral `ConflictNotification` records. These are not persisted to the CRDT document -- they are delivered to the client callback for UI display.
 
 **Correction envelopes:** all corrections are submitted as new encrypted changes, so they become part of the document's CRDT history and propagate to all devices.
+
+**Validator implementation:** `packages/sync/src/post-merge-validator.ts` runs each rule (`hierarchy`, `sort-order`, `fronting-sessions`, `fronting-comments`, `tombstones`, `check-in`, `friend-connection`, `m4-timer-config`, `m4-webhook-config`) after every merge. Tests are split per concern under `packages/sync/src/__tests__/post-merge-validator-*.test.ts` so each rule can evolve independently.
 
 ## 11. Error Codes
 
