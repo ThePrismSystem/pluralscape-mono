@@ -2,6 +2,7 @@ set -e
 
 pnpm typecheck
 pnpm lint
+pnpm lint:loc
 pnpm test:unit
 pnpm scope:check
 

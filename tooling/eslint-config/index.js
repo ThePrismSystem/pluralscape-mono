@@ -4,6 +4,7 @@ import importPlugin from "eslint-plugin-import-x";
 import unicornPlugin from "eslint-plugin-unicorn";
 import tseslint from "typescript-eslint";
 
+import { locRules } from "./loc-rules.js";
 import noHandRolledRequestTypes from "./rules/no-hand-rolled-request-types.js";
 import noParamsUnknown from "./rules/no-params-unknown.js";
 
@@ -27,7 +28,10 @@ export default tseslint.config(
       "**/.expo/**",
       "**/vitest.config.ts",
       "**/vitest.*.config.ts",
+      "**/playwright.config.ts",
+      "**/drizzle.config.*.ts",
       "**/generated/**",
+      "**/__sot-manifest__.ts",
       "**/scripts/**",
     ],
   },
@@ -223,5 +227,12 @@ export default tseslint.config(
     files: ["**/*.d.ts"],
     ...tseslint.configs.disableTypeChecked,
   },
+  // ─── LOC ceilings — see tooling/eslint-config/loc-rules.js ──────────────
+  // (Per-package turbo lint does not fire these because flat-config globs
+  // resolve against per-package cwd. The actual enforcement runs via
+  // `pnpm lint:loc` against the root `eslint.loc.config.js`.)
+  ...locRules,
+  // ────────────────────────────────────────────────────────────────────────
+
   eslintConfigPrettier,
 );
