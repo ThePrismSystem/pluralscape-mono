@@ -2,23 +2,25 @@ import { brandId, extractErrorMessage, toUnixMillis } from "@pluralscape/types";
 import { createId, now } from "@pluralscape/types/runtime";
 import { Queue, Worker } from "bullmq";
 
-import {
-  IdempotencyConflictError,
-  InvalidJobTransitionError,
-  JobNotFoundError,
-  QueueCorruptionError,
-} from "../../errors.js";
+import { InvalidJobTransitionError, JobNotFoundError, QueueCorruptionError } from "../../errors.js";
 import { fireHook } from "../../fire-hook.js";
 import { calculateBackoff, DEFAULT_RETRY_POLICY } from "../../policies/index.js";
-import {
-  DEFAULT_TIMEOUT_MS,
-  IDEM_RESERVATION_TTL_SEC,
-  MAX_DEQUEUE_BATCH,
-  PUT_BACK_DELAY_MS,
-  SCAN_COUNT,
-} from "../../queue.constants.js";
+import { MAX_DEQUEUE_BATCH, PUT_BACK_DELAY_MS } from "../../queue.constants.js";
 
-import { fromStoredData, StoredJobDataSchema } from "./job-mapper.js";
+import { CancelledJobStore } from "./bullmq-cancelled-store.js";
+import {
+  extractRedisOptions,
+  jobIdOf,
+  mapStatusToBullMQStates,
+  parseJobDataOrThrow,
+  scanRedisKeys,
+} from "./bullmq-job-queue.helpers.js";
+import {
+  performEnqueue,
+  performListJobs,
+  type OperationContext,
+} from "./bullmq-job-queue.operations.js";
+import { fromStoredData } from "./job-mapper.js";
 
 import type { StoredJobData } from "./job-mapper.js";
 import type { JobEventHooks } from "../../event-hooks.js";
@@ -28,7 +30,6 @@ import type {
   JobDefinition,
   JobId,
   JobResult,
-  JobStatus,
   JobType,
   Logger,
   RetryPolicy,
@@ -37,50 +38,14 @@ import type {
 import type { Job as BullMQJob } from "bullmq";
 import type IORedis from "ioredis";
 import type { RedisOptions } from "ioredis";
-import type { z } from "zod";
-
-/**
- * Render a Zod error as a compact, operator-readable summary: one
- * `path: message` pair per issue, joined by "; ". Used as the `details`
- * string passed to {@link QueueCorruptionError} so the top-level message
- * surfaces the failing field without requiring callers to chase `cause`.
- */
-function formatZodIssues(err: z.ZodError): string {
-  return err.issues.map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`).join("; ");
-}
-
-function jobIdOf(job: BullMQJob): JobId {
-  const id = job.id;
-  if (id === undefined) throw new Error("BullMQ job missing id");
-  return brandId<JobId>(id);
-}
-
-/**
- * Validate a BullMQ job's `data` field against {@link StoredJobDataSchema} and
- * return the parsed shape. Throws {@link QueueCorruptionError} on failure so
- * callers surface a typed error rather than a raw ZodError leaking across the
- * queue API boundary.
- *
- * Use this at every point where we deserialize `job.data` — silent casts let
- * partial writes, schema drift, or manual Redis edits produce malformed
- * JobDefinitions downstream, which violates the fail-closed contract.
- */
-function parseJobDataOrThrow(job: BullMQJob): StoredJobData {
-  const result = StoredJobDataSchema.safeParse(job.data);
-  if (!result.success) {
-    throw new QueueCorruptionError(jobIdOf(job), formatZodIssues(result.error), {
-      cause: result.error,
-    });
-  }
-  return result.data;
-}
 
 /**
  * BullMQ-backed implementation of JobQueue.
  *
  * Uses a single BullMQ queue with our JobDefinition embedded in job data.
- * Cancelled jobs are stored in a Redis hash since BullMQ has no native cancel state.
- * Idempotency is tracked via Redis keys.
+ * Cancelled jobs are stored in a Redis hash via {@link CancelledJobStore}
+ * since BullMQ has no native cancel state. Idempotency is tracked via
+ * dedicated Redis keys.
  */
 export class BullMQJobQueue implements JobQueue {
   private readonly retryPolicies = new Map<JobType, RetryPolicy>();
@@ -93,6 +58,7 @@ export class BullMQJobQueue implements JobQueue {
   private readonly prefix: string;
   private readonly token: string;
   private readonly connOpts: RedisOptions;
+  private readonly cancelledStore: CancelledJobStore;
   readonly name: string;
 
   constructor(
@@ -106,23 +72,8 @@ export class BullMQJobQueue implements JobQueue {
     this.name = queueName;
     this.prefix = `psq:${queueName}`;
     this.token = `token-${createId("tk_")}`;
-
-    // Pass connection config (not the instance) to BullMQ so it creates and
-    // fully owns its internal connections. Forwards auth, TLS, db, and
-    // sentinel options alongside host/port.
-    const { host, port, password, username, db, tls, keyPrefix, sentinels, natMap } =
-      connection.options;
-    this.connOpts = {
-      host,
-      port,
-      ...(password !== undefined && { password }),
-      ...(username !== undefined && { username }),
-      ...(db !== undefined && { db }),
-      ...(tls !== undefined && { tls }),
-      ...(keyPrefix !== undefined && { keyPrefix }),
-      ...(sentinels !== undefined && { sentinels }),
-      ...(natMap !== undefined && { natMap }),
-    };
+    this.cancelledStore = new CancelledJobStore(connection, this.prefix);
+    this.connOpts = extractRedisOptions(connection);
 
     this.queue = new Queue(queueName, {
       connection: this.connOpts,
@@ -133,7 +84,6 @@ export class BullMQJobQueue implements JobQueue {
       },
     });
 
-    // Prevent unhandled EventEmitter errors from BullMQ's internal connections
     this.queue.on("error", (err: Error) => {
       this.logger.warn("queue.connection-error", { error: extractErrorMessage(err) });
     });
@@ -160,12 +110,8 @@ export class BullMQJobQueue implements JobQueue {
     return this.fetchWorker;
   }
 
-  /** Closes BullMQ queue and worker connections. Call during cleanup. */
   async close(): Promise<void> {
     if (this.fetchWorker !== null) {
-      // Wait for connections to finish initializing before closing. If closed
-      // while still initializing, BullMQ may use ioredis.disconnect() which
-      // rejects pending init commands as unhandled promise rejections.
       await this.fetchWorker.waitUntilReady().catch(() => undefined);
       try {
         await this.fetchWorker.close();
@@ -181,110 +127,17 @@ export class BullMQJobQueue implements JobQueue {
     }
   }
 
-  /** Removes all data for this queue from Redis. For test cleanup only. */
   async obliterate(): Promise<void> {
-    // Clean our custom keys (use SCAN to avoid blocking Redis)
-    const cancelledKeys = await this.scanKeys(`${this.prefix}:cancelled:*`);
-    const idemKeys = await this.scanKeys(`${this.prefix}:idem:*`);
-    const allKeys = [...cancelledKeys, ...idemKeys];
-    if (allKeys.length > 0) {
-      await this.redis.del(...allKeys);
+    await this.cancelledStore.deleteAll();
+    const idemKeys = await scanRedisKeys(this.redis, `${this.prefix}:idem:*`);
+    if (idemKeys.length > 0) {
+      await this.redis.del(...idemKeys);
     }
     await this.queue.obliterate({ force: true });
   }
 
   async enqueue<T extends JobType>(params: JobEnqueueParams<T>): Promise<JobDefinition> {
-    // Atomic idempotency check using SET NX to prevent TOCTOU race
-    const idemKey = `${this.prefix}:idem:${params.idempotencyKey}`;
-    const nxResult = await this.redis.set(
-      idemKey,
-      "reserving",
-      "EX",
-      IDEM_RESERVATION_TTL_SEC,
-      "NX",
-    );
-
-    if (nxResult === null) {
-      // Key already exists — check whether the existing job allows re-enqueue
-      const existingId = await this.redis.get(idemKey);
-      if (existingId !== null && existingId !== "reserving") {
-        const existing = await this.getJob(brandId<JobId>(existingId));
-        if (
-          existing !== null &&
-          existing.status !== "completed" &&
-          existing.status !== "cancelled"
-        ) {
-          throw new IdempotencyConflictError(params.idempotencyKey);
-        }
-      } else if (existingId === "reserving") {
-        // Another concurrent enqueue is in progress
-        throw new IdempotencyConflictError(params.idempotencyKey);
-      }
-      // Completed/cancelled — allow re-enqueue by overwriting
-    }
-
-    const id = brandId<JobId>(createId("job_"));
-    const currentTime = this.clock();
-    const policy = this.getRetryPolicy(params.type);
-    const maxAttempts = params.maxAttempts ?? policy.maxRetries + 1;
-
-    const data: StoredJobData = {
-      systemId: params.systemId ?? null,
-      type: params.type,
-      payload: params.payload as Record<string, unknown>,
-      status: "pending",
-      attempts: 0,
-      maxAttempts,
-      nextRetryAt: null,
-      error: null,
-      result: null,
-      createdAt: currentTime,
-      startedAt: null,
-      completedAt: null,
-      idempotencyKey: params.idempotencyKey,
-      lastHeartbeatAt: null,
-      timeoutMs: params.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-      scheduledFor: params.scheduledFor ?? null,
-      priority: params.priority ?? 0,
-    };
-
-    const delay =
-      params.scheduledFor !== undefined ? Math.max(0, params.scheduledFor - currentTime) : 0;
-
-    try {
-      await this.queue.add(params.type, data, {
-        jobId: id,
-        priority: params.priority ?? 0,
-        delay,
-      });
-    } catch (err) {
-      // Clean up the NX key on enqueue failure
-      if (nxResult !== null) {
-        await this.redis.del(idemKey);
-      }
-      throw err;
-    }
-
-    // Update idempotency key to actual job ID
-    try {
-      await this.redis.set(idemKey, id);
-    } catch (err) {
-      this.logger.error("queue.idem-key-update-failed", {
-        jobId: id,
-        error: extractErrorMessage(err),
-      });
-      try {
-        await this.redis.del(idemKey);
-      } catch (delErr) {
-        this.logger.warn("queue.idem-key-cleanup-failed", {
-          idemKey,
-          error: extractErrorMessage(delErr),
-        });
-      }
-      throw err;
-    }
-
-    return fromStoredData(id, data);
+    return performEnqueue(this.operationContext(), params);
   }
 
   async checkIdempotency(key: string): Promise<IdempotencyCheckResult> {
@@ -306,45 +159,35 @@ export class BullMQJobQueue implements JobQueue {
    * `moveToDelayed`. This means type-filtered dequeue does not guarantee
    * strict priority ordering across all job types — only among the jobs
    * inspected in a single call (up to {@link MAX_DEQUEUE_BATCH}).
-   *
-   * An alternative would be separate queues per job type, but that adds
-   * operational complexity (more Redis keys, per-queue workers) without
-   * meaningful benefit at our current scale.
    */
   async dequeue(types?: readonly JobType[]): Promise<JobDefinition | null> {
     const currentTime = this.clock();
 
-    // Fetch jobs from BullMQ, putting back non-matching ones
     const putBack: BullMQJob[] = [];
     let result: JobDefinition | null = null;
 
     const fetchWorker = this.ensureFetchWorker();
     try {
       for (let i = 0; i < MAX_DEQUEUE_BATCH; i++) {
-        // getNextJob may return undefined when no jobs available
         const job = (await fetchWorker.getNextJob(this.token)) as BullMQJob | undefined;
         if (job === undefined) break;
 
         const def = parseJobDataOrThrow(job);
-        // Check type filter
         if (types !== undefined && !types.includes(def.type)) {
           putBack.push(job);
           continue;
         }
 
-        // Check scheduled time
         if (def.scheduledFor !== null && def.scheduledFor > currentTime) {
           putBack.push(job);
           continue;
         }
 
-        // Check retry time
         if (def.nextRetryAt !== null && def.nextRetryAt > currentTime) {
           putBack.push(job);
           continue;
         }
 
-        // Match found — update to running
         const updated: StoredJobData = {
           ...def,
           status: "running",
@@ -356,7 +199,6 @@ export class BullMQJobQueue implements JobQueue {
         break;
       }
     } finally {
-      // Put back non-matching jobs
       for (const job of putBack) {
         try {
           await job.moveToDelayed(this.clock() + PUT_BACK_DELAY_MS, this.token);
@@ -450,28 +292,20 @@ export class BullMQJobQueue implements JobQueue {
   }
 
   async retry(jobId: JobId): Promise<JobDefinition> {
-    // Check cancelled store first
-    const cancelledRaw = await this.redis.get(`${this.prefix}:cancelled:${jobId}`);
-    if (cancelledRaw !== null) {
-      let parsed: StoredJobData;
-      try {
-        parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw));
-      } catch (err) {
-        throw new QueueCorruptionError(jobId, extractErrorMessage(err), { cause: err });
+    const cancelled = await this.cancelledStore.read(jobId);
+    if (cancelled !== null) {
+      if (cancelled.status !== "dead-letter") {
+        throw new InvalidJobTransitionError(jobId, cancelled.status, "retry");
       }
-      if (parsed.status !== "dead-letter") {
-        throw new InvalidJobTransitionError(jobId, parsed.status, "retry");
-      }
-      // Re-enqueue from cancelled store
       const updated: StoredJobData = {
-        ...parsed,
+        ...cancelled,
         status: "pending",
         attempts: 0,
         error: null,
         nextRetryAt: null,
       };
-      await this.queue.add(parsed.type, updated, { jobId });
-      await this.redis.del(`${this.prefix}:cancelled:${jobId}`);
+      await this.queue.add(cancelled.type, updated, { jobId });
+      await this.cancelledStore.delete(jobId);
       return fromStoredData(jobId, updated);
     }
 
@@ -497,20 +331,13 @@ export class BullMQJobQueue implements JobQueue {
   }
 
   async cancel(jobId: JobId): Promise<JobDefinition> {
-    // Check cancelled store — already cancelled
-    const cancelledRaw = await this.redis.get(`${this.prefix}:cancelled:${jobId}`);
-    if (cancelledRaw !== null) {
-      let parsed: StoredJobData;
-      try {
-        parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw));
-      } catch (err) {
-        throw new QueueCorruptionError(jobId, extractErrorMessage(err), { cause: err });
-      }
-      if (parsed.status === "completed") {
+    const cancelled = await this.cancelledStore.read(jobId);
+    if (cancelled !== null) {
+      if (cancelled.status === "completed") {
         throw new InvalidJobTransitionError(jobId, "completed", "cancel");
       }
-      const updated: StoredJobData = { ...parsed, status: "cancelled" };
-      await this.redis.set(`${this.prefix}:cancelled:${jobId}`, JSON.stringify(updated));
+      const updated: StoredJobData = { ...cancelled, status: "cancelled" };
+      await this.cancelledStore.write(jobId, updated);
       return fromStoredData(jobId, updated);
     }
 
@@ -523,18 +350,16 @@ export class BullMQJobQueue implements JobQueue {
     }
 
     const updated: StoredJobData = { ...def, status: "cancelled" };
-
-    // Store in cancelled hash and remove from BullMQ
-    await this.redis.set(`${this.prefix}:cancelled:${jobId}`, JSON.stringify(updated));
+    await this.cancelledStore.write(jobId, updated);
     await job.remove();
 
     return fromStoredData(jobId, updated);
   }
 
   async getJob(jobId: JobId): Promise<JobDefinition | null> {
-    // Check BullMQ first. BullMQ calls `JSON.parse(json.data)` inside Job.fromJSON,
-    // so a malformed `data` field surfaces as a raw SyntaxError from the SDK.
-    // Wrap that path so callers always see a typed QueueCorruptionError.
+    // BullMQ calls `JSON.parse(json.data)` inside Job.fromJSON, so a malformed
+    // `data` field surfaces as a raw SyntaxError from the SDK. Wrap that path
+    // so callers always see a typed QueueCorruptionError.
     let job: BullMQJob | undefined;
     try {
       job = await this.queue.getJob(jobId);
@@ -545,84 +370,18 @@ export class BullMQJobQueue implements JobQueue {
       throw err;
     }
     if (job !== undefined) {
-      // Validate the deserialized shape — BullMQ happily returns partial data
-      // if fields were never stored, which would produce a silently-malformed
-      // JobDefinition downstream.
-      const parseResult = StoredJobDataSchema.safeParse(job.data);
-      if (!parseResult.success) {
-        throw new QueueCorruptionError(jobId, formatZodIssues(parseResult.error), {
-          cause: parseResult.error,
-        });
-      }
-      return fromStoredData(jobIdOf(job), parseResult.data);
+      return fromStoredData(jobIdOf(job), parseJobDataOrThrow(job));
     }
 
-    // Check cancelled store
-    const cancelledRaw = await this.redis.get(`${this.prefix}:cancelled:${jobId}`);
-    if (cancelledRaw !== null) {
-      let parsed: StoredJobData;
-      try {
-        parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw));
-      } catch (err) {
-        throw new QueueCorruptionError(jobId, extractErrorMessage(err), { cause: err });
-      }
-      return fromStoredData(jobId, parsed);
+    const cancelled = await this.cancelledStore.read(jobId);
+    if (cancelled !== null) {
+      return fromStoredData(jobId, cancelled);
     }
-
     return null;
   }
 
   async listJobs(filter: JobFilter): Promise<readonly JobDefinition[]> {
-    // Collect all jobs from BullMQ + cancelled store
-    const bullmqStates = this.mapStatusToBullMQStates(filter.status);
-    const bullmqJobs = bullmqStates.length > 0 ? await this.queue.getJobs(bullmqStates) : [];
-
-    const allJobs: JobDefinition[] = bullmqJobs.map((j) => {
-      // Same fail-closed contract as getJob: a mismatched (type, payload) or
-      // missing field in the stored data must surface as QueueCorruptionError
-      // rather than silently yielding a malformed JobDefinition to callers.
-      const parseResult = StoredJobDataSchema.safeParse(j.data);
-      if (!parseResult.success) {
-        throw new QueueCorruptionError(jobIdOf(j), formatZodIssues(parseResult.error), {
-          cause: parseResult.error,
-        });
-      }
-      return fromStoredData(jobIdOf(j), parseResult.data);
-    });
-
-    if (filter.status === undefined || filter.status === "cancelled") {
-      const cancelledKeys = await this.scanKeys(`${this.prefix}:cancelled:*`);
-      for (const key of cancelledKeys) {
-        const raw = await this.redis.get(key);
-        if (raw !== null) {
-          const id = brandId<JobId>(key.replace(`${this.prefix}:cancelled:`, ""));
-          try {
-            allJobs.push(fromStoredData(id, StoredJobDataSchema.parse(JSON.parse(raw))));
-          } catch {
-            this.logger.warn("Corrupt cancelled job data, skipping", { jobId: id });
-          }
-        }
-      }
-    }
-
-    // Single-pass filter
-    const filtered = allJobs.filter((j) => {
-      if (filter.type !== undefined && j.type !== filter.type) return false;
-      if (filter.status !== undefined && j.status !== filter.status) return false;
-      if (filter.systemId !== undefined && j.systemId !== filter.systemId) return false;
-      return true;
-    });
-
-    // Sort by priority then createdAt
-    filtered.sort((a, b) => {
-      if (a.priority !== b.priority) return a.priority - b.priority;
-      return a.createdAt - b.createdAt;
-    });
-
-    // Pagination
-    const offset = filter.offset ?? 0;
-    const limit = filter.limit;
-    return filtered.slice(offset, limit !== undefined ? offset + limit : undefined);
+    return performListJobs(this.operationContext(), filter);
   }
 
   async listDeadLettered(
@@ -652,15 +411,12 @@ export class BullMQJobQueue implements JobQueue {
    * periodically MUST supervise that error — alert an operator, open a
    * ticket, quarantine the bad key — rather than re-invoke blindly, since
    * the corrupt record will keep tripping the guard until it is repaired
-   * or removed. The explicit trade-off vs. silent-skip is that a partial
-   * sweep can hide a real stall; here we prefer an obvious paged incident
-   * over a silent detection gap.
+   * or removed.
    */
   async findStalledJobs(): Promise<readonly JobDefinition[]> {
     const currentTime = this.clock();
     const activeJobs = await this.queue.getJobs(["active"]);
 
-    // Parse once per job, then reuse the validated shape in the map() pass.
     return activeJobs
       .map((job) => ({ job, data: parseJobDataOrThrow(job) }))
       .filter(({ data }) => {
@@ -685,24 +441,22 @@ export class BullMQJobQueue implements JobQueue {
   }
 
   async countJobs(filter: JobFilter): Promise<number> {
-    // Fall back to listJobs when filtering by type or systemId (BullMQ can't filter natively)
     if (filter.type !== undefined || filter.systemId !== undefined) {
       const jobs = await this.listJobs(filter);
       return jobs.length;
     }
 
     if (filter.status === "cancelled") {
-      const keys = await this.scanKeys(`${this.prefix}:cancelled:*`);
-      return keys.length;
+      const ids = await this.cancelledStore.scanIds();
+      return ids.length;
     }
 
     if (filter.status !== undefined) {
-      const states = this.mapStatusToBullMQStates(filter.status);
+      const states = mapStatusToBullMQStates(filter.status);
       const counts = await this.queue.getJobCounts(...states);
       return Object.values(counts).reduce((sum, n) => sum + n, 0);
     }
 
-    // No filter: sum all BullMQ states + cancelled
     const counts = await this.queue.getJobCounts(
       "waiting",
       "active",
@@ -712,11 +466,9 @@ export class BullMQJobQueue implements JobQueue {
       "prioritized",
     );
     const bullmqTotal = Object.values(counts).reduce((sum, n) => sum + n, 0);
-    const cancelledKeys = await this.scanKeys(`${this.prefix}:cancelled:*`);
-    return bullmqTotal + cancelledKeys.length;
+    const cancelledIds = await this.cancelledStore.scanIds();
+    return bullmqTotal + cancelledIds.length;
   }
-
-  // ── Private helpers ──────────────────────────────────────────────
 
   private async requireBullMQJob(jobId: JobId): Promise<BullMQJob> {
     const job = await this.queue.getJob(jobId);
@@ -724,44 +476,21 @@ export class BullMQJobQueue implements JobQueue {
     return job;
   }
 
-  private mapStatusToBullMQStates(
-    status?: JobStatus,
-  ): ("waiting" | "active" | "completed" | "failed" | "delayed" | "prioritized")[] {
-    if (status === undefined) {
-      return ["waiting", "active", "completed", "failed", "delayed", "prioritized"];
-    }
-    switch (status) {
-      case "pending":
-        return ["waiting", "delayed", "prioritized"];
-      case "running":
-        return ["active"];
-      case "completed":
-        return ["completed"];
-      case "dead-letter":
-        return ["failed"];
-      case "cancelled":
-        return []; // Handled separately via Redis
-      default: {
-        const _exhaustive: never = status;
-        return _exhaustive;
-      }
-    }
-  }
-
-  private async scanKeys(pattern: string): Promise<string[]> {
-    const keys: string[] = [];
-    let cursor = "0";
-    do {
-      const [nextCursor, batch] = await this.redis.scan(
-        cursor,
-        "MATCH",
-        pattern,
-        "COUNT",
-        SCAN_COUNT,
-      );
-      cursor = nextCursor;
-      keys.push(...batch);
-    } while (cursor !== "0");
-    return keys;
+  /**
+   * Snapshot of class state needed by extracted operations. Bound delegates
+   * are captured here so the operation functions don't need access to
+   * private members of the class instance.
+   */
+  private operationContext(): OperationContext {
+    return {
+      redis: this.redis,
+      queue: this.queue,
+      prefix: this.prefix,
+      logger: this.logger,
+      clock: this.clock,
+      cancelledStore: this.cancelledStore,
+      getRetryPolicy: (type) => this.getRetryPolicy(type),
+      getJob: (id) => this.getJob(id),
+    };
   }
 }
