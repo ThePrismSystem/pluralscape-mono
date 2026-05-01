@@ -3,10 +3,12 @@
 PluralKit import engine — maps PluralKit data to Pluralscape entities.
 
 Accepts two source modes — a PluralKit JSON export file or the live PK REST API
-(via `pkapi.js`) — validates each document with Zod, maps members, groups,
-group membership, fronting sessions (derived from switches), and a synthesised
-privacy bucket to Pluralscape entities, and drives a resumable, checkpoint-based
-import via the shared `Persister` interface from `@pluralscape/import-core`.
+(via `pkapi.js`) — and maps members, groups (with their member rosters),
+fronting sessions (derived from switches), and a synthesised privacy bucket to
+Pluralscape entities. Mapped payloads are typed against the
+`@pluralscape/validation` request schemas. The package drives a resumable,
+checkpoint-based import via the shared `Persister` interface from
+`@pluralscape/import-core`.
 
 ---
 
@@ -39,12 +41,19 @@ checkpoint boundary.
 
 Both factories return an `ImportDataSource`. The API source wraps `pkapi.js`
 and converts its class-based Member / Group / Switch shapes into plain objects
-matching the export schema, so a single set of validators and mappers covers
-both modes.
+matching the export schema, so a single set of mappers covers both modes.
 
-The file source uses `node:fs` (whole-file `readFileSync` bounded by
-`MAX_IMPORT_FILE_BYTES` from `@pluralscape/import-core`). Mobile callers should
-use the API source; the file source is Node-only.
+The file source uses `node:fs` and validates the whole export against
+`PKPayloadSchema` (Zod) on first read. To keep the size check and the read on
+the same file object — and avoid path-based TOCTOU (e.g. symlink swap) — it
+opens a single file descriptor and pairs `fstatSync` with `readFileSync(fd)`.
+The size cap is `MAX_IMPORT_FILE_BYTES` from `@pluralscape/import-core`. Mobile
+callers should use the API source; the file source is Node-only.
+
+The API source does not re-run `PKPayloadSchema` over pkapi.js objects — the
+SDK's typed shapes act as the schema. Only the per-member `privacy` blob is
+re-parsed defensively (with a small ad-hoc Zod record schema) before being
+forwarded to the privacy-bucket synthesis pass.
 
 ### API source guards
 
@@ -63,15 +72,23 @@ wire:
 
 ## Collections mapped
 
-| PK Source          | Pluralscape Entity | Notes                                               |
-| ------------------ | ------------------ | --------------------------------------------------- |
-| `members`          | member             | Name, pronouns, description, color, avatar          |
-| `groups`           | group              | Name, description, color                            |
-| `members[].groups` | group-membership   | Derived from member-to-group references             |
-| `switches`         | fronting-session   | Diffed into per-member sessions; see below          |
-| synthetic scan     | privacy-bucket     | One "PK Private" bucket synthesised from PK privacy |
+| PK Source      | Pluralscape Entity | Notes                                                                                  |
+| -------------- | ------------------ | -------------------------------------------------------------------------------------- |
+| `members`      | member             | name, description, pronouns (singleton list), color (singleton list), external avatar  |
+| `groups`       | group              | name, description, color, external icon as `imageSource`, member roster on the payload |
+| `switches`     | fronting-session   | Diffed into per-member sessions; see below                                             |
+| synthetic scan | privacy-bucket     | One "PK Private" bucket synthesised from PK per-member privacy flags                   |
 
-`PK_DEPENDENCY_ORDER` is `member → group → switch → privacy-bucket`.
+Group → member memberships ride along inside the group payload's `memberIds`
+field — there is no separate `group-membership` collection. Unresolved member
+refs are warned-and-skipped rather than failing the group.
+
+`PK_DEPENDENCY_ORDER` (and the underlying `PK_COLLECTION_NAMES`) is
+`member → group → switch → privacy-bucket`. The privacy-bucket synthesis pass
+walks collected member privacy data and exposes the set of "private" member
+IDs as cross-pass metadata on the `MappingContext`, which the member mapper
+reads via `ctx.getMetadata("privacy-bucket", "synthetic:pk-private", "memberIds")`
+to attach the synthetic bucket.
 
 ### Switch-to-session diff
 

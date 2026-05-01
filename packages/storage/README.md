@@ -1,10 +1,10 @@
 # @pluralscape/storage
 
-Backend-agnostic blob storage adapter interface with S3, filesystem, and in-memory implementations for encrypted media.
+Backend-agnostic blob storage adapter interface with S3 and filesystem implementations for encrypted media.
 
 ## Overview
 
-`@pluralscape/storage` provides a uniform `BlobStorageAdapter` interface that decouples the application from any specific storage backend. Concrete adapters are shipped in sub-entry points (`/s3`, `/filesystem`) so each deployment tier can import only what it needs.
+`@pluralscape/storage` provides a uniform `BlobStorageAdapter` interface that decouples the application from any specific storage backend. Concrete adapters are shipped in sub-entry points (`/s3`, `/filesystem`) so each deployment tier can import only what it needs. An in-memory adapter (`src/adapters/memory-adapter.ts`) backs the contract test suite and is not part of the public export surface.
 
 All bytes flowing through the adapter are encrypted before they arrive. The storage layer is zero-knowledge: it stores and retrieves opaque ciphertext and never has access to plaintext media. Per ADR 009, the client encrypts blobs (XChaCha20-Poly1305) before upload, and decrypts them locally after download. The server generates time-limited presigned URLs so clients upload directly to the storage backend, keeping API server bandwidth low.
 
