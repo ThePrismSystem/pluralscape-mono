@@ -1,11 +1,11 @@
 ---
 # ps-oz0p
 title: "Apply PR #603 review suggestions: drop shims, slice god-types, fold helpers"
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-05-01T19:06:56Z
-updated_at: 2026-05-01T19:17:47Z
+updated_at: 2026-05-01T19:26:33Z
 ---
 
 Apply all suggestions from /review-pr on PR #603 (refactor/tier-b-loc-ratchet-splits). No critical/important issues; all suggestions.
@@ -22,7 +22,17 @@ Apply all suggestions from /review-pr on PR #603 (refactor/tier-b-loc-ratchet-sp
   - [x] Delete re-export at `packages/import-core/src/import-engine.ts` + JSDoc cleanup
   - [x] Update stale JSDoc in `packages/import-core/src/import-engine.helpers.ts`
 - [x] **Cluster 3 — Mobile import-sp cleanup** (all done)
-- [ ] **Verification**
-  - [ ] Targeted vitest projects (sync, import-core, mobile)
-  - [ ] /verify full suite (format, lint, typecheck, unit, integration, e2e)
-  - [ ] Grep guard: zero hits for old shim import paths
+- [x] **Verification** — all green
+  - [x] Targeted vitest projects: sync 951/951, import-core 124/124, mobile 1366/1366
+  - [x] Full suite: format/lint/typecheck pass, unit 13177/13180 (3 pre-existing skips), integration 3032/3043 (11 skips), e2e 509/511 (2 skips)
+  - [x] Grep guard clean for all four shim sites
+
+## Summary of Changes
+
+Applied all suggestions from /review-pr on PR #603 (no critical/important; suggestions only). Three commits, one per cluster:
+
+1. **refactor(sync)** — Migrated 11 sync test files + sync-engine consumer to per-validator paths; deleted 16-line re-export block in post-merge-validator.ts. Two import-\* namespace tests retained for vi.spyOn on runAllValidations.
+2. **refactor(import-core)** — Routed package barrel directly to import-engine.helpers.js for buildPersistableEntity; migrated import-core test; cleaned stale JSDoc; deleted re-export shim in import-engine.ts. import-sp engine has its own buildPersistableEntity surface (out of scope).
+3. **refactor(mobile)** — Sliced TRPCClientSubset per builder via Pick; un-exported Query/Mutation generics; moved AVATAR_ENCRYPTION_TIER to constants; folded 41-LOC trpc-persister-api.helpers.ts (defaultFetch into trpc-persister-api.ts; sha256Hex into blob-and-refs.ts); deleted helpers file; dropped TRPCClientSubset/FetchFn re-export shim and the orphaned import.hooks.ts re-export of useImport\*; migrated index.ts barrel + dynamic test imports.
+
+Pre-production policy enforced everywhere: no aliases, shims, or re-exports left behind.
