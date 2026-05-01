@@ -26,23 +26,26 @@
  *  - Errors thrown inside the iteration loop are classified by the injected
  *    `classifyError` (or the default classifier): fatal errors abort the run;
  *    non-fatal errors are recorded and iteration continues.
+ *  - Per-collection iteration is delegated to `import-engine.collection.ts`
+ *    to keep this orchestrator file under the LOC ceiling.
  */
-import {
-  advanceWithinCollection,
-  bumpCollectionTotals,
-  completeCollection,
-  emptyCheckpointState,
-  resumeStartCollection,
-  type AdvanceDelta,
-} from "./checkpoint.js";
+import { completeCollection, emptyCheckpointState } from "./checkpoint.js";
 import { createMappingContext, type MappingContext, type MappingWarning } from "./context.js";
-import { classifyErrorDefault, isFatalError, ResumeCutoffNotFoundError } from "./engine-errors.js";
-import { CHECKPOINT_CHUNK_SIZE } from "./import-core.constants.js";
-import { isBatchMapper, type MapperDispatchEntry, type SourceDocument } from "./mapper-dispatch.js";
+import { classifyErrorDefault, ResumeCutoffNotFoundError } from "./engine-errors.js";
+import {
+  runBatchCollection,
+  runSingleCollection,
+  type EngineRunContext,
+} from "./import-engine.collection.js";
+import {
+  buildPersistableEntity,
+  indexOfResumeCollection,
+  isAborted,
+} from "./import-engine.helpers.js";
+import { isBatchMapper, type MapperDispatchEntry } from "./mapper-dispatch.js";
 
 import type { ErrorClassifier } from "./engine-errors.js";
-import type { MapperResult } from "./mapper-result.js";
-import type { PersistableEntity, Persister, PersisterUpsertAction } from "./persister.types.js";
+import type { Persister } from "./persister.types.js";
 import type { ImportDataSource } from "./source.types.js";
 import type {
   ImportAvatarMode,
@@ -52,81 +55,7 @@ import type {
   ImportSourceFormat,
 } from "@pluralscape/types";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Check whether the signal has been aborted. Isolated into a function so
- * TypeScript's control-flow narrowing cannot eliminate the second check
- * inside the document loop -- `AbortSignal.aborted` is mutable.
- */
-function isAborted(signal: AbortSignal | undefined): boolean {
-  return signal?.aborted === true;
-}
-
-/** Build a single-document `AdvanceDelta` for one of the four terminal outcomes. */
-function delta(kind: "imported" | "updated" | "skipped" | "failed"): AdvanceDelta {
-  return {
-    imported: kind === "imported" ? 1 : 0,
-    updated: kind === "updated" ? 1 : 0,
-    skipped: kind === "skipped" ? 1 : 0,
-    failed: kind === "failed" ? 1 : 0,
-    total: 1,
-  };
-}
-
-/**
- * Narrow a dispatch result into a {@link PersistableEntity} variant at the
- * upsert boundary.
- *
- * Invariant: the mapper dispatch table guarantees that for each collection the
- * mapper returns a payload whose shape matches the `Mapped<Entity>` type
- * bound to the corresponding `entityType` variant of `PersistableEntity`.
- * We therefore construct the variant with a single controlled cast —
- * avoiding widening the persister's input type or threading a generic
- * through the dispatch table — and the TypeScript compiler enforces the
- * shape of every consumer of the narrowed result. A runtime guard rejects
- * primitives and null payloads so misrouted dispatch entries surface as a
- * visible error rather than a silent cast.
- */
-export function buildPersistableEntity(
-  entityType: ImportCollectionType,
-  sourceEntityId: string,
-  sourceFormat: ImportSourceFormat,
-  payload: unknown,
-): PersistableEntity {
-  if (payload === null || typeof payload !== "object") {
-    throw new Error(
-      `mapper for ${entityType} returned non-object payload (${typeof payload}); dispatch table may be misrouted`,
-    );
-  }
-  return { entityType, sourceEntityId, source: sourceFormat, payload };
-}
-
-// ---------------------------------------------------------------------------
-// Result constructors
-// ---------------------------------------------------------------------------
-
-function abortedResult(
-  state: ImportCheckpointState,
-  ctx: MappingContext,
-  errors: readonly ImportError[],
-): ImportRunResult {
-  return { finalState: state, warnings: ctx.warnings, errors, outcome: "aborted" };
-}
-
-function completedResult(
-  state: ImportCheckpointState,
-  ctx: MappingContext,
-  errors: readonly ImportError[],
-): ImportRunResult {
-  return { finalState: state, warnings: ctx.warnings, errors, outcome: "completed" };
-}
-
-// ---------------------------------------------------------------------------
-// Public types
-// ---------------------------------------------------------------------------
+export { buildPersistableEntity };
 
 export interface BeforeCollectionArgs {
   readonly collection: string;
@@ -169,33 +98,21 @@ export interface ImportRunResult {
   readonly outcome: ImportRunOutcome;
 }
 
-// ---------------------------------------------------------------------------
-// Resume helper
-// ---------------------------------------------------------------------------
-
-/**
- * Find the index in `dependencyOrder` of the collection corresponding to a
- * resumed entity type. Resumes are stored as `ImportCollectionType`; we scan
- * the dependency order calling `collectionToEntityType` to find the match.
- */
-function indexOfResumeCollection(
+function abortedResult(
   state: ImportCheckpointState,
-  dependencyOrder: readonly string[],
-  collectionToEntityType: (collection: string) => ImportCollectionType,
-): number {
-  const entityType = resumeStartCollection(state);
-  for (let i = 0; i < dependencyOrder.length; i += 1) {
-    const collection = dependencyOrder[i];
-    if (collection !== undefined && collectionToEntityType(collection) === entityType) {
-      return i;
-    }
-  }
-  return -1;
+  ctx: MappingContext,
+  errors: readonly ImportError[],
+): ImportRunResult {
+  return { finalState: state, warnings: ctx.warnings, errors, outcome: "aborted" };
 }
 
-// ---------------------------------------------------------------------------
-// Engine
-// ---------------------------------------------------------------------------
+function completedResult(
+  state: ImportCheckpointState,
+  ctx: MappingContext,
+  errors: readonly ImportError[],
+): ImportRunResult {
+  return { finalState: state, warnings: ctx.warnings, errors, outcome: "completed" };
+}
 
 /**
  * Generic import engine. Iterates source collections in dependency order,
@@ -215,88 +132,6 @@ export async function runImportEngine<TCollection extends string>(
   const classify = args.classifyError ?? classifyErrorDefault;
   const ctx = createMappingContext({ sourceMode: source.mode });
   const errors: ImportError[] = [];
-
-  type CheckpointStateRef = { current: ImportCheckpointState };
-
-  const UPSERT_ACTION_TO_DELTA: Record<PersisterUpsertAction, AdvanceDelta> = {
-    created: delta("imported"),
-    updated: delta("updated"),
-    skipped: delta("skipped"),
-  };
-
-  /**
-   * Process a single mapper result (skipped/failed/mapped) through the
-   * persist-and-checkpoint pipeline. Shared by both the batch and single
-   * mapper paths to eliminate duplicated error-handling and upsert logic.
-   *
-   * Returns `true` when a fatal error aborted the collection.
-   */
-  async function persistMapperResult(
-    result: MapperResult<unknown>,
-    sourceEntityId: string,
-    entityType: ImportCollectionType,
-    persistedSourceIds: string[],
-    stateRef: CheckpointStateRef,
-  ): Promise<boolean> {
-    if (result.status === "skipped") {
-      stateRef.current = advanceWithinCollection(stateRef.current, {
-        entityType,
-        lastSourceId: sourceEntityId,
-        delta: delta("skipped"),
-      });
-      return false;
-    }
-
-    if (result.status === "failed") {
-      const error: ImportError = {
-        entityType,
-        entityId: sourceEntityId,
-        message: result.message,
-        kind: result.kind,
-        fatal: false,
-      };
-      errors.push(error);
-      try {
-        await persister.recordError(error);
-      } catch {
-        /* contract violation — swallow */
-      }
-      stateRef.current = advanceWithinCollection(stateRef.current, {
-        entityType,
-        lastSourceId: sourceEntityId,
-        delta: delta("failed"),
-      });
-      return false;
-    }
-
-    // status === "mapped"
-    try {
-      const upsert = await persister.upsertEntity(
-        buildPersistableEntity(entityType, sourceEntityId, sourceFormat, result.payload),
-      );
-      ctx.register(entityType, sourceEntityId, upsert.pluralscapeEntityId);
-      persistedSourceIds.push(sourceEntityId);
-      const upsertDelta = UPSERT_ACTION_TO_DELTA[upsert.action];
-      stateRef.current = advanceWithinCollection(stateRef.current, {
-        entityType,
-        lastSourceId: sourceEntityId,
-        delta: upsertDelta,
-      });
-    } catch (thrown) {
-      const error = classify(thrown, { entityType, entityId: sourceEntityId });
-      errors.push(error);
-      await persister.recordError(error);
-      if (isFatalError(error)) {
-        return true;
-      }
-      stateRef.current = advanceWithinCollection(stateRef.current, {
-        entityType,
-        lastSourceId: sourceEntityId,
-        delta: delta("failed"),
-      });
-    }
-    return false;
-  }
 
   /** Set of collection names the engine iterates. Computed once per run. */
   const knownDependencyOrderSet = new Set<string>(dependencyOrder);
@@ -347,6 +182,17 @@ export async function runImportEngine<TCollection extends string>(
 
     const startIndex = indexOfResumeCollection(state, dependencyOrder, collectionToEntityType);
     const safeStartIndex = startIndex < 0 ? 0 : startIndex;
+
+    const rctx: EngineRunContext = {
+      source,
+      persister,
+      sourceFormat,
+      classify,
+      ctx,
+      errors,
+      onProgress,
+      abortSignal: args.abortSignal,
+    };
 
     for (
       let collectionIndex = safeStartIndex;
@@ -415,201 +261,30 @@ export async function runImportEngine<TCollection extends string>(
       // Includes created, updated, AND skipped docs — all valid for dependent
       // fetch parent enumeration.
       const persistedSourceIds: string[] = [];
-      let docsSinceCheckpoint = 0;
-      let collectionAborted = false;
-      let pastResumeCutoff = resumeCutoffSourceId === null;
 
-      if (isBatchMapper(entry)) {
-        // ---------------------------------------------------------------
-        // Batch mapper path: accumulate all documents, then map in bulk.
-        // ---------------------------------------------------------------
-        try {
-          const accumulated: SourceDocument[] = [];
+      const outcome = isBatchMapper(entry)
+        ? await runBatchCollection(
+            rctx,
+            entry,
+            collection,
+            entityType,
+            state,
+            resumeCutoffSourceId,
+            persistedSourceIds,
+          )
+        : await runSingleCollection(
+            rctx,
+            entry,
+            collection,
+            entityType,
+            state,
+            resumeCutoffSourceId,
+            persistedSourceIds,
+          );
 
-          for await (const event of source.iterate(collection)) {
-            if (isAborted(args.abortSignal)) {
-              return abortedResult(state, ctx, errors);
-            }
-
-            if (!pastResumeCutoff) {
-              if (event.sourceId === resumeCutoffSourceId) {
-                pastResumeCutoff = true;
-              }
-              continue;
-            }
-
-            if (event.kind === "drop") {
-              const error: ImportError = {
-                entityType,
-                entityId: event.sourceId,
-                message: event.reason,
-                kind: "invalid-source-document",
-                fatal: false,
-              };
-              errors.push(error);
-              await persister.recordError(error);
-              if (event.sourceId !== null) {
-                state = advanceWithinCollection(state, {
-                  entityType,
-                  lastSourceId: event.sourceId,
-                  delta: delta("failed"),
-                });
-              } else {
-                state = bumpCollectionTotals(state, entityType, delta("failed"));
-              }
-              docsSinceCheckpoint += 1;
-              if (docsSinceCheckpoint >= CHECKPOINT_CHUNK_SIZE) {
-                await persister.flush();
-                await onProgress(state);
-                docsSinceCheckpoint = 0;
-              }
-              continue;
-            }
-
-            accumulated.push({ sourceId: event.sourceId, document: event.document });
-          }
-
-          // Process all accumulated documents in a single batch call.
-          const batchResults = entry.mapBatch(accumulated, ctx);
-
-          const stateRef: CheckpointStateRef = { current: state };
-          for (const batchItem of batchResults) {
-            if (isAborted(args.abortSignal)) {
-              state = stateRef.current;
-              return abortedResult(state, ctx, errors);
-            }
-
-            const fatal = await persistMapperResult(
-              batchItem.result,
-              batchItem.sourceEntityId,
-              entityType,
-              persistedSourceIds,
-              stateRef,
-            );
-            if (fatal) {
-              collectionAborted = true;
-              state = stateRef.current;
-              break;
-            }
-
-            docsSinceCheckpoint += 1;
-            if (docsSinceCheckpoint >= CHECKPOINT_CHUNK_SIZE) {
-              state = stateRef.current;
-              await persister.flush();
-              await onProgress(state);
-              docsSinceCheckpoint = 0;
-            }
-          }
-          state = stateRef.current;
-        } catch (thrown) {
-          // Source iteration itself threw — always fatal.
-          const classified = classify(thrown, { entityType, entityId: null });
-          const error: ImportError = classified.fatal
-            ? classified
-            : {
-                entityType: classified.entityType,
-                entityId: classified.entityId,
-                message: classified.message,
-                fatal: true,
-                recoverable: true,
-              };
-          errors.push(error);
-          await persister.recordError(error);
-          return abortedResult(state, ctx, errors);
-        }
-      } else {
-        // ---------------------------------------------------------------
-        // Single mapper path: process documents one at a time.
-        // ---------------------------------------------------------------
-        try {
-          const singleStateRef: CheckpointStateRef = { current: state };
-          for await (const event of source.iterate(collection)) {
-            if (!pastResumeCutoff) {
-              if (event.sourceId === resumeCutoffSourceId) {
-                pastResumeCutoff = true;
-              }
-              continue;
-            }
-
-            if (event.kind === "drop") {
-              const error: ImportError = {
-                entityType,
-                entityId: event.sourceId,
-                message: event.reason,
-                kind: "invalid-source-document",
-                fatal: false,
-              };
-              errors.push(error);
-              await persister.recordError(error);
-              if (event.sourceId !== null) {
-                state = advanceWithinCollection(state, {
-                  entityType,
-                  lastSourceId: event.sourceId,
-                  delta: delta("failed"),
-                });
-              } else {
-                state = bumpCollectionTotals(state, entityType, delta("failed"));
-              }
-              docsSinceCheckpoint += 1;
-              if (docsSinceCheckpoint >= CHECKPOINT_CHUNK_SIZE) {
-                await persister.flush();
-                await onProgress(state);
-                docsSinceCheckpoint = 0;
-              }
-              if (isAborted(args.abortSignal)) {
-                return abortedResult(state, ctx, errors);
-              }
-              continue;
-            }
-
-            const doc = event;
-            const result = entry.map(doc.document, ctx);
-            singleStateRef.current = state;
-
-            const fatal = await persistMapperResult(
-              result,
-              doc.sourceId,
-              entityType,
-              persistedSourceIds,
-              singleStateRef,
-            );
-            state = singleStateRef.current;
-            if (fatal) {
-              collectionAborted = true;
-              break;
-            }
-
-            docsSinceCheckpoint += 1;
-            if (docsSinceCheckpoint >= CHECKPOINT_CHUNK_SIZE) {
-              await persister.flush();
-              await onProgress(state);
-              docsSinceCheckpoint = 0;
-            }
-
-            if (isAborted(args.abortSignal)) {
-              return abortedResult(state, ctx, errors);
-            }
-          }
-        } catch (thrown) {
-          // Source iteration itself threw — always fatal regardless of the
-          // underlying error type. Generic `Error` instances would otherwise be
-          // classified as non-fatal by the default classifier, but there is no
-          // way to continue iterating a source whose generator has thrown, so
-          // we override `fatal` to make the abort explicit in recorded errors.
-          const classified = classify(thrown, { entityType, entityId: null });
-          const error: ImportError = classified.fatal
-            ? classified
-            : {
-                entityType: classified.entityType,
-                entityId: classified.entityId,
-                message: classified.message,
-                fatal: true,
-                recoverable: true,
-              };
-          errors.push(error);
-          await persister.recordError(error);
-          return abortedResult(state, ctx, errors);
-        }
+      state = outcome.state;
+      if (outcome.kind === "aborted") {
+        return abortedResult(state, ctx, errors);
       }
 
       // Resume cutoff sanity check: if we were resuming mid-collection and
@@ -617,17 +292,13 @@ export async function runImportEngine<TCollection extends string>(
       // likely dropped that document between runs. Aborting (rather than
       // silently skipping the rest of the collection) forces the operator to
       // restart the import deliberately.
-      if (resumeCutoffSourceId !== null && !pastResumeCutoff) {
+      if (resumeCutoffSourceId !== null && !outcome.pastResumeCutoff) {
         const cutoffError = classify(
           new ResumeCutoffNotFoundError(collection, resumeCutoffSourceId),
           { entityType, entityId: resumeCutoffSourceId },
         );
         errors.push(cutoffError);
         await persister.recordError(cutoffError);
-        return abortedResult(state, ctx, errors);
-      }
-
-      if (collectionAborted) {
         return abortedResult(state, ctx, errors);
       }
 

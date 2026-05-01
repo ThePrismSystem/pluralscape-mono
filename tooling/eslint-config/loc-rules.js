@@ -24,7 +24,7 @@ export const locRules = [
   { files: ["apps/mobile/src/**/*.{ts,tsx}"], rules: { "max-lines": ["error", { max: 850 }] } },
   { files: ["packages/sync/src/**/*.ts"], rules: { "max-lines": ["error", { max: 1100 }] } },
   { files: ["packages/queue/src/**/*.ts"], rules: { "max-lines": ["error", { max: 775 }] } },
-  { files: ["packages/import-core/src/**/*.ts"], rules: { "max-lines": ["error", { max: 675 }] } },
+  { files: ["packages/import-core/src/**/*.ts"], rules: { "max-lines": ["error", { max: 500 }] } },
 
   // Tier A — Target (final standards)
   { files: ["apps/api/src/routes/**/*.{ts,tsx}"], rules: { "max-lines": ["error", { max: 200 }] } },
