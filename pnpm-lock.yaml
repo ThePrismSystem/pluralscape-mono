@@ -67,7 +67,7 @@ overrides:
   ioredis: 5.10.1
   esbuild: '>=0.25.0'
   fast-xml-parser: '>=5.7.0'
-  '@aws-sdk/xml-builder>fast-xml-parser': 5.5.8
+  '@aws-sdk/xml-builder>fast-xml-parser': 5.5.12
   postcss: '>=8.5.10'
   flatted: '>=3.4.2'
   brace-expansion: '>=5.0.5'
@@ -4845,8 +4845,8 @@ packages:
   fast-xml-builder@1.1.5:
     resolution: {integrity: sha512-4TJn/8FKLeslLAH3dnohXqE3QSoxkhvaMzepOIZytwJXZO69Bfz0HBdDHzOTOon6G59Zrk6VQ2bEiv1t61rfkA==}
 
-  fast-xml-parser@5.5.8:
-    resolution: {integrity: sha512-Z7Fh2nVQSb2d+poDViM063ix2ZGt9jmY1nWhPfHBOK2Hgnb/OW3P4Et3P/81SEej0J7QbWtJqxO05h8QYfK7LQ==}
+  fast-xml-parser@5.5.12:
+    resolution: {integrity: sha512-nUR0q8PPfoA/svPM43Gup7vLOZWppaNrYgGmrVqrAVJa7cOH4hMG6FX9M4mQ8dZA1/ObGZHzES7Ed88hxEBSJg==}
     hasBin: true
 
   fast-xml-parser@5.7.2:
@@ -7847,7 +7847,7 @@ snapshots:
     dependencies:
       '@nodable/entities': 2.1.0
       '@smithy/types': 4.14.1
-      fast-xml-parser: 5.5.8
+      fast-xml-parser: 5.5.12
       tslib: 2.8.1
 
   '@aws/lambda-invoke-store@0.2.4': {}
@@ -11856,7 +11856,7 @@ snapshots:
     dependencies:
       path-expression-matcher: 1.5.0
 
-  fast-xml-parser@5.5.8:
+  fast-xml-parser@5.5.12:
     dependencies:
       fast-xml-builder: 1.1.5
       path-expression-matcher: 1.5.0
