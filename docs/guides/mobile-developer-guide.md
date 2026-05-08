@@ -15,7 +15,7 @@ The app uses [Expo Router](https://expo.dev/router) with file-based routing. Rou
 - `(auth)/` -- unauthenticated screens: `login`, `register`
 - `(app)/(tabs)/` -- authenticated tabbed screens (main app surface)
 
-`AuthGate` in the root layout redirects to `/(auth)/login` when the auth state is `unauthenticated` and shows a lock screen when `locked`. Authenticated users reach `(app)/(tabs)/`.
+`AuthGate` in the root layout redirects to `/(auth)/login` when the auth state is `unauthenticated`, and shows a lock screen when the state is `locked`. Authenticated users reach `(app)/(tabs)/`.
 
 ### Provider Tree
 
@@ -66,9 +66,9 @@ When the source is `"local"`, real-time updates flow through the sync engine to 
 
 All sensitive data is encrypted at rest on the server. The client decrypts on read:
 
-- **MasterKey** -- derived from the user's password via Argon2id. Available from `CryptoProvider` only when auth state is `unlocked`. Used to decrypt entity fields (member names, journal entries, etc.) via a `decrypt` callback in each hook.
+- **MasterKey** -- derived from the user's password via Argon2id. Available from `CryptoProvider` only when auth state is `unlocked`. Used to decrypt entity fields (member names, journal entries, and similar) via a `decrypt` callback in each hook.
 - **Bucket keys** -- per-bucket symmetric keys (AEAD) for friend visibility. `BucketKeyProvider` fetches received key grants, decrypts them with the user's `boxKeypair` (X25519), and caches them. Used to decrypt data shared by friends.
-- **Key zeroing** -- the `AuthStateMachine` fires `onKeyDiscard` when transitioning out of `unlocked`, calling `sodium.memzero()` on the master key. `BucketKeyProvider` zeros all cached keys on unmount.
+- **Key zeroing** -- the `AuthStateMachine` fires `onKeyDiscard` when leaving `unlocked`, which calls `sodium.memzero()` on the master key. `BucketKeyProvider` zeros all cached keys on unmount.
 
 ---
 
@@ -170,7 +170,7 @@ export function useMembersList(opts?: MemberListOpts): DataListQuery<Member | Ar
 }
 ```
 
-Mutation hooks follow a consistent pattern -- wrap `trpc.*.useMutation` and invalidate related queries:
+Mutation hooks wrap `trpc.*.useMutation` and invalidate related queries:
 
 ```ts
 // From use-members.ts
@@ -193,11 +193,11 @@ export function useUpdateMember(): TRPCMutation<
 1. Query keys start with the table name: `["members", ...]`, `["groups", ...]`
 2. Row transforms live in `apps/mobile/src/data/row-transforms/` grouped by domain
 3. Decrypt functions live in `@pluralscape/data/transforms/` (shared with the API)
-4. The `useRemote` callback is a thin wrapper around the tRPC hook -- the factory cannot call tRPC hooks directly because each entity has unique procedure types
+4. The `useRemote` callback is a thin wrapper around the tRPC hook. The factory cannot call tRPC hooks directly because each entity has unique procedure types
 
 ### File size ceilings
 
-ESLint enforces `max-lines: 500` on all files under `apps/mobile/src/**` (`tooling/eslint-config/loc-rules.js`). When a module hits the cap, split by concern -- do not add per-file overrides. The Simply Plural import persister is the canonical example: the original `apps/mobile/src/features/import-sp/trpc-persister-api.ts` was split (mobile-62f6) into focused modules under `apps/mobile/src/features/import-sp/trpc-persister-builders/` and the `persister/` subdirectory, with shared types in `trpc-persister-api.types.ts`. Test files follow the same split pattern (`__tests__/trpc-persister-api-{bulk,fronting,comms,core}.test.ts`).
+ESLint enforces `max-lines: 500` on all files under `apps/mobile/src/**` (`tooling/eslint-config/loc-rules.js`). When a module hits the cap, split by concern. Do not add per-file overrides. The Simply Plural import persister is the canonical example: the original `apps/mobile/src/features/import-sp/trpc-persister-api.ts` was split (mobile-62f6) into focused modules under `apps/mobile/src/features/import-sp/trpc-persister-builders/` and the `persister/` subdirectory, with shared types in `trpc-persister-api.types.ts`. Test files follow the same split pattern (`__tests__/trpc-persister-api-{bulk,fronting,comms,core}.test.ts`).
 
 ### Platform Abstraction
 
@@ -217,12 +217,12 @@ The platform layer (`apps/mobile/src/platform/`) detects the runtime environment
 
 - **Native**: `expo-sqlite` via `createExpoSqliteDriver()` -- full SQLite with WAL mode
 - **Web with OPFS**: `createOpfsSqliteDriver()` -- `@journeyapps/wa-sqlite` compiled to WASM, backed by Origin Private File System (worker-hosted, async-only API surface)
-- **Web without OPFS**: `IndexedDB` adapters for storage and offline queue (no local SQLite queries -- hooks fall back to remote mode); `storageFallbackReason` records why OPFS was skipped (capability missing vs. init failure)
+- **Web without OPFS**: `IndexedDB` adapters for storage and offline queue. Without local SQLite queries, hooks fall back to remote mode. `storageFallbackReason` records why OPFS was skipped (capability missing vs. init failure)
 
 **Crypto adapters:**
 
 - **Native**: `ReactNativeSodiumAdapter` from `@pluralscape/crypto/react-native`, with optional native `memzero` for secure key wiping
-- **Web**: `WasmSodiumAdapter` from `@pluralscape/crypto/wasm` -- libsodium compiled to WebAssembly
+- **Web**: `WasmSodiumAdapter` from `@pluralscape/crypto/wasm`, libsodium compiled to WebAssembly
 
 Platform detection runs once at startup (`detectPlatform()`) and the result is immutable for the session.
 
@@ -289,7 +289,7 @@ Key test patterns:
 
 The mobile app uses **tRPC** (not REST) for all standard API calls. The tRPC client is configured with:
 
-- **httpBatchLink** for queries and mutations -- batches concurrent requests into a single HTTP call
+- **httpBatchLink** for queries and mutations. Batches concurrent requests into a single HTTP call
 - **httpSubscriptionLink** for real-time subscriptions via SSE
 - **loggerLink** (dev only) for error logging
 
@@ -355,4 +355,4 @@ For full sync protocol details, see [`sync-protocol.md`](sync-protocol.md).
 - **Reads**: served from local SQLite. The `QueryInvalidator` listens to materialization events from the sync engine and invalidates React Query cache entries, keeping the UI current.
 - **Writes**: mutations go through tRPC. When offline, they are queued locally (via the platform's offline queue adapter) and replayed on reconnect.
 - **Conflict resolution**: Automerge CRDTs handle concurrent edits deterministically. No manual conflict resolution is required.
-- **Degraded mode**: if the platform lacks SQLite support (web without OPFS), the app operates in remote-only mode -- all reads and writes go through tRPC with no local cache beyond React Query's in-memory store.
+- **Degraded mode**: if the platform lacks SQLite support (web without OPFS), the app operates in remote-only mode. All reads and writes go through tRPC with no local cache beyond React Query's in-memory store.

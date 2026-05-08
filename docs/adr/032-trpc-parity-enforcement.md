@@ -8,7 +8,7 @@ Accepted
 
 tRPC serves as the internal typed API for the Pluralscape mobile client (ADR 003). Both tRPC and REST transports delegate to the same service layer, but each configures its own middleware stack independently. Without active enforcement, the two transports drift in their security and operational properties.
 
-A comprehensive audit (PR #356) discovered a concrete gap: only 2 of 35 tRPC routers had rate limits applied, while 100% of REST routes had correct rate limiting. Left unaddressed, this would expose the tRPC surface to unauthenticated or high-frequency abuse that the REST surface already protects against.
+An audit (PR #356) discovered a concrete gap: only 2 of 35 tRPC routers had rate limits applied, while 100% of REST routes had correct rate limiting. Left unaddressed, this would expose the tRPC surface to unauthenticated or high-frequency abuse that the REST surface already protects against.
 
 The audit fixed all gaps across five parity dimensions: procedure existence, rate limit categories, authentication levels, input validation schemas, and idempotency markers. A prevention mechanism is needed so these gaps cannot silently re-emerge as new endpoints are added.
 

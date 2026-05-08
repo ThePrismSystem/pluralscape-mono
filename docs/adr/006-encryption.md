@@ -94,14 +94,14 @@ Etebase's Collection/key model maps well to Privacy Buckets, and its crypto choi
 
 ## Consequences
 
-- The encryption layer is a core competency — significant engineering investment to build and audit
+- The encryption layer is a core competency, with significant engineering investment to build and audit
 - Password strength is the foundation of security (mitigated by Argon2id with high memory cost + zxcvbn enforcement)
 - Key loss = data loss (mitigated by recovery keys and optional social recovery)
-- The server sees metadata (timestamps, bucket membership graphs, activity patterns) even with E2E encryption — accept for V1, consider "Maximum Privacy" mode later
+- The server sees metadata (timestamps, bucket membership graphs, activity patterns) even with E2E encryption. Accept for V1, consider "Maximum Privacy" mode later
 - Web clients are inherently weaker (no hardware-backed key storage, JS tamperable by compromised server)
-- Bucket key rotation on friend removal is O(bucket_size) — mitigated by lazy rotation protocol (ADR 014)
-- The split key derivation doubles Argon2id output size but requires only one KDF call — no performance cost relative to a single-key derivation at the same parameters
-- The server never has enough information to perform an offline brute-force attack: it holds only a BLAKE2B hash of the auth key, not the key itself or anything that can unwrap the master key
+- Bucket key rotation on friend removal is O(bucket_size). The lazy rotation protocol (ADR 014) mitigates this
+- The split key derivation doubles Argon2id output size but requires only one KDF call, with no performance cost relative to a single-key derivation at the same parameters
+- The server never has enough information to perform an offline brute-force attack. It holds only a BLAKE2B hash of the auth key, not the key itself or anything that can unwrap the master key
 
 Full encryption architecture documented in `docs/planning/encryption-research.md`.
 

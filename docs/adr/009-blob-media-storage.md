@@ -57,11 +57,11 @@ Evaluated: S3-compatible object storage, PostgreSQL large objects, SQLite BLOB c
 
 ## Consequences
 
-- No server-side image processing — all crop/resize/thumbnail work happens on the client, which increases client complexity and may be slow on low-spec devices
-- Encrypted blobs cannot be CDN-cached in readable form — cache only the encrypted bytes, decryption happens on-device
-- Local filesystem fallback lacks the durability guarantees of S3 — self-hosters using minimal tier should configure their own backup strategy
+- No server-side image processing. All crop/resize/thumbnail work happens on the client, which increases client complexity and may be slow on low-spec devices
+- Encrypted blobs cannot be CDN-cached in readable form. Cache only the encrypted bytes; decryption happens on-device
+- Local filesystem fallback lacks the durability guarantees of S3. Self-hosters using the minimal tier should configure their own backup strategy
 - Three storage backends increase testing surface (S3, MinIO, local filesystem)
-- Import of SP avatar ZIPs requires client-side extraction, encryption, and upload of potentially hundreds of images — must be chunked with progress indication
+- Import of SP avatar ZIPs requires client-side extraction, encryption, and upload of potentially hundreds of images. The flow must be chunked with progress indication
 
 ### License
 

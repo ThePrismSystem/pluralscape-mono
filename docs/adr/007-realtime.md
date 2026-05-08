@@ -13,7 +13,7 @@ The app needs real-time capabilities for:
 - Push notifications when switches occur
 - Mandatory acknowledgement routing (persistent alerts until a specific member confirms)
 
-At 500K users, a single server process cannot handle all concurrent WebSocket connections — horizontal scaling requires a pub/sub backbone to fan out messages across instances.
+At 500K users, a single server process cannot handle all concurrent WebSocket connections. Horizontal scaling requires a pub/sub backbone to fan out messages across instances.
 
 ## Decision
 
@@ -31,10 +31,10 @@ MQTT is not natively supported in browsers (requires MQTT-over-WebSocket bridge)
 
 ## Consequences
 
-- Hono's WebSocket support is basic — no built-in pub/sub, presence tracking, or topic routing (must implement on top of Valkey)
-- Valkey is an additional service in Docker Compose for self-hosters (optional — only needed at scale or for multi-instance deployments)
-- SSE has no native mobile SDK support — requires custom implementation on iOS/Android
-- All real-time payloads are E2E encrypted — push notification content must not contain plaintext (send a signal, client fetches and decrypts on wakeup)
+- Hono's WebSocket support is basic, with no built-in pub/sub, presence tracking, or topic routing. Those must be implemented on top of Valkey
+- Valkey is an additional service in Docker Compose for self-hosters. Optional, only needed at scale or for multi-instance deployments
+- SSE has no native mobile SDK support, so iOS/Android need a custom implementation
+- All real-time payloads are E2E encrypted. Push notification content must not contain plaintext. Send a signal, then the client fetches and decrypts on wakeup
 
 ### License
 

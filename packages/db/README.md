@@ -19,9 +19,9 @@ The two server schema sets share a structural mixin layer in `src/helpers/entity
 (`entityIdentity<TIdBrand>()`, `encryptedPayload()`, `serverEntityChecks()`). The
 client-cache schemas reuse `entityIdentity()` and use per-entity decrypted columns.
 
-The schema covers all application domains — members, fronting sessions, journals,
+The schema covers every application domain: members, fronting sessions, journals,
 groups, custom fields, communication, innerworld, blob metadata, notifications, key
-rotation, import/export, audit logging, and more.
+rotation, import/export, audit logging, and others.
 
 The three sets are exposed as sub-entry points: `./pg`, `./sqlite`, and
 `./sqlite-client-cache`. The main entry point (`@pluralscape/db`) exports the client
@@ -34,15 +34,15 @@ schemas, and that cache decrypted columns track the canonical domain types per t
 encoding rules in ADR-038.
 
 Row-Level Security (RLS) is enforced on the PostgreSQL dialect. Every tenant table is
-protected by policies keyed on `system_id`, `account_id`, or both — including sync
+protected by policies keyed on `system_id`, `account_id`, or both, including sync
 tables (`sync_docs`, `sync_events`, `sync_cursors`) and bidirectional friend
 connections. The RLS migration is generated from `RLS_TABLE_POLICIES` in
 `src/rls/policies.ts` and must be regenerated whenever tables are added, removed, or
 change scope (see [Migrations](#migrations)).
 
-Several high-volume tables use PostgreSQL range partitioning by timestamp —
+Several high-volume tables use PostgreSQL range partitioning by timestamp:
 `fronting_sessions` (by `start_time`), `messages` (by `timestamp`), and `audit_log`
-(by `timestamp`). Partition creation and detachment are handled by the helpers in
+(by `timestamp`). Partition creation and detachment go through the helpers in
 `src/queries/partition-maintenance.ts` (`pgEnsureFuturePartitions`,
 `pgDetachOldPartitions`); only `audit_log` partitions may be detached destructively.
 
@@ -149,9 +149,9 @@ emits its DDL at runtime by introspecting the Drizzle schema (`getTableConfig`).
 **Pre-release migration policy:** Pluralscape is pre-production, so generated migration
 files are regularly nuked and regenerated from scratch. The Drizzle schema files under
 `src/schema/pg/`, `src/schema/sqlite/`, and `src/schema/sqlite-client-cache/` are the
-single source of truth for table shape — never treat a migration file as authoritative.
-Changes to column names, constraints, or indexes land in the schema files first;
-migrations are then regenerated to reflect them.
+single source of truth for table shape; never treat a migration file as authoritative.
+Changes to column names, constraints, or indexes land in the schema files first, and
+migrations are regenerated from there.
 
 Generate the Drizzle schema migration after schema changes:
 

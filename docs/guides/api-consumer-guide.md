@@ -149,7 +149,7 @@ All cryptographic operations happen client-side:
 
 The recovery key is generated and stored client-side. The client must present it to the user for offline storage before calling commit (`recoveryKeyBackupConfirmed: true`).
 
-**Anti-enumeration:** duplicate email registrations return a fake success response with identical shape and timing to prevent email harvesting.
+**Anti-enumeration:** duplicate email registrations return a fake success response with matching shape and timing to prevent email harvesting.
 
 **Rate limiting:** `authHeavy` category.
 
@@ -191,7 +191,7 @@ The client decrypts the master key client-side using the password-derived key (t
 
 **Failure responses:**
 
-- `401 UNAUTHENTICATED`: generic "Invalid credentials" (no user enumeration).
+- `401 UNAUTHENTICATED`: returns a generic "Invalid credentials" message to avoid user enumeration.
 - `429 LOGIN_THROTTLED`: too many failed attempts for this account. Response includes `Retry-After` header.
 
 **Anti-timing:** when an email is not found, the server performs a dummy auth key verification to equalize response times with real accounts.
@@ -240,7 +240,7 @@ On mobile, the master key is cached in the OS secure store (Keychain/Keystore) b
 
 ### 2.5 Password Reset via Recovery Key
 
-There is no email-based password reset. Because the server is zero-knowledge, it cannot verify account ownership without the password-derived key. The only reset path is the recovery key, which the user stored at registration.
+There is no email-based password reset. Because the server is zero-knowledge, it cannot verify account ownership without the password-derived key. The only reset path is the recovery key the user stored at registration.
 
 ```
 POST /v1/auth/password-reset/recovery-key
@@ -418,7 +418,7 @@ Master Key (256-bit, random, persistent)
   --> KDF(subkey=1, ctx="bktkeywp") --> Bucket key wrapping key
 ```
 
-**The master key is NOT derived from the password.** It is a random 256-bit value generated at registration and persisted (encrypted) in the database. This means password changes do not invalidate derived keys -- only the KEK wrapping layer is re-encrypted.
+**The master key is NOT derived from the password.** It is a random 256-bit value generated at registration and persisted (encrypted) in the database. Password changes do not invalidate derived keys; only the KEK wrapping layer is re-encrypted.
 
 **Argon2id profiles (ADR 037):**
 
@@ -482,13 +482,13 @@ A **privacy bucket** is a named container that controls which friends can see ta
 - Shareable with friends who have been granted the bucket key.
 - Used for: any field tagged with a privacy bucket for selective friend visibility.
 - Wire format: `T2EncryptedBlob` with `tier: 2`, a `bucketId`, and a `keyVersion`.
-- During key rotation, clients must support dual-key reads (check `keyVersion` to select the correct key).
+- During key rotation, clients must support dual-key reads. Check `keyVersion` to select the correct key.
 
 **T3 -- Plaintext (server-readable):**
 
 - Not encrypted. The server can read, index, and query these fields.
 - Used for: timestamps (`createdAt`, `updatedAt`), sort orders, archived flags, webhook secrets, session metadata.
-- No `EncryptedBlob` wrapper -- fields appear as plain types.
+- No `EncryptedBlob` wrapper. Fields appear as plain types.
 
 ### 3.5 Per-Field Encryption
 
@@ -516,7 +516,7 @@ The `encrypt()` function produces `{ ciphertext, nonce }`. The `decrypt()` funct
 
 ### 3.6 Key Rotation
 
-Key rotation follows the **lazy rotation protocol** defined in ADR 014. It separates security-critical revocation (instant) from expensive re-encryption (background, client-driven).
+Key rotation follows the **lazy rotation protocol** defined in ADR 014. Security-critical revocation is instant; expensive re-encryption runs in the background and is client-driven.
 
 **Rotation state machine:**
 
@@ -578,7 +578,7 @@ Paginated list responses return `PaginatedResult` directly (not nested under `da
 }
 ```
 
-Error responses use a distinct shape (see section 4.3). The discriminant is the presence of `data` (success) versus `error` (failure) -- they are never both present.
+Error responses use a distinct shape (see section 4.3). The discriminant is the presence of `data` (success) versus `error` (failure); they are never both present.
 
 ### 4.2 Pagination
 
@@ -604,13 +604,13 @@ All list endpoints use **cursor-based keyset pagination**. Cursors are opaque, H
 
 - `nextCursor` is `null` when there are no more results.
 - `hasMore` mirrors `nextCursor !== null` for convenience.
-- `totalCount` is `null` for most endpoints (expensive to compute with keyset pagination). When present, it is capped at 100,000 rows.
+- `totalCount` is `null` for most endpoints because it is expensive to compute with keyset pagination. When present, it is capped at 100,000 rows.
 
 **Errors:**
 
 - `400 INVALID_CURSOR` -- the cursor is malformed or expired (TTL: 24 hours). Discard the cursor and restart from the first page.
 
-Some endpoints use **composite cursors** that encode both a sort value (e.g., timestamp) and entity ID for stable ordering across pages. The wire format is identical -- the cursor is still an opaque string.
+Some endpoints use **composite cursors** that encode both a sort value (e.g., timestamp) and entity ID for stable ordering across pages. The wire format is identical; the cursor is still an opaque string.
 
 ### 4.3 Error Responses
 
@@ -682,7 +682,7 @@ Idempotency-Key: 550e8400-e29b-41d4-a716-446655440000
 - Key max length: 64 characters. UUIDs recommended.
 - If a request with the same key was already completed, the cached response is replayed (same status code and body).
 - If a request with the same key is currently in flight, the server returns `409 IDEMPOTENCY_CONFLICT`.
-- Server errors (5xx) are **not cached** -- they can be retried with the same key.
+- Server errors (5xx) are **not cached**, so they can be retried with the same key.
 - Cached responses have a TTL of **24 hours**.
 
 **Which endpoints support it:** All `POST` creation endpoints apply the idempotency middleware (e.g., member creation, fronting session creation, blob upload URL, timer config creation, webhook config creation, and similar). Non-creation mutations (PATCH, DELETE, archive/restore) are naturally idempotent and do not use the header.
@@ -695,7 +695,7 @@ Export and manifest endpoints return an `ETag` header (weak validator):
 ETag: W/"a1b2c3d4e5f67890"
 ```
 
-The ETag is computed from `MAX(updatedAt)` and entity count -- it changes when entities are added, removed, or modified.
+The ETag is computed from `MAX(updatedAt)` and entity count, so it changes when entities are added, removed, or modified.
 
 **Conditional request flow:**
 
@@ -845,7 +845,7 @@ POST /v1/systems/:systemId/blobs/:blobId/confirm
 }
 ```
 
-Confirmation is idempotent -- confirming an already-confirmed blob returns the blob metadata without error.
+Confirmation is idempotent: confirming an already-confirmed blob returns the blob metadata without error.
 
 **Step 4 -- Download:** `GET /v1/systems/:systemId/blobs/:blobId/download-url` returns a time-limited presigned download URL.
 
@@ -864,7 +864,7 @@ Exceeding the limit returns `413 BLOB_TOO_LARGE`. Storage quota violations retur
 
 ### 5.5 Polymorphic Subjects in Fronting
 
-Fronting sessions and fronting comments support **polymorphic subjects** -- the entity being tracked can be a member, a custom front, or a structure entity. The database enforces that at least one must be present:
+Fronting sessions and fronting comments support **polymorphic subjects**: the entity being tracked can be a member, a custom front, or a structure entity. The database enforces that at least one must be present:
 
 ```json
 {
@@ -894,17 +894,17 @@ Or for a structure entity:
 }
 ```
 
-Exactly one of `memberId`, `customFrontId`, or `structureEntityId` should be non-null (the database constraint requires at least one, but the application enforces exactly one). These foreign keys use `ON DELETE RESTRICT` -- you cannot delete a member, custom front, or structure entity that is referenced by an active fronting session. Archive the session first, or end and delete it.
+Exactly one of `memberId`, `customFrontId`, or `structureEntityId` should be non-null. The database constraint requires at least one, but the application enforces exactly one. These foreign keys use `ON DELETE RESTRICT`: you cannot delete a member, custom front, or structure entity that is referenced by an active fronting session. Archive the session first, or end and delete it.
 
-This pattern enables tracking fronting for abstract cognitive states (custom fronts like "Dissociated" or "Blurry") and system-defined structure entities alongside traditional member-based fronting.
+This pattern lets fronting track abstract cognitive states (custom fronts like "Dissociated" or "Blurry") and system-defined structure entities alongside traditional member-based fronting.
 
 ---
 
 ## 6. Sync Protocol
 
-Pluralscape uses an encrypted CRDT sync protocol for offline-first data synchronization. The server is an encrypted relay -- it stores and forwards ciphertext without ever seeing plaintext content. All encryption and decryption happen on the client.
+Pluralscape uses an encrypted CRDT sync protocol for offline-first data synchronization. The server is an encrypted relay: it stores and forwards ciphertext without ever seeing plaintext content. All encryption and decryption happen on the client.
 
-The protocol is transport-agnostic. The primary transport is WebSocket; HTTP long-polling is a fallback. The wire format is JSON with binary fields (ciphertext, nonces, signatures, public keys) encoded as Base64url strings.
+The protocol is transport-agnostic. The primary transport is WebSocket, with HTTP long-polling as a fallback. The wire format is JSON with binary fields (ciphertext, nonces, signatures, public keys) encoded as Base64url strings.
 
 ### 6.1 WebSocket Sync
 
@@ -920,7 +920,7 @@ After authentication, the client fetches the sync manifest, subscribes to docume
 
 Connection limits, rate limits, and other constraints are documented in [`docs/api-limits.md`](../api-limits.md#websocket-sync-limits).
 
-For the full protocol specification -- message types, envelope formats, manifest structure, subscription mechanics, offline queue, conflict resolution, and error codes -- see the **[Sync Protocol Reference](sync-protocol.md)**.
+For the full protocol specification (message types, envelope formats, manifest structure, subscription mechanics, offline queue, conflict resolution, error codes) see the **[Sync Protocol Reference](sync-protocol.md)**.
 
 ### 6.2 SSE Notification Stream
 
@@ -1027,7 +1027,7 @@ The `secret` field is returned only on creation and secret rotation. It is a 32-
 
 When a webhook config is created, the server generates a 32-byte (256-bit) cryptographically random secret using `node:crypto.randomBytes()`. The raw bytes are stored in the database; the base64 encoding is returned to the client exactly once in the creation response.
 
-The secret is used for HMAC-SHA256 signature computation on all outgoing deliveries. The client must store it securely -- the server will not return it again.
+The secret is used for HMAC-SHA256 signature computation on all outgoing deliveries. The client must store it securely; the server will not return it again.
 
 ### 7.3 HMAC Signature Verification
 
@@ -1109,7 +1109,7 @@ The test delivery goes through the same SSRF validation and HMAC signing as real
 
 ### 7.6 Event Types
 
-Webhook payloads contain T3 (plaintext) metadata only -- entity IDs, timestamps, and structural data. The server never includes encrypted content in webhook payloads. The `systemId` is automatically injected into every payload by the dispatcher.
+Webhook payloads contain T3 (plaintext) metadata only: entity IDs, timestamps, and structural data. The server never includes encrypted content in webhook payloads. The `systemId` is automatically injected into every payload by the dispatcher.
 
 Event types follow the pattern `{domain}.{action}`. Each payload includes `systemId` (injected by the dispatcher) plus entity-specific IDs.
 
@@ -1162,7 +1162,7 @@ This section covers endpoint patterns, key concepts, and gotchas for each major 
 
 ### 8.1 Fronting
 
-Fronting tracks which members, custom fronts, or structure entities currently have executive control. Sessions use overlapping time ranges -- co-fronting is the norm, not an exception.
+Fronting tracks which members, custom fronts, or structure entities currently have executive control. Sessions use overlapping time ranges; co-fronting is the norm, not an exception.
 
 **Key endpoints:**
 
@@ -1184,7 +1184,7 @@ PATCH  /fronting-sessions/:sessionId/comments/:commentId
 DELETE /fronting-sessions/:sessionId/comments/:commentId
 ```
 
-**Co-fronting model:** multiple sessions can be active simultaneously. There is no "current fronter" singular concept -- the client queries active sessions and displays all of them. A session is active when `endedAt` is null.
+**Co-fronting model:** multiple sessions can be active simultaneously. There is no singular "current fronter" concept; the client queries active sessions and displays all of them. A session is active when `endedAt` is null.
 
 **Polymorphic subjects:** a fronting session references one of `memberId`, `customFrontId`, or `structureEntityId` (exactly one non-null). See [section 5.5](#55-polymorphic-subjects-in-fronting) for details and examples.
 
@@ -1213,7 +1213,7 @@ The communication domain covers internal messaging, board posts, notes, polls, a
 
 **Channels and categories:**
 
-Channels have a `type` field: `"category"` or `"channel"`. Categories are containers -- they hold channels via `parentId`. A channel with `parentId: null` is uncategorized. Messages are nested under channels:
+Channels have a `type` field: `"category"` or `"channel"`. Categories are containers that hold channels via `parentId`. A channel with `parentId: null` is uncategorized. Messages are nested under channels:
 
 ```
 POST   /channels                              Create channel or category
@@ -1258,7 +1258,7 @@ POST   /acknowledgements/:id/confirm         Target member confirms (idempotent 
 GET    /acknowledgements                     List (filterable by confirmed status)
 ```
 
-The `confirmed` field starts `false` and flips to `true` on confirmation. Once confirmed, `confirmedAt` is set. This is a one-way transition -- acknowledgements cannot be unconfirmed.
+The `confirmed` field starts `false` and flips to `true` on confirmation. Once confirmed, `confirmedAt` is set. This is a one-way transition; acknowledgements cannot be unconfirmed.
 
 ### 8.3 Privacy Buckets
 
@@ -1274,7 +1274,7 @@ PATCH  /buckets/:id           Update bucket
 DELETE /buckets/:id           Delete bucket (409 if has content tags or friend assignments)
 ```
 
-**Content tagging** -- tag/untag entities into buckets:
+**Content tagging**: tag and untag entities into buckets:
 
 ```
 POST   /buckets/:id/tags        Tag an entity (body: { entityType, entityId })
@@ -1284,7 +1284,7 @@ GET    /buckets/:id/tags         List tags for a bucket
 
 Supported entity types (21 total): `member`, `group`, `channel`, `message`, `note`, `poll`, `relationship`, `structure-entity-type`, `structure-entity`, `journal-entry`, `wiki-page`, `custom-front`, `fronting-session`, `board-message`, `acknowledgement`, `innerworld-entity`, `innerworld-region`, `field-definition`, `field-value`, `member-photo`, `fronting-comment`.
 
-**Intersection logic:** if a member is tagged with buckets A and B, a friend must have both A and B assigned to see that member. If the friend only has A, the member is invisible to them. This is the **fail-closed** default: unmapped or errored content defaults to invisible.
+**Intersection logic:** if a member is tagged with buckets A and B, a friend must have both A and B assigned to see that member. If the friend only has A, the member is invisible to them. This is the **fail-closed** default; unmapped or errored content defaults to invisible.
 
 **Field-level bucket visibility:** custom field definitions can be assigned bucket visibility, controlling which fields a friend can see on an entity even if they can see the entity itself. These routes are nested under the field, not the bucket, and require `read:fields`/`write:fields`/`delete:fields` scopes:
 
@@ -1294,14 +1294,14 @@ POST   /fields/:fieldDefinitionId/bucket-visibility              Set field visib
 DELETE /fields/:fieldDefinitionId/bucket-visibility/:bucketId    Remove field visibility for a bucket
 ```
 
-**Friend assignment** -- assign/unassign buckets to friends:
+**Friend assignment**: assign or unassign buckets to friends:
 
 ```
 POST   /buckets/:id/friends       Assign bucket to friend (body: { connectionId, encryptedBucketKey, keyVersion })
 DELETE /buckets/:id/friends/:id   Unassign bucket from friend
 ```
 
-Note that assigning a bucket requires providing an `encryptedBucketKey` -- the client encrypts the bucket's symmetric key with the friend's public key so the friend can decrypt bucket-scoped (T2) content.
+Note that assigning a bucket requires providing an `encryptedBucketKey`: the client encrypts the bucket's symmetric key with the friend's public key so the friend can decrypt bucket-scoped (T2) content.
 
 **Key rotation** is managed per-bucket:
 
@@ -1345,7 +1345,7 @@ GET    /v1/account/friends/:connectionId/dashboard       Full dashboard snapshot
 GET    /v1/account/friends/:connectionId/dashboard/sync   Incremental sync (cursor-based)
 ```
 
-The dashboard returns only data that the viewing friend has bucket access to see. The server enforces intersection logic -- the client receives pre-filtered results.
+The dashboard returns only data that the viewing friend has bucket access to see. The server enforces intersection logic; the client receives pre-filtered results.
 
 **Friend data export:**
 
@@ -1376,7 +1376,7 @@ DELETE /v1/systems/:systemId/device-tokens/:id       Delete token
 POST   /v1/systems/:systemId/device-tokens/:id/revoke  Revoke token
 ```
 
-Supported platforms: `"ios"`, `"android"`, `"web"`. Token registration validates ownership -- a token can only belong to one account.
+Supported platforms: `"ios"`, `"android"`, `"web"`. Token registration validates ownership: a token can only belong to one account.
 
 **Notification config** -- per-event-type toggle:
 
@@ -1389,7 +1389,7 @@ Event types: `switch-reminder`, `check-in-due`, `acknowledgement-requested`, `me
 
 Each config has `enabled` (master toggle) and `pushEnabled` (push-specific toggle) flags. Both must be true for push delivery.
 
-**Trigger flow:** when a fronting session is created, the API dispatches switch alert jobs to the queue. The push worker picks up the job, resolves eligible friends (based on notification preferences and bucket visibility), and delivers the push notification. This is entirely server-side -- the client only needs to register tokens and configure preferences.
+**Trigger flow:** when a fronting session is created, the API dispatches switch alert jobs to the queue. The push worker picks up the job, resolves eligible friends (based on notification preferences and bucket visibility), and delivers the push notification. This is entirely server-side; the client only needs to register tokens and configure preferences.
 
 ### 8.6 Import Jobs
 
@@ -1435,9 +1435,9 @@ Authorization: Bearer ps_<token>
 
 Each API key is granted a set of scopes that control which endpoints it can access. Scopes follow a three-tier hierarchy:
 
-- **read** -- list and get operations
-- **write** -- create, update, archive, restore (implies read)
-- **delete** -- permanent deletion and purge (implies write and read)
+- **read**: list and get operations
+- **write**: create, update, archive, restore (implies read)
+- **delete**: permanent deletion and purge (implies write and read)
 
 Scopes are organized by domain (e.g., `read:members`, `write:fronting`, `delete:groups`). Aggregate scopes (`read-all`, `write-all`, `delete-all`) grant access across all domains. The `full` scope grants unrestricted access including API key management.
 
@@ -1465,7 +1465,7 @@ POST   /v1/systems/:systemId/api-keys/:apiKeyId/revoke    Revoke key
 }
 ```
 
-The `token` field is only returned in the create response -- store it securely. It cannot be retrieved again.
+The `token` field is only returned in the create response. Store it securely; it cannot be retrieved again.
 
 **Scope enforcement:** a global middleware resolves each request against the central scope registry. Session-authenticated requests bypass the registry. If the key lacks the required scope, the server returns `403` with error code `SCOPE_INSUFFICIENT` and a message of the form `Insufficient scope: requires <scope>`. If the route is not registered for API key access at all, the server returns `403` with error code `FORBIDDEN`. API key management endpoints require the `full` scope to prevent privilege escalation.
 
@@ -1473,7 +1473,7 @@ The `token` field is only returned in the create response -- store it securely. 
 
 ## 10. Self-Hosted Considerations
 
-Pluralscape supports self-hosted deployments. The API uses an adapter pattern for external services, so the client should not need to change behavior based on the hosting environment -- but there are subtle differences to be aware of.
+Pluralscape supports self-hosted deployments. The API uses an adapter pattern for external services, so the client should not need to change behavior based on the hosting environment. There are still a few subtle differences to be aware of.
 
 **Adapter pattern:** the API injects service adapters at startup. The client interacts with the same REST endpoints regardless of which adapter is active behind the scenes.
 
@@ -1481,11 +1481,11 @@ Pluralscape supports self-hosted deployments. The API uses an adapter pattern fo
 
 **Blob storage:** hosted deployments use **S3**; self-hosted deployments may use **MinIO** or a **filesystem** adapter. Key difference: the filesystem adapter does not support presigned URLs (`supportsPresignedUrls: false`). When the client requests a presigned upload/download URL, the response includes a `supported` field:
 
-- `{ "supported": true, "url": "...", "expiresAt": ... }` -- use the presigned URL for direct upload/download
-- `{ "supported": false }` -- fall back to proxied upload/download through the API
+- `{ "supported": true, "url": "...", "expiresAt": ... }`: use the presigned URL for direct upload/download
+- `{ "supported": false }`: fall back to proxied upload/download through the API
 
 The client must handle both cases.
 
-**Job queue:** hosted deployments use **BullMQ** backed by **Valkey** (Redis-compatible); self-hosted deployments use a **SQLite queue**. The SQLite queue is polled rather than event-driven, so background jobs (key rotation, push notifications, webhook delivery) may have slightly higher latency. The client should not assume instant job completion -- always poll for results rather than assuming synchronous processing.
+**Job queue:** hosted deployments use **BullMQ** backed by **Valkey** (Redis-compatible); self-hosted deployments use a **SQLite queue**. The SQLite queue is polled rather than event-driven, so background jobs (key rotation, push notifications, webhook delivery) may have slightly higher latency. The client should not assume instant job completion. Always poll for results rather than assuming synchronous processing.
 
-**Further details:** see [ADR 012 -- Self-Hosted Tiers](../adr/012-self-hosted-tiers.md) for the full deployment tier architecture.
+**Further details:** see [ADR 012 -- Self-Hosted Tiers](../adr/012-self-hosted-tiers.md) for the deployment tier architecture.

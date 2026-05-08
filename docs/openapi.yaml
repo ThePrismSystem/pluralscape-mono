@@ -5,7 +5,7 @@ info:
   description: |
     REST API for Pluralscape, a cross-platform plurality management application.
 
-    All sensitive data is end-to-end encrypted. The server is zero-knowledge —
+    All sensitive data is end-to-end encrypted. The server is zero-knowledge:
     it cannot read user content.
 
     ## Encryption Model
@@ -32,7 +32,7 @@ info:
     2. The client encrypts that JSON with either the master key (T1) or a bucket key (T2)
        using XChaCha20-Poly1305, producing `{ciphertext, nonce}`
     3. The client base64-encodes the result and sends it as `encryptedData`
-    4. The server stores the blob **opaquely** — it never decrypts or inspects the contents
+    4. The server stores the blob **opaquely**. It never decrypts or inspects the contents
     5. On read, the client decrypts the blob using the same key
 
     The server enforces size limits on `encryptedData` but cannot validate its internal
@@ -42,7 +42,7 @@ info:
     - The user's **master key** is derived from their password using Argon2id
     - The master key is stored encrypted on the server (encrypted with itself)
     - A **recovery key** (generated at registration) can decrypt the master key if
-      the password is forgotten — this is the only recovery mechanism
+      the password is forgotten. This is the only recovery mechanism
     - Changing a password re-wraps the master key; the underlying encryption keys remain stable
 
     ### Privacy Buckets and Friend Sharing
@@ -76,7 +76,7 @@ info:
     Since the server is zero-knowledge, it cannot validate the contents of `encryptedData`
     fields. The **Plaintext*** schemas in the components section document what the client
     should serialize into JSON, then encrypt, before sending as `encryptedData`. These are
-    **client-enforced contracts** — the server stores the blob opaquely. See each resource
+    **client-enforced contracts**: the server stores the blob opaquely. See each resource
     endpoint's description for which plaintext schema applies.
   license:
     name: AGPL-3.0
@@ -201,7 +201,7 @@ paths:
         - Auth
       summary: Complete account registration (phase 2)
       description: |
-        Zero-knowledge — the server never sees the password. The client sends
+        Zero-knowledge: the server never sees the password. The client sends
         pre-encrypted key blobs and a challenge signature proving possession of
         the signing key.
 
@@ -231,7 +231,7 @@ paths:
         - Auth
       summary: Fetch KDF salt for an email address
       description: |
-        Always returns 200 with a salt — either the real KDF salt for the account
+        Always returns 200 with a salt: either the real KDF salt for the account
         or a deterministic fake salt derived from the email (anti-enumeration).
 
         Rate limit: 5 req/min (authHeavy)
@@ -261,7 +261,7 @@ paths:
       summary: Log in with email and auth key
       description: |
         Zero-knowledge login. The client derives an auth key from the password
-        via Argon2id and sends only the auth key — the server never sees the
+        via Argon2id and sends only the auth key. The server never sees the
         plaintext password. Timing is equalized across success and failure paths
         to prevent user-enumeration attacks.
 
@@ -297,8 +297,8 @@ paths:
         hex-encoded blobs: a new auth key, new KDF salt, re-encrypted master
         key, and a new recovery-encrypted master key. The server never sees
         the plaintext password or master key. All existing encrypted data
-        remains accessible because the underlying master key is unchanged —
-        only its wrapping changes.
+        remains accessible because the underlying master key is unchanged.
+        Only its wrapping changes.
 
         Rate limit: 5 req/min (authHeavy)
       security: []
@@ -572,7 +572,7 @@ paths:
       description: |
         Permanently deletes the authenticated account and all associated data.
         Requires the current password for confirmation. This action is
-        irreversible — all systems, members, sessions, keys, and dependent data
+        irreversible: all systems, members, sessions, keys, and dependent data
         are cascade-deleted.
 
         Rate limit: 60 req/min (write)
@@ -822,7 +822,7 @@ paths:
       summary: Verify account PIN
       description: |
         Verifies the account PIN. Returns `{ verified: true }` on success.
-        Uses anti-timing measures — verification runs even when no PIN is set.
+        Uses anti-timing measures: verification runs even when no PIN is set.
         Returns 404 if no PIN is configured, 401 if the PIN is incorrect.
 
         Rate limit: 5 req/min (authHeavy)
@@ -2351,7 +2351,7 @@ paths:
       summary: List members
       description: |
         Returns a paginated list of all members belonging to the specified system.
-        Members are returned as encrypted entities — all user-visible fields are
+        Members are returned as encrypted entities: all user-visible fields are
         encrypted client-side and opaque to the server.
 
         Rate limit: 60 req/min (readDefault)
@@ -2381,7 +2381,7 @@ paths:
           schema:
             type: string
           description: |
-            Sparse fieldset — comma-separated list of fields to include on each
+            Sparse fieldset: comma-separated list of fields to include on each
             member. Allowed: id, systemId, encryptedData, version, createdAt,
             updatedAt, archived, archivedAt.
       responses:
@@ -3331,7 +3331,7 @@ paths:
       summary: Remove a member from a group
       description: |
         Removes a member from the specified group. The member itself is not
-        deleted — only the group membership record is removed.
+        deleted; only the group membership record is removed.
 
         Rate limit: 30 req/min (writeDefault)
       security:
@@ -3603,7 +3603,7 @@ paths:
       summary: List device tokens
       description: |
         Returns all non-revoked device tokens for the specified system,
-        newest first. Tokens are masked for security — only the last 8
+        newest first. Tokens are masked for security: only the last 8
         characters are visible.
 
         Rate limit: 60 req/min (readDefault)
@@ -3627,7 +3627,7 @@ paths:
       summary: Register a device token
       description: |
         Registers a push notification token for the current device. Upserts
-        on (token, platform) — if the same token is re-registered, the
+        on (token, platform): if the same token is re-registered, the
         lastActiveAt timestamp is refreshed.
 
         Rate limit: 30 req/min (write)
@@ -6366,7 +6366,7 @@ paths:
       description: |
         Associates an entity with a privacy bucket. The entity will be included
         in bucket exports and visible to friends with access to this bucket.
-        Idempotent — tagging an already-tagged entity is a no-op.
+        Idempotent: tagging an already-tagged entity is a no-op.
 
         Rate limit: 60 req/min (write)
       security:
@@ -6515,7 +6515,7 @@ paths:
         Grants a friend access to a privacy bucket by creating a friend bucket
         assignment and a key grant. The client must encrypt the bucket's symmetric
         key with the friend's X25519 public key and provide it as `encryptedBucketKey`.
-        Idempotent — assigning an already-assigned friend is a no-op.
+        Idempotent: assigning an already-assigned friend is a no-op.
 
         The friend connection must exist and have `accepted` status.
 
@@ -6657,7 +6657,7 @@ paths:
         privacy bucket. Entities are ordered by updatedAt ASC, id ASC for
         deterministic cursor-based pagination.
 
-        The server returns encrypted blobs — all decryption and rendering
+        The server returns encrypted blobs. All decryption and rendering
         happens client-side (zero-knowledge).
 
         Rate limit: 60 req/min (readDefault)
@@ -10440,7 +10440,7 @@ paths:
       summary: Confirm an acknowledgement
       description: |
         Marks an acknowledgement as confirmed by the target member. This action
-        is idempotent — re-confirming an already-confirmed acknowledgement returns
+        is idempotent: re-confirming an already-confirmed acknowledgement returns
         the current state without modification. Optionally accepts new
         `encryptedData` to replace the existing payload at confirmation time.
 
@@ -11840,7 +11840,7 @@ components:
         opaquely and never inspects the contents. The client is responsible for
         encrypting before write and decrypting after read using the appropriate
         key (master key for T1, bucket key for T2). The `version` field is used
-        for optimistic concurrency control — updates must include the current version.
+        for optimistic concurrency control: updates must include the current version.
       required:
         - id
         - systemId
@@ -12281,7 +12281,7 @@ components:
           enum:
             - system
             - viewer
-          description: Account type — system accounts own a plural system, viewer accounts have read-only access
+          description: "Account type. system accounts own a plural system; viewer accounts have read-only access"
         systemId:
           type: string
           nullable: true
@@ -13298,7 +13298,7 @@ components:
       description: Push notification platform
     DeviceTokenResponse:
       description: |
-        A registered device push token. Tokens are masked — only the last 8
+        A registered device push token. Tokens are masked: only the last 8
         characters are visible.
       type: object
       required:
@@ -13378,7 +13378,7 @@ components:
     NotificationConfigResponse:
       description: |
         Per-event notification configuration.
-        T3 (all fields plaintext) — the server uses these flags to decide delivery.
+        T3 (all fields plaintext): the server uses these flags to decide delivery.
       type: object
       properties:
         id:
@@ -14162,7 +14162,7 @@ components:
       type: object
       description: |
         Singleton per-system innerworld canvas. Keyed by `systemId` (not a
-        standalone `id`) and without archive state — the client only ever
+        standalone `id`) and without archive state: the client only ever
         has one canvas per system and restores fresh state on delete rather
         than archiving.
       required:
@@ -14801,7 +14801,7 @@ components:
         A comment attached to a fronting session. Extends EncryptedEntity with the
         parent session ID and the authoring subject (member, custom front, or
         structure entity). The three subject IDs are always present in the
-        response payload — exactly one is non-null per the database CHECK
+        response payload. Exactly one is non-null per the database CHECK
         constraint; the other two are explicitly null.
       allOf:
         - $ref: "#/components/schemas/EncryptedEntity"
@@ -16536,7 +16536,7 @@ components:
             - weekly
             - disabled
           description: |
-            Automatic snapshot schedule. Client-triggered — the client reads
+            Automatic snapshot schedule. Client-triggered: the client reads
             this value and fires snapshots locally, preserving zero-knowledge.
         onboardingComplete:
           type: boolean
@@ -16544,7 +16544,7 @@ components:
       description: |
         **Encrypted into**: `encryptedData` on nomenclature update and setup endpoints.
 
-        Per-system terminology preferences — map of `TermCategory` to selected
+        Per-system terminology preferences. Maps `TermCategory` to selected
         display term. Keys mirror the `TermCategory` union in
         `@pluralscape/types` (kebab-case) so the parity gate can project
         `Pick<NomenclatureSettings, NomenclatureEncryptedFields>` onto this
@@ -16603,7 +16603,7 @@ components:
           description: "Term for saturation level (default: 'Saturation'). Presets: Saturation, Elaboration, Completeness"
     PlaintextStructureEntityMemberLink:
       description: |
-        Structure entity member links carry no encrypted payload today — every
+        Structure entity member links carry no encrypted payload today. Every
         field (`memberId`, `parentEntityId`, `sortOrder`) is plaintext at the
         API layer. The schema is retained as an empty object so future encrypted
         additions plug in without a breaking rename; the current parity gate
@@ -16613,7 +16613,7 @@ components:
       properties: {}
     PlaintextStructureEntityAssociation:
       description: |
-        Structure entity associations carry no encrypted payload today — every
+        Structure entity associations carry no encrypted payload today. Every
         field (`sourceEntityId`, `targetEntityId`) is plaintext at the API
         layer. The schema is retained as an empty object so future encrypted
         additions plug in without a breaking rename; the current parity gate
@@ -17752,7 +17752,7 @@ components:
           description: Vote counts grouped by option
     AcknowledgementResponse:
       description: |
-        A mandatory acknowledgement — a targeted alert that persists until a
+        A mandatory acknowledgement: a targeted alert that persists until a
         specific member confirms it. Extends EncryptedEntity with confirmation
         tracking fields.
       allOf:

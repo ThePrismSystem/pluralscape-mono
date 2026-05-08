@@ -6,7 +6,7 @@ Throughout this document, severity labels (M2, M3, M4, L6, M5, M6, M7) reference
 
 ## Overview
 
-Pluralscape is an E2E encrypted application built on libsodium (XChaCha20-Poly1305, X25519, Argon2id). The server operates in a zero-knowledge model: all user content is encrypted client-side before transmission, and the server stores only ciphertext. This architecture provides strong defense-in-depth — even when infrastructure-level controls have gaps, the encrypted content remains unreadable to an attacker who compromises the server or its backing services.
+Pluralscape is an E2E encrypted application built on libsodium (XChaCha20-Poly1305, X25519, Argon2id). The server operates in a zero-knowledge model: all user content is encrypted client-side before transmission, and the server stores only ciphertext. This provides defense-in-depth. Even when infrastructure-level controls have gaps, the encrypted content remains unreadable to an attacker who compromises the server or its backing services.
 
 Key architectural properties relevant to this threat model:
 
@@ -25,7 +25,7 @@ Key architectural properties relevant to this threat model:
 
 **Current state**: Valkey is used as a pub/sub backbone for horizontal WebSocket scaling (ADR 007) and as a backing store for BullMQ job queues (ADR 010). Pub/sub messages flowing through Valkey are not independently authenticated — any client with network access to the Valkey instance can subscribe to channels and observe message envelopes.
 
-**Defense-in-depth**: All pub/sub payloads relay E2E encrypted content. An attacker who gains access to Valkey can observe message metadata (channel names, timing, envelope sizes) but cannot decrypt the content. Rate limit counters and job queue metadata are the primary exposure.
+**Defense-in-depth**: All pub/sub payloads relay E2E encrypted content. An attacker who gains access to Valkey can observe message metadata (channel names, timing, envelope sizes) but cannot decrypt the content. The primary exposure is rate limit counters and job queue metadata.
 
 #### Deployment requirements
 
@@ -43,7 +43,7 @@ The following must be enforced in all deployment configurations (Docker Compose,
 
 #### Future hardening
 
-- **HMAC-signed envelopes**: Pub/sub messages are currently unauthenticated plain envelopes wrapping encrypted content. Adding HMAC signatures (using a shared application secret) to pub/sub envelopes would prevent a Valkey-compromised attacker from injecting forged messages into the pub/sub channels. This is a defense-in-depth measure — the encrypted content itself has AEAD integrity, so injected messages would fail client-side decryption, but signed envelopes would prevent the injection entirely.
+- **HMAC-signed envelopes**: Pub/sub messages are currently unauthenticated plain envelopes wrapping encrypted content. Adding HMAC signatures (using a shared application secret) to pub/sub envelopes would prevent a Valkey-compromised attacker from injecting forged messages into the pub/sub channels. This is a defense-in-depth measure. The encrypted content itself has AEAD integrity, so injected messages would fail client-side decryption, but signed envelopes would prevent the injection entirely.
 
 - **Encrypted job payloads**: BullMQ job data that contains metadata (e.g., account IDs, system IDs in job arguments) could be encrypted at the application layer before enqueuing, reducing metadata exposure if Valkey is compromised.
 
@@ -63,7 +63,7 @@ The following must be enforced in all deployment configurations (Docker Compose,
 2. **Opaque document IDs**: Document identifiers are UUIDs. There is no enumeration endpoint — an attacker would need to guess a valid document ID (122 bits of entropy for UUID v4).
 3. **Ephemeral relay**: The sync relay holds documents in memory with LRU eviction. Documents are not persisted server-side; they exist only while actively syncing.
 
-**Residual risk**: An attacker with a valid session could observe metadata about a document if they know its ID:
+**Residual risk**: An attacker with a valid session who knows a document ID can observe metadata about it:
 
 - Whether a document exists (subscription succeeds)
 - Timing of updates (pub/sub notifications)
@@ -102,7 +102,7 @@ Online attacks are well-mitigated by multiple overlapping controls:
 | Session timeout  | Transfer sessions expire after 5 minutes (`TRANSFER_TIMEOUT_MS = 300_000`). The server destroys the encrypted payload after expiry.                                                               |
 | KDF cost         | Each attempt requires a full Argon2id computation under the TRANSFER profile (~380ms on mid-range mobile hardware), preventing rapid local enumeration.                                           |
 
-At 5 attempts per transfer and 3 transfer initiations possible per hour (the account-level initiation limit), an online attacker can test at most 15 codes per hour — exhausting the 10^10 keyspace is computationally infeasible on these parameters (well past any realistic attack window).
+At 5 attempts per transfer and 3 transfer initiations possible per hour (the account-level initiation limit), an online attacker can test at most 15 codes per hour. Exhausting the 10^10 keyspace is computationally infeasible on these parameters (well past any realistic attack window).
 
 #### Offline brute-force exposure
 
@@ -149,7 +149,7 @@ This splits the transfer into two factors:
 1. **QR scan** (something you have access to): Transfers the `requestId` and `salt`
 2. **Manual code entry** (something you know): The 10-digit code displayed separately on the source device
 
-Capturing the QR code alone is now insufficient to complete a transfer — the attacker must also observe and transcribe the displayed code. `decodeQRPayload` rejects payloads without `version === 2` (or carrying a legacy `code` field), enforcing the two-factor split at the schema boundary.
+Capturing the QR code alone is now insufficient to complete a transfer. The attacker must also observe and transcribe the displayed code. `decodeQRPayload` rejects payloads without `version === 2` (or carrying a legacy `code` field), enforcing the two-factor split at the schema boundary.
 
 ---
 
@@ -161,7 +161,7 @@ Capturing the QR code alone is now insufficient to complete a transfer — the a
 
 **Current state**: Messages are stored server-side as E2E encrypted payloads (XChaCha20-Poly1305). The server acts as a relay only; it has no key material to decrypt messages. Channel membership is system-scoped: channels belong to a system, and all access is gated by `assertSystemOwnership` before any channel or message operation.
 
-**Defense-in-depth**: The zero-knowledge server model limits metadata exposure. An attacker with database access can observe that a system has channels with a certain number of messages, and approximate timing, but cannot read any message content. There is no cross-system channel access — channels cannot be shared between systems, eliminating the risk of a compromised system being used to eavesdrop on another system's communications.
+**Defense-in-depth**: The zero-knowledge server model limits metadata exposure. An attacker with database access can observe that a system has channels with a certain number of messages, and approximate timing, but cannot read any message content. There is no cross-system channel access. Channels cannot be shared between systems, eliminating the risk of a compromised system being used to eavesdrop on another system's communications.
 
 #### Deployment requirements
 
@@ -187,7 +187,7 @@ No additional deployment controls beyond the baseline (TLS in transit, database 
 
 **Current state**: Privacy buckets use a tag-intersection model: an entity is visible to a friend only if the entity's bucket tags and the friend's assigned buckets share at least one tag (intersection non-empty). The system is explicitly fail-closed: if a bucket assignment is missing, cannot be resolved, or errors during evaluation, the result is invisibility (the entity is not shown to the friend). This mirrors the architectural property documented in the Overview section.
 
-**Defense-in-depth**: The fail-closed default means misconfiguration or a partially migrated account produces over-restriction (entities invisible) rather than over-exposure (entities leaked). An error in the privacy evaluation path cannot cause data leakage.
+**Defense-in-depth**: The fail-closed default means misconfiguration or a partially migrated account produces over-restriction (entities invisible) rather than over-exposure (entities leaked). An error in the privacy evaluation path cannot leak data.
 
 #### Mitigations
 
@@ -210,9 +210,9 @@ No additional deployment controls beyond the baseline (TLS in transit, database 
 
 **Finding (M6 audit)**: Device token registration must validate ownership to prevent a compromised or malicious client from registering push tokens for another account's devices.
 
-**Current state**: Device token registration requires an authenticated session. The token is bound to the authenticated account and system — a session cannot register tokens for a different account. Tokens are cleared when a device session is revoked (via the session revocation endpoint), preventing a revoked session from continuing to receive push notifications.
+**Current state**: Device token registration requires an authenticated session. The token is bound to the authenticated account and system; a session cannot register tokens for a different account. Tokens are cleared when a device session is revoked (via the session revocation endpoint), preventing a revoked session from continuing to receive push notifications.
 
-**Defense-in-depth**: Ownership validation is enforced at registration and at the revocation boundary. A token that survives session revocation would only receive notifications that the owning system authorizes — the notification payload does not contain plaintext system data.
+**Defense-in-depth**: Ownership validation is enforced at registration and at the revocation boundary. A token that survives session revocation would only receive notifications that the owning system authorizes, and the notification payload does not contain plaintext system data.
 
 ---
 
@@ -224,7 +224,7 @@ No additional deployment controls beyond the baseline (TLS in transit, database 
 
 **Current state**: Email addresses are stored encrypted using AES-256-GCM with a server-side key. A BLAKE2b hash of the email address is stored alongside the ciphertext to enable deterministic lookup (login, deduplication) without decrypting. The plaintext email address is never persisted; it is encrypted immediately on account creation and on any update.
 
-**Defense-in-depth**: An attacker with read-only access to the database cannot recover email addresses without the server-side encryption key. The BLAKE2b hash enables login lookups without decryption but is not reversible — the hash cannot be used to recover the plaintext email. The AES-256-GCM authentication tag provides tamper detection on the ciphertext.
+**Defense-in-depth**: An attacker with read-only access to the database cannot recover email addresses without the server-side encryption key. The BLAKE2b hash enables login lookups without decryption but is not reversible; the hash cannot be used to recover the plaintext email. The AES-256-GCM authentication tag provides tamper detection on the ciphertext.
 
 **Residual risk**: The server-side encryption key is a shared secret that, if compromised, exposes all stored email addresses. Key management for the email encryption key must follow the same security controls as other application secrets (secrets manager, rotation policy, never in version-controlled config).
 
@@ -303,7 +303,7 @@ No additional deployment controls beyond the baseline (TLS in transit, database 
 
 **Finding (M7 audit — high priority, intentional)**: On password change, all sessions except the current session are revoked. A compromised device that holds a session initiated before the password change retains access until that session's absolute TTL expires or the session is explicitly revoked by the user.
 
-**Current state**: This is an intentional UX decision — revoking all other sessions on password change prevents the user from being locked out of all devices simultaneously if the password change was itself initiated from a compromised session. The behavior is documented here as a known residual risk.
+**Current state**: This is an intentional UX decision. Revoking all other sessions on password change prevents the user from being locked out of all devices simultaneously if the password change was itself initiated from a compromised session. The behavior is documented here as a known residual risk.
 
 **Residual risk**: If an attacker has obtained a session token and the user changes their password without explicitly revoking all sessions, the attacker's session remains valid until TTL. Users who suspect a compromise should use the session management interface to explicitly revoke all sessions.
 

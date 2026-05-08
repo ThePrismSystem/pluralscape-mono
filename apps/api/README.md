@@ -18,9 +18,9 @@ set at startup, the API wires a single ioredis client and shares it across:
 - **Sync pub/sub** — cross-instance WebSocket broadcast fan-out.
 - **i18n OTA cache** — Crowdin distribution responses (see ADR 035).
 
-A coherent shared store is required for any multi-replica deployment —
-without it, each replica maintains an independent view and rate-limit /
-idempotency guarantees degrade to per-process.
+Multi-replica deployments require a coherent shared store. Without one, each
+replica maintains an independent view, and rate-limit / idempotency
+guarantees degrade to per-process.
 
 ### In-memory cache fallback
 
@@ -29,13 +29,13 @@ cache** for i18n OTA responses, rate-limit counters, and idempotency state.
 
 - **Safe for:** single-instance deployments, local development, E2E test
   suites.
-- **Not safe for:** multi-replica production — each replica sees a
-  divergent cache, breaking rate-limit fairness and idempotency guarantees.
+- **Not safe for:** multi-replica production. Each replica sees a divergent
+  cache, breaking rate-limit fairness and idempotency guarantees.
 
-In `NODE_ENV=production` the API **refuses to start** without `VALKEY_URL`
-unless you explicitly opt in with `ALLOW_IN_MEMORY_CACHE=1`. This forces a
-conscious decision for single-instance prod rather than silently degrading.
+Under `NODE_ENV=production` the API **refuses to start** without `VALKEY_URL`
+unless `ALLOW_IN_MEMORY_CACHE=1` is set. The opt-in is deliberate: it forces a
+conscious choice for single-instance prod rather than silent degradation.
 
-At startup, if the fallback is active, the logger emits a `WARN` with
-`valkey-cache: falling back to per-process in-memory cache — ...` so
-operators have a searchable signal.
+When the fallback is active at startup, the logger emits a `WARN` with
+`valkey-cache: falling back to per-process in-memory cache — ...` so operators
+have a searchable signal.

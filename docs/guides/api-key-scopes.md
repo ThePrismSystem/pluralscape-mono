@@ -1,6 +1,6 @@
 # API Key Scopes Reference
 
-API keys use a three-tier scope hierarchy to control access to Pluralscape endpoints. Scopes are set at key creation time and cannot be modified — revoke and recreate to change scopes.
+API keys use a three-tier scope hierarchy to control access to Pluralscape endpoints. Scopes are set at key creation time and cannot be modified. Revoke and recreate to change scopes.
 
 ## Scope Hierarchy
 
@@ -57,7 +57,7 @@ Aggregate scopes grant access across all domains at a given tier:
 | `delete-all` | `delete:*` + `write:*` + `read:*` on every domain         |
 | `full`       | All access, including API key management endpoints        |
 
-**Note:** `full` is the only scope that grants access to API key management endpoints (`/api-keys` CRUD). This prevents privilege escalation — a key cannot create keys with broader scopes than its own unless it has `full`.
+**Note:** `full` is the only scope that grants access to API key management endpoints (`/api-keys` CRUD). This prevents privilege escalation: a key cannot create keys with broader scopes than its own unless it has `full`.
 
 ## Hierarchy Resolution
 
@@ -68,7 +68,7 @@ When an endpoint requires a scope, the server checks in this order:
 3. For each tier at or above the required tier (write, delete):
    - Check if the key has the aggregate scope for that tier (`write-all`, `delete-all`)
    - Check if the key has the per-entity scope for that tier (`write:members`, `delete:members`)
-4. If none match — denied (403 `SCOPE_INSUFFICIENT` with message `Insufficient scope: requires <scope>`). If the endpoint is not registered for API key access at all, the response is 403 `FORBIDDEN` instead.
+4. If none match, the request is denied (403 `SCOPE_INSUFFICIENT` with message `Insufficient scope: requires <scope>`). If the endpoint is not registered for API key access at all, the response is 403 `FORBIDDEN` instead.
 
 ## Scope Count
 

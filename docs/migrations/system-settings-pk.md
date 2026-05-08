@@ -50,7 +50,7 @@ CREATE TABLE system_settings (
 
 ## Migration Steps (PostgreSQL)
 
-The entire migration must execute inside a single transaction. If any step fails — especially encryption — the whole transaction rolls back and the table is left unchanged.
+The entire migration must execute inside a single transaction. If any step fails (especially encryption) the whole transaction rolls back and the table is left unchanged.
 
 ### Step 1 — Encrypt `littles_safe_mode_enabled` into `encrypted_data`
 
@@ -104,7 +104,7 @@ ALTER TABLE system_settings DROP COLUMN littles_safe_mode_enabled;
 
 ## Rollback Strategy
 
-Because the migration runs inside a single transaction, a failure at any step triggers an automatic rollback — the table is returned to its pre-migration state with no partial changes.
+Because the migration runs inside a single transaction, a failure at any step triggers an automatic rollback. The table is returned to its pre-migration state with no partial changes.
 
 For a manual rollback after a committed migration:
 
@@ -178,15 +178,15 @@ ALTER TABLE system_settings_new RENAME TO system_settings;
 
 > **Note**: SQLite's `randomblob`-based UUID generation is shown for illustration. In practice, the migration runner should generate UUIDs in application code and bind them as parameters rather than generating them in SQL.
 
-SQLite migrations run entirely client-side on the device. The encryption step (Step 1) is performed by the app before the DDL changes, using the device-local master key. There is no server coordination required — each device migrates independently on first launch after the app update.
+SQLite migrations run entirely client-side on the device. The encryption step (Step 1) is performed by the app before the DDL changes, using the device-local master key. There is no server coordination required; each device migrates independently on first launch after the app update.
 
 ---
 
 ## Self-Hosted Deployment Impact
 
-Self-hosted operators running the **full Docker Compose tier** use PostgreSQL — the standard migration steps above apply. The Drizzle migration runner executes automatically on container startup.
+Self-hosted operators running the **full Docker Compose tier** use PostgreSQL; the standard migration steps above apply. The Drizzle migration runner executes automatically on container startup.
 
-Self-hosted operators running the **single-binary (minimal) tier** use SQLite — the table-recreation path above applies. Because the binary manages the SQLite file directly, no operator action is required beyond upgrading the binary.
+Self-hosted operators running the **single-binary (minimal) tier** use SQLite; the table-recreation path above applies. Because the binary manages the SQLite file directly, no operator action is required beyond upgrading the binary.
 
 **Pre-upgrade checklist for self-hosted operators**:
 

@@ -5,7 +5,7 @@ info:
   description: |
     REST API for Pluralscape, a cross-platform plurality management application.
 
-    All sensitive data is end-to-end encrypted. The server is zero-knowledge —
+    All sensitive data is end-to-end encrypted. The server is zero-knowledge:
     it cannot read user content.
 
     ## Encryption Model
@@ -32,7 +32,7 @@ info:
     2. The client encrypts that JSON with either the master key (T1) or a bucket key (T2)
        using XChaCha20-Poly1305, producing `{ciphertext, nonce}`
     3. The client base64-encodes the result and sends it as `encryptedData`
-    4. The server stores the blob **opaquely** — it never decrypts or inspects the contents
+    4. The server stores the blob **opaquely**. It never decrypts or inspects the contents
     5. On read, the client decrypts the blob using the same key
 
     The server enforces size limits on `encryptedData` but cannot validate its internal
@@ -42,7 +42,7 @@ info:
     - The user's **master key** is derived from their password using Argon2id
     - The master key is stored encrypted on the server (encrypted with itself)
     - A **recovery key** (generated at registration) can decrypt the master key if
-      the password is forgotten — this is the only recovery mechanism
+      the password is forgotten. This is the only recovery mechanism
     - Changing a password re-wraps the master key; the underlying encryption keys remain stable
 
     ### Privacy Buckets and Friend Sharing
@@ -76,7 +76,7 @@ info:
     Since the server is zero-knowledge, it cannot validate the contents of `encryptedData`
     fields. The **Plaintext*** schemas in the components section document what the client
     should serialize into JSON, then encrypt, before sending as `encryptedData`. These are
-    **client-enforced contracts** — the server stores the blob opaquely. See each resource
+    **client-enforced contracts**: the server stores the blob opaquely. See each resource
     endpoint's description for which plaintext schema applies.
   license:
     name: AGPL-3.0

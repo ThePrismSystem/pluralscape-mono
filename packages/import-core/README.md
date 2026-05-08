@@ -1,6 +1,6 @@
 # @pluralscape/import-core
 
-Shared import orchestration engine — extracted from the Simply Plural import to serve as the foundation for all import sources ([ADR 034](../../docs/adr/034-import-core-extraction.md)).
+Shared import orchestration engine, extracted from the Simply Plural import to serve as the foundation for all import sources ([ADR 034](../../docs/adr/034-import-core-extraction.md)).
 
 This package defines the core abstractions that every import engine (SP, PK, future sources) builds on. It contains no source-specific logic.
 
@@ -37,11 +37,11 @@ interface ImportDataSource {
 }
 ```
 
-Sources yield `SourceEvent`s tagged either `"doc"` (a raw document the engine validates and maps) or `"drop"` (a document the source knowingly rejected before producing it — recorded by the engine as a non-fatal `invalid-source-document` error). Transport and parse failures throw and are fatal. Iteration order must be stable across calls so the engine's resume cursor remains meaningful.
+Sources yield `SourceEvent`s tagged either `"doc"` (a raw document the engine validates and maps) or `"drop"` (a document the source knowingly rejected before producing it; the engine records these as a non-fatal `invalid-source-document` error). Transport and parse failures throw and are fatal. Iteration order must be stable across calls so the engine's resume cursor remains meaningful.
 
 Before iterating, the engine compares `listCollections()` against `dependencyOrder` and emits two distinct warnings: `dropped-collection` for source-reported collections it does not know how to import, and `source-missing-collection` for collections it expected but the source did not report.
 
-`supplyParentIds` is an optional hook the engine invokes after finishing a parent collection, passing the source IDs persisted from that collection to any dependent collection that needs them. The list includes `created`, `updated`, and `skipped` source IDs — all valid for parent enumeration on dependent endpoints.
+`supplyParentIds` is an optional hook the engine invokes after finishing a parent collection, passing the source IDs persisted from that collection to any dependent collection that needs them. The list includes `created`, `updated`, and `skipped` source IDs; all are valid for parent enumeration on dependent endpoints.
 
 ### Checkpoint and resume
 
@@ -52,7 +52,7 @@ On resume, the engine:
 1. Skips collections in `completedCollections`.
 2. Finds the current collection in `dependencyOrder` via `collectionToEntityType`.
 3. Advances through its iterator discarding events until it sees `currentCollectionLastSourceId`, then continues mapping from the next event.
-4. If the cutoff ID is never seen (the source dropped that document between runs), the engine aborts with a fatal `ResumeCutoffNotFoundError` rather than silently skipping the remainder — operators must restart the import deliberately.
+4. If the cutoff ID is never seen (the source dropped that document between runs), the engine aborts with a fatal `ResumeCutoffNotFoundError` rather than silently skipping the remainder. Operators must restart the import deliberately.
 
 ### Entity reference tracking
 
@@ -73,7 +73,7 @@ Callers can inject their own `ErrorClassifier` via `RunImportEngineArgs.classify
 - `SyntaxError` (parse failure) → `fatal: true, recoverable: false`.
 - Anything else → `fatal: false` (record as non-fatal `ImportError` and continue).
 
-Errors thrown by the source's iterator are always treated as fatal — there is no way to continue iterating after the generator has thrown.
+Errors thrown by the source's iterator are always treated as fatal; there is no way to continue iterating after the generator has thrown.
 
 ### Mapper dispatch
 

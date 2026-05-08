@@ -20,7 +20,7 @@ The SDK lineup targets Python, JavaScript/TypeScript, Go, Rust, and C# -- coveri
 
 Pluralscape's public REST API (ADR 013) supports two key types: metadata keys (T3 plaintext data only, no crypto needed) and crypto keys (carry encrypted key material for T1/T2 data access). Metadata keys are simple to use -- any HTTP client can call the API and get JSON back. But crypto keys require the caller to implement the full decryption pipeline: extract the key material from the API key, derive the correct decryption key, identify the encryption algorithm and nonce, and decrypt the ciphertext.
 
-This is a significant barrier. Even experienced developers may implement the crypto stack incorrectly, leading to silent data corruption, key leakage, or inability to decrypt data. The integration guides (features.md Section 9) help, but a guide is not a substitute for a tested, maintained library.
+This is a major barrier. Even experienced developers may implement the crypto stack incorrectly, leading to silent data corruption, key leakage, or inability to decrypt data. The integration guides (features.md Section 9) help, but a guide is not a substitute for a tested, maintained library.
 
 Official SDKs reduce this barrier to a few lines of code:
 

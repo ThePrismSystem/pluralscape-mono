@@ -2,7 +2,7 @@
 
 ## The Stakes
 
-Pluralscape handles deeply sensitive psychiatric and personal data — trauma journals, identity information, fronting histories, and internal communications. A security breach in this application can cause real psychological harm. We take this seriously.
+Pluralscape handles deeply sensitive psychiatric and personal data: trauma journals, identity information, fronting histories, and internal communications. A security breach in this application can cause real psychological harm. We take this seriously.
 
 ## Reporting a Vulnerability
 
@@ -38,11 +38,11 @@ The following are in scope:
 
 ## Security Principles
 
-- **Fail-closed**: if a privacy check errors, access is denied — never granted
-- **End-to-end encryption**: user data is encrypted client-side before leaving the device — the server stores and returns opaque ciphertext blobs and never sees plaintext
+- **Fail-closed**: if a privacy check errors, access is denied. Never granted
+- **End-to-end encryption**: user data is encrypted client-side before leaving the device. The server stores and returns opaque ciphertext blobs and never sees plaintext
 - **Encryption at rest**: infrastructure-level encryption (PG TDE / volume encryption, SQLCipher for mobile) provides defense-in-depth for metadata columns not covered by E2E encryption
 - **Transit encryption**: all client-server communication uses TLS (HTTPS/WSS), independent of E2E encryption
-- **No telemetry without opt-in**: we do not collect data about users without explicit consent
+- **No telemetry without opt-in**: data about users is not collected without explicit consent
 - **Audit logging**: security-relevant events are logged for system administrators
 - **Offline-first safety**: locally cached data is treated as source of truth until sync is cryptographically verified
 

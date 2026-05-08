@@ -10,7 +10,7 @@
 Pluralscape ships in 12 target languages via Crowdin (see ADR 035 for OTA delivery). The initial integration (PRs #465, #467) established source upload and scheduled translation pull, but lacked:
 
 1. A glossary tailored to plurality terminology, where standard MT engines mistranslate community-specific terms like "fronting," "host," "little," and "switch."
-2. Automatic pre-translation for new source strings — new English strings sat untranslated until a human translator intervened.
+2. Automatic pre-translation for new source strings. New English strings sat untranslated until a human translator intervened.
 3. Any automated way to merge translation PRs — daily PRs required manual review despite translation files being a low-risk change surface.
 4. A plan for handling target languages DeepL does not support (Arabic, Latin American Spanish).
 
@@ -71,8 +71,8 @@ downloads, and a separate ADR will document the gated workflow.
 
 - New English strings reach non-English users within minutes of merge.
 - Glossary is version-controlled, reviewable, and auditable.
-- Auto-merge removes daily friction; translation changes flow as data.
-- MT failures are contained: path allowlist means an English-touching PR is never auto-merged.
+- Auto-merge removes daily friction. Translation changes flow as data.
+- MT failures are contained. The path allowlist means an English-touching PR is never auto-merged.
 
 **Negative:**
 

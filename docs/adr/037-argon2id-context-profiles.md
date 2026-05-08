@@ -14,15 +14,15 @@ Every Argon2id key derivation in Pluralscape currently runs against a single
 `PWHASH_*_UNIFIED` parameter set (`opslimit = 4`, `memlimit = 64 MiB`). That
 unified profile is applied by:
 
-1. **Master-key / auth-key derivation** (`packages/crypto/src/auth-key.ts`) —
+1. **Master-key / auth-key derivation** (`packages/crypto/src/auth-key.ts`)
    derives the authKey + passwordKey from the user's password at login,
    registration, and password reset. Runs once per auth flow on a device that is
    typically the user's laptop or phone with ample memory.
-2. **PIN hashing** (`packages/crypto/src/pin.ts`) — stores a self-contained
+2. **PIN hashing** (`packages/crypto/src/pin.ts`) stores a self-contained
    Argon2id hash of the local-unlock PIN. Verified on every PIN entry on mobile,
    where thermal / memory pressure matters.
 3. **Device-transfer key derivation** (`packages/crypto/src/device-transfer.ts`)
-   — stretches a 10-digit code (~33.2 bits of entropy) into a one-shot
+   stretches a 10-digit code (~33.2 bits of entropy) into a one-shot
    symmetric key used for a 5-minute transfer session. Runs on both the source
    and target device of a transfer.
 
@@ -37,7 +37,7 @@ One knob for three workloads leaves real security and UX on the table:
   deserves the full OWASP ASVS 4.x sensitive-tier budget, not the minimum.
 - The previous "SENSITIVE" constants pegged at `m = 1 GiB` were never wired up
   anywhere. A 1 GiB allocation is not viable on mobile (iOS jetsams at ~2 GiB
-  RSS for most devices) and is larger than any current threat model requires.
+  RSS for most devices), and it is larger than any current threat model requires.
 
 Findings **[H2]** (audit 2026-04-20, `crypto-z2eg`) and the corresponding ADR
 gap motivated by `ps-h2gl` call for context-specific profiles backed by a
@@ -128,7 +128,7 @@ they are referenced from tests and the low-level `pwhash` adapter surface.
 ### Pre-release migration
 
 Every derivation that previously used the unified profile is now a
-`MASTER_KEY` derivation with identical `(t, m)` parameters — existing master-key
+`MASTER_KEY` derivation with identical `(t, m)` parameters. Existing master-key
 wrap / auth-key / PIN artifacts remain valid. The only behavioural change is
 for device-transfer: keys derived with the new `TRANSFER` profile do not match
 keys derived from the unified constants. Because a transfer session lives for
@@ -160,7 +160,7 @@ cross-version transfer sessions spanning a deploy.
 
 - Call sites read as _intent_ ("use the transfer profile") rather than _magic
   numbers_, and profiles are indivisible.
-- Master-key derivations keep their current security margin; device-transfer
+- Master-key derivations keep their current security margin. Device-transfer
   KDF cost drops meaningfully on mobile.
 - Removing the dead 1 GiB constants eliminates a foot-gun.
 

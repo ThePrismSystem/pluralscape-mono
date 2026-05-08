@@ -16,7 +16,7 @@ A system for tracking recurring dates that hold significance for the system -- t
 
 ## Motivation
 
-Recurring significant dates are a reality for many plural systems. Traumaversaries (anniversaries of traumatic events), discovery dates (when members were first discovered), and other milestones can bring up strong emotions, dissociative episodes, or increased switching. Being caught off-guard by these dates is distressing. Proactive awareness -- knowing a difficult date is approaching -- allows systems to prepare coping strategies, schedule therapy sessions, arrange support, and notify trusted friends. Currently, systems must track these dates externally (calendar apps, paper notes) which fragments their management tools and may expose sensitive information to non-E2E-encrypted services.
+Recurring significant dates are a reality for many plural systems. Traumaversaries (anniversaries of traumatic events), discovery dates (when members were first discovered), and other milestones can bring up strong emotions, dissociative episodes, or increased switching. Being caught off-guard by these dates is distressing. Knowing a difficult date is approaching lets systems prepare coping strategies, schedule therapy sessions, arrange support, and notify trusted friends. Currently, systems must track these dates externally (calendar apps, paper notes), which fragments their management tools and may expose sensitive information to non-E2E-encrypted services.
 
 ## Proposed Behavior
 

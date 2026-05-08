@@ -29,7 +29,7 @@ Community terminology is used throughout: "system" (not patient), "member" (not 
         (primary DB)    (cache/pub-sub) (blob storage)
 ```
 
-On iOS and Android the client uses `expo-sqlite` with SQLCipher. On web, the client substitutes OPFS-backed `wa-sqlite` (with an IndexedDB fallback for browsers that lack OPFS), preserving the same SQLite-shaped adapter interfaces — see [adr/031-web-storage-backend.md](adr/031-web-storage-backend.md).
+On iOS and Android the client uses `expo-sqlite` with SQLCipher. On web, the client substitutes OPFS-backed `wa-sqlite`, falling back to IndexedDB on browsers without OPFS. Both paths preserve the same SQLite-shaped adapter interfaces. See [adr/031-web-storage-backend.md](adr/031-web-storage-backend.md).
 
 ### Self-Hosted Deployment
 
@@ -70,7 +70,7 @@ The server persists and relays ciphertext it cannot decrypt. All plaintext lives
 
 ### Three Drizzle Schema Sets
 
-Domain entities have three on-disk representations, each a Drizzle schema in `packages/db/src/schema/` — see [adr/038-three-drizzle-schema-sets.md](adr/038-three-drizzle-schema-sets.md):
+Domain entities have three on-disk representations. Each one is a Drizzle schema in `packages/db/src/schema/`. See [adr/038-three-drizzle-schema-sets.md](adr/038-three-drizzle-schema-sets.md):
 
 - `schema/pg/` — server PostgreSQL. Encrypted-blob + structural columns; zero-knowledge.
 - `schema/sqlite/` — server SQLite for self-hosted deployments and the queue package. Same shape as PG.
@@ -232,13 +232,13 @@ Per-bucket symmetric keys are derived client-side. The server never holds T1 key
 
 ### Service Layer Structure
 
-API services live in `apps/api/src/services/<domain>/<verb>.ts` (Option E — per-verb file layout, no barrels). Callers import directly from the verb file (e.g., `services/member/create.ts`); there is no `services/<domain>/index.ts` re-export. Shared types and helpers live in `services/<domain>/internal.ts` only when consumed by two or more verb files; single-consumer helpers stay local. The service tree mirrors `apps/api/src/routes/`.
+API services live in `apps/api/src/services/<domain>/<verb>.ts` (Option E — per-verb file layout, no barrels). Callers import directly from the verb file (e.g., `services/member/create.ts`); there is no `services/<domain>/index.ts` re-export. Shared types and helpers live in `services/<domain>/internal.ts` only when consumed by two or more verb files. Single-consumer helpers stay local. The service tree mirrors `apps/api/src/routes/`.
 
 A shared `checkDependents` helper enforces the deliberate-data-lifecycle 409 contract uniformly across verbs.
 
 ### LOC Ceilings
 
-File-size limits are codified as ESLint `max-lines` rules in `tooling/eslint-config/loc-rules.js` rather than enforced ad-hoc. Notable ceilings: `services/**/*.ts` 450, `routes/**/*.ts` 200, `trpc/**/*.ts` 350, `middleware/**/*.ts` 200, `mobile/src/**` 500, `packages/types/src/**` 450, `packages/sync/src/**` 750. CI fails on overflow; the fix is to split the file along its natural seams, never to add an override comment.
+File-size limits are codified as ESLint `max-lines` rules in `tooling/eslint-config/loc-rules.js` rather than enforced ad-hoc. Notable ceilings: `services/**/*.ts` 450, `routes/**/*.ts` 200, `trpc/**/*.ts` 350, `middleware/**/*.ts` 200, `mobile/src/**` 500, `packages/types/src/**` 450, `packages/sync/src/**` 750. CI fails on overflow. The fix is to split the file along its natural seams, never to add an override comment.
 
 ### Canonical type chain (types-as-SoT)
 
@@ -294,19 +294,19 @@ Runtime validation of decrypted blobs is delegated to
 
 ### Zero-Knowledge Server
 
-The server stores only T1 ciphertext. It cannot read member profiles, journal entries, front logs, or messages. Raw passwords and master keys never reach the server. All master-key derivation, unwrap, rewrap, and recovery operations execute on the client; the server persists only the encrypted master-key blobs and the auth-key hash.
+The server stores only T1 ciphertext. It cannot read member profiles, journal entries, front logs, or messages. Raw passwords and master keys never reach the server. All master-key derivation, unwrap, rewrap, and recovery operations execute on the client. The server persists only the encrypted master-key blobs and the auth-key hash.
 
-Authentication uses a split key derivation protocol (ADR 006): a single Argon2id pass over the password produces an `auth_key` (sent to the server, stored as a BLAKE2B hash) and a `password_key` (client-only, used to unwrap the master key). The server verifies a hash of the auth key — it cannot derive the password key or the master key from what it stores. Argon2id runs against context-specific profiles (`TRANSFER`, `MASTER_KEY`) rather than a single unified parameter set — see [adr/037-argon2id-context-profiles.md](adr/037-argon2id-context-profiles.md).
+Authentication uses a split key derivation protocol (ADR 006). A single Argon2id pass over the password produces an `auth_key` (sent to the server, stored as a BLAKE2B hash) and a `password_key` (client-only, used to unwrap the master key). The server verifies a hash of the auth key. From what it stores, the server cannot derive either the password key or the master key. Argon2id runs against context-specific profiles (`TRANSFER`, `MASTER_KEY`) rather than a single unified parameter set. See [adr/037-argon2id-context-profiles.md](adr/037-argon2id-context-profiles.md).
 
 Per-bucket symmetric keys are generated client-side and exchanged between devices via encrypted key bundles (X25519 ECDH). Key rotation is lazy: triggered on device removal or compromise, not on every write.
 
 ### Fail-Closed Privacy
 
-Privacy bucket membership is evaluated client-side using intersection logic. If bucket data is unavailable, corrupted, or unmapped, access defaults to maximum restriction — the system's data is never accidentally exposed. This principle extends to the API: missing or erroneous privacy context is treated as "deny".
+Privacy bucket membership is evaluated client-side using intersection logic. If bucket data is unavailable, corrupted, or unmapped, access defaults to maximum restriction. The system's data is never accidentally exposed. This principle extends to the API: missing or erroneous privacy context is treated as "deny".
 
 ### RLS Context Wrappers
 
-All API queries against RLS-protected tables go through `withTenantRead` or `withTenantTransaction` (`apps/api/src/lib/rls-context.ts`), which set `app.current_system_id` and `app.current_account_id` as transaction-local GUCs before running the callback. Read variants additionally enforce `SET TRANSACTION READ ONLY` so accidental writes are rejected at the database. Bare `db.execute(...)` or `db.transaction(...)` outside these wrappers is an ESLint error; the rare cross-account paths use `withCrossAccountRead` / `withCrossAccountTransaction`. An integration regression test locks in fail-silent behavior: an un-contexted query returns an empty result set rather than rows from another tenant.
+All API queries against RLS-protected tables go through `withTenantRead` or `withTenantTransaction` (`apps/api/src/lib/rls-context.ts`), which set `app.current_system_id` and `app.current_account_id` as transaction-local GUCs before running the callback. Read variants additionally enforce `SET TRANSACTION READ ONLY` so accidental writes are rejected at the database. Bare `db.execute(...)` or `db.transaction(...)` outside these wrappers is an ESLint error. The rare cross-account paths use `withCrossAccountRead` / `withCrossAccountTransaction`. An integration regression test locks in fail-silent behavior: an un-contexted query returns an empty result set rather than rows from another tenant.
 
 ### Trust Boundary
 
@@ -318,7 +318,7 @@ All API queries against RLS-protected tables go through `withTenantRead` or `wit
 
 ### Deliberate Data Lifecycle
 
-Deleting an entity that has dependents returns HTTP 409 — no silent cascade. Foreign keys use `ON DELETE RESTRICT` for entity relationships. `ON DELETE CASCADE` applies only to `system_id` and `account_id` columns, so an account purge removes all system data atomically.
+Deleting an entity that has dependents returns HTTP 409. There is no silent cascade. Foreign keys use `ON DELETE RESTRICT` for entity relationships. `ON DELETE CASCADE` applies only to `system_id` and `account_id` columns, so an account purge removes all system data atomically.
 
 ---
 
@@ -328,19 +328,19 @@ Milestones are ordered to eliminate rework by resolving foundational dependencie
 
 **M0 — Infrastructure foundation**: CI/CD, monorepo tooling, shared package scaffolding. No application logic yet; establishes the build and release pipeline.
 
-**M1 — Types, DB, Crypto, Sync design**: Everything depends on the domain model. Encryption tiers constrain how data is stored. The sync protocol must be co-designed with the database schema — retrofitting CRDT sync onto an existing schema guarantees rework. This milestone produces the data layer but no running API.
+**M1 — Types, DB, Crypto, Sync design**: Everything depends on the domain model. Encryption tiers constrain how data is stored. The sync protocol must be co-designed with the database schema. Retrofitting CRDT sync onto an existing schema guarantees rework. This milestone produces the data layer but no running API.
 
 **M2 — API core**: CRUD operations are the foundation for all subsequent features. Auth gates every endpoint; recovery key generation happens at registration. No API feature can be built before this milestone.
 
 **M3 — Sync and real-time**: With the sync protocol designed in M1, implementation happens early so every subsequent feature is built on top of the sync layer. Multi-device key recovery also lives here. Retrofitting sync onto already-shipped features is the primary risk this avoids.
 
-**M4–M6 — Fronting → Communication → Privacy**: Ordered by dependency. Fronting is the most-used feature and the clearest domain concept. Communication builds on member identity. Privacy governs visibility of everything and integrates the three-tier encryption model — it must come after the data it protects exists.
+**M4–M6 — Fronting → Communication → Privacy**: Ordered by dependency. Fronting is the most-used feature and the clearest domain concept. Communication builds on member identity. Privacy governs visibility of everything and integrates the three-tier encryption model, so it must come after the data it protects exists.
 
-**M7 — Data portability**: Email notifications, webhook enhancements, and public API surface. Infrastructure that supports external integration is deferred until the core API is stable; it does not drive internal architecture.
+**M7 — Data portability**: Email notifications, webhook enhancements, and public API surface. Infrastructure that supports external integration is deferred until the core API is stable. It does not drive internal architecture.
 
 **M8 — Client app foundation**: The mobile/web UI consumes the API. Building the client after the API is stable prevents constant frontend rework caused by breaking schema changes. API key management and the complete data hook surface are client-side features bundled here. In practice, M8 epics are developed in parallel with M2–M7 — each API feature ships with its corresponding UI.
 
-**M9 — Data import**: Import engines are data-layer work — parsing, mapping, and persisting external data into the Pluralscape schema. Building import before UI/UX design ensures the full data surface (including imported SP and PK data) is established before screen design begins.
+**M9 — Data import**: Import engines are data-layer work: parsing, mapping, and persisting external data into the Pluralscape schema. Building import before UI/UX design ensures the full data surface (including imported SP and PK data) is established before screen design begins.
 
 **M10–M11 — UI design → buildout**: Visual design system established before the buildout phase; avoids retrofitting accessibility and design tokens.
 

@@ -2,7 +2,7 @@
 
 ## Our Commitment
 
-Pluralscape exists to serve one of the most vulnerable communities in digital mental health. Every person who contributes to, interacts with, or uses this project deserves to feel safe, respected, and welcomed — regardless of identity, background, or experience level.
+Pluralscape serves one of the most vulnerable communities in digital mental health, and we take that responsibility seriously. Whoever you are and however you got here, if you contribute to this project or use it, we want you to feel safe and welcomed. Identity, background, and experience level make no difference to that.
 
 ## Standards
 
@@ -28,17 +28,17 @@ The following are grounds for immediate action, up to and including permanent re
 
 ### On tools and contributions
 
-We evaluate contributions on their quality — code correctness, test coverage, readability, and adherence to project standards. We do not police the tools used to write contributions. AI-assisted development is welcome.
+We judge contributions on the work itself: whether the code is correct, whether tests cover it, whether it reads well, and whether it meets project standards. The tools you reach for to get there are your own business. AI-assisted development is welcome here.
 
 ## Scope
 
-This Code of Conduct applies to all project spaces: GitHub repositories, issues, pull requests, discussions, chat channels, and any other communication related to Pluralscape. It also applies when an individual is officially representing the project in public spaces.
+This Code of Conduct covers every space the project touches. That means GitHub repositories, issues, pull requests, discussions, chat channels, and anywhere else conversation about Pluralscape happens. It also applies when someone is representing the project in public.
 
 ## Enforcement
 
-Instances of unacceptable behavior can be reported to the project maintainers at **pluralscape@proton.me**.
+If you need to report unacceptable behavior, write to the project maintainers at **pluralscape@proton.me**.
 
-All reports will be reviewed promptly and confidentially. Maintainers are obligated to maintain the privacy of the reporter. Enforcement actions may include:
+We review every report promptly and in confidence. Maintainers are obligated to protect the privacy of the reporter. Enforcement actions may include:
 
 1. **Warning** — a private written notice with an explanation of the violation
 2. **Temporary ban** — removal from project spaces for a defined period

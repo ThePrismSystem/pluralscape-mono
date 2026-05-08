@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-Systems evolve over time — members are discovered, structures change, relationships shift. Users (and their therapists) want to see what the system looked like at a specific point in time. There is no current mechanism to capture a frozen view of system state. The app has an offline-first, E2E encrypted architecture — snapshots must respect the zero-knowledge model.
+Systems evolve over time. Members are discovered, structures change, relationships shift. Users (and their therapists) want to see what the system looked like at a specific point in time. There is no current mechanism to capture a frozen view of system state. The app has an offline-first, E2E encrypted architecture, so snapshots must respect the zero-knowledge model.
 
 ## Decision
 
@@ -25,10 +25,10 @@ Systems evolve over time — members are discovered, structures change, relation
 
 ## Consequences
 
-- Storage grows linearly with snapshot count — but snapshots are text-only (no images), so each is relatively small
+- Storage grows linearly with snapshot count, but snapshots are text-only (no images), so each is relatively small
 - Scheduled snapshots require the background job system to be running
-- Snapshot data may become stale if the snapshot format changes — version the `SnapshotContent` schema if needed later
-- No revert capability means users cannot roll back to a previous state — but they can compare current state to any snapshot
+- Snapshot data may become stale if the snapshot format changes. Version the `SnapshotContent` schema if needed later
+- No revert capability means users cannot roll back to a previous state. They can still compare current state to any snapshot
 - Future features (revert, diff between snapshots) are possible without schema changes
-- Snapshot creation is a client-side operation — the server never sees the plaintext content
+- Snapshot creation is a client-side operation. The server never sees the plaintext content
 - For self-hosted minimal tier: snapshots are created when the app is open (no background scheduling without Valkey)

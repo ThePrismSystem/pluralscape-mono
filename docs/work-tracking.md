@@ -1,6 +1,6 @@
 # Work Tracking
 
-This project uses [beans](https://github.com/hmans/beans), a local-first issue tracker that stores issues as markdown files in `.beans/`. Beans are committed alongside code — no external issue tracker needed.
+This project uses [beans](https://github.com/hmans/beans), a local-first issue tracker that stores issues as markdown files in `.beans/`. Beans are committed alongside code, so no external issue tracker is needed.
 
 ## Quick Reference
 
@@ -89,12 +89,12 @@ beans create "Log a front" -t feature --prefix mobile- --parent ps-xxxx
 
 ### Epic conventions
 
-Epics are containers — they organize related work but are never worked on directly.
+Epics are containers. They organize related work but are never worked on directly.
 
 1. Create epics in `draft` status. Move to `todo` once children are defined
 2. An epic is `in-progress` when any child is `in-progress`
 3. An epic is `completed` only when all children are `completed` or `scrapped`
-4. Break work into feature/task/bug children — do not assign work directly to an epic
+4. Break work into feature/task/bug children. Do not assign work directly to an epic
 5. Epics typically use the `ps-` prefix since they often span domains
 
 ### Blocking relationships
@@ -118,4 +118,4 @@ beans update db-xxxx --blocking api-yyyy
 3. **When committing**: include bean file changes in the commit
 4. **When completing**: add a `## Summary of Changes` section, then set status to `completed`
 5. **When scrapping**: add a `## Reasons for Scrapping` section, then set status to `scrapped`
-6. **Deferred work**: always create a follow-up bean — never leave work undocumented
+6. **Deferred work**: always create a follow-up bean. Never leave work undocumented

@@ -14,7 +14,7 @@ The tRPC client is provided by `@pluralscape/api-client`:
 import { trpc } from "@pluralscape/api-client/trpc";
 ```
 
-`trpc` is a `createTRPCReact<AppRouter>()` instance. Wrap your component tree with the provider once in the app root — the client is pre-configured with auth headers and the API base URL from environment config.
+`trpc` is a `createTRPCReact<AppRouter>()` instance. Wrap your component tree with the provider once in the app root. The client is pre-configured with auth headers and the API base URL from environment config.
 
 ### Usage with React Query hooks
 
@@ -104,7 +104,7 @@ Router keys match the object composed in `apps/api/src/trpc/root.ts` — use the
 - **Protected** — valid session required
 - **System-scoped** — session must belong to the system that owns the resource; enforced by middleware on every mutating procedure
 
-API key requests additionally pass through the fail-closed scope gate (`scopeGateMiddleware`), which looks up each procedure path in the shared `SCOPE_REGISTRY.trpc` (defined in `apps/api/src/lib/scope-registry/trpc-entries.ts`; REST entries live alongside it in `rest-entries.ts`). Procedures with no registry entry are rejected with `FORBIDDEN` — the same registry powers REST per-endpoint scope enforcement.
+API key requests additionally pass through the fail-closed scope gate (`scopeGateMiddleware`), which looks up each procedure path in the shared `SCOPE_REGISTRY.trpc` (defined in `apps/api/src/lib/scope-registry/trpc-entries.ts`; REST entries live alongside it in `rest-entries.ts`). Procedures with no registry entry are rejected with `FORBIDDEN`. The same registry powers REST per-endpoint scope enforcement.
 
 ---
 

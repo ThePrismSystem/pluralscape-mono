@@ -34,7 +34,7 @@ This is a pre-release change. Backfill of existing rows via the migration is saf
 
 **Easier:**
 
-- RLS policy evaluation is O(1) per row — no JOIN subqueries.
+- RLS policy evaluation is O(1) per row, with no JOIN subqueries.
 - System-scoped queries on these tables can use the `system_id` index directly.
 - RLS policy code is simpler: all six tables use the same `"system"` scope type.
 

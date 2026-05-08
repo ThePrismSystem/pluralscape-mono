@@ -8,14 +8,14 @@ Accepted
 
 Push notification tokens (APNs device tokens, FCM registration tokens) must be
 transmitted to Apple and Google servers verbatim to deliver notifications. The
-server cannot relay an encrypted token — the upstream provider requires the
+server cannot relay an encrypted token. The upstream provider requires the
 exact token bytes it issued. Encrypting device tokens with the system master key
 would render them useless for their only purpose.
 
 Push tokens are semi-sensitive infrastructure credentials (knowledge of a token
-allows sending notifications to a device) but they are not user content. The
-zero-knowledge threat model targets user data — journals, member profiles,
-messages — not infrastructure tokens. The server already holds session keys and
+allows sending notifications to a device), but they are not user content. The
+zero-knowledge threat model targets user data such as journals, member profiles,
+and messages, not infrastructure tokens. The server already holds session keys and
 other metadata that fall outside the ZK boundary.
 
 ## Decision

@@ -64,7 +64,7 @@ Schema authors who deviate from the encoding rules must justify it explicitly wi
 
 ### CRDT shapes are NOT in this regime
 
-`CrdtMember`, `CrdtFrontingSession`, etc. in `packages/sync/src/schemas/` use `Automerge.Text` runtime types and JSON-encoded representations of complex fields. These are not derivable from domain types — the choice of which fields are `Automerge.Text` (collaborative-text) vs JSON-stringified (LWW-replaced) is a per-field judgment about merge semantics that cannot be derived mechanically.
+`CrdtMember`, `CrdtFrontingSession`, etc. in `packages/sync/src/schemas/` use `Automerge.Text` runtime types and JSON-encoded representations of complex fields. These are not derivable from domain types. The choice of which fields are `Automerge.Text` (collaborative-text) vs JSON-stringified (LWW-replaced) is a per-field judgment about merge semantics that cannot be derived mechanically.
 
 CRDT shapes remain hand-maintained, and the parity story for CrdtMember ↔ Member is a separate concern out of scope for this ADR.
 

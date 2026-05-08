@@ -10,7 +10,7 @@ Runbook for the automated localization pipeline. Architecture decisions live in 
 4. The `crowdin-sync` workflow enables GitHub native auto-merge on the PR it just created. Branch protection on `main` holds the PR until required status checks pass, then GitHub merges it automatically.
 5. Glossary changes on `main` trigger `crowdin-config` to reapply Crowdin project configuration.
 
-The `chore/crowdin-translations` branch is protected by a repo ruleset that restricts creation, updates, and deletion to the **Pluralscape Crowdin Bot** GitHub App (the only bypass actor besides repo admins). The workflow mints a short-lived installation token from this App per run and uses it for checkout, the crowdin-action's git push, and the auto-merge enable call — so only Crowdin-originated commits can ever land on that branch.
+The `chore/crowdin-translations` branch is protected by a repo ruleset that restricts creation, updates, and deletion to the **Pluralscape Crowdin Bot** GitHub App (the only bypass actor besides repo admins). The workflow mints a short-lived installation token from this App per run and uses it for checkout, the crowdin-action's git push, and the auto-merge enable call. Only Crowdin-originated commits can ever land on that branch.
 
 ## Glossary maintenance
 
@@ -136,7 +136,7 @@ All three live in GitHub Actions repo secrets; local dev values are in
 
 Any translation entered in the Crowdin editor supersedes the MT in the next
 daily sync. Volunteers don't need to wait for approval from a Pluralscape
-maintainer — all translations saved in the Crowdin editor are auto-approved
+maintainer. All translations saved in the Crowdin editor are auto-approved
 immediately during the MT-only phase, matching how MT output is auto-approved.
 Steps:
 
@@ -145,7 +145,7 @@ Steps:
 3. Save. Your translation is approved automatically; it lands in the daily sync PR within 24 hours.
 
 If you see an MT translation that's wrong, harmful, or uses gatekept
-terminology, edit it — even a literal retranslation is an improvement over the
+terminology, edit it. Even a literal retranslation is an improvement over the
 MT default.
 
 ## Adding source string context

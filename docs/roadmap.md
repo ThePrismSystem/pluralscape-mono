@@ -1,19 +1,49 @@
 # Roadmap
 
-## Milestone: Milestone 15: Polish and Launch ([ps-9u4w](.beans/ps-9u4w--milestone-10-polish-and-launch.md))
-
-> Security audit, performance, beta testing
-
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) OpenAPI reconciliation: constraint-aware and full deep comparison ([api-yxvn](.beans/api-yxvn--openapi-reconciliation-constraint-aware-and-full-d.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Drop messages_system_id_idx after partitioning is stable ([db-1aw7](.beans/db-1aw7--drop-messages-system-id-idx-after-partitioning-is.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Schedule audit log PII cleanup as recurring job ([infra-gvgo](.beans/infra-gvgo--schedule-audit-log-pii-cleanup-as-recurring-job.md))
-
 ## Milestone: Milestone 14: Self-Hosted ([ps-qcfr](.beans/ps-qcfr--milestone-13-self-hosted.md))
 
 > Two-tier self-hosted deployment (minimal single binary + full Docker Compose)
 
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Two-factor device transfer (remove code from QR) ([api-v2ar](.beans/api-v2ar--two-factor-device-transfer-remove-code-from-qr.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) SQLite schema codegen from PG (Phase B) ([db-k19k](.beans/db-k19k--sqlite-schema-codegen-from-pg-phase-b.md))
+
+## Milestone: Milestone 15: Polish and Launch ([ps-9u4w](.beans/ps-9u4w--milestone-10-polish-and-launch.md))
+
+> Security audit, performance, beta testing
+
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Push co-fronting breakdown aggregation into DB ([api-4hfa](.beans/api-4hfa--push-co-fronting-breakdown-aggregation-into-db.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Bucket rotation full lifecycle E2E tests ([api-7spq](.beans/api-7spq--bucket-rotation-full-lifecycle-e2e-tests.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Test coverage: snapshot.service.ts has zero tests ([api-k6as](.beans/api-k6as--test-coverage-snapshotservicets-has-zero-tests.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Test coverage: key-grant.service.ts has zero tests ([api-lr6o](.beans/api-lr6o--test-coverage-key-grantservicets-has-zero-tests.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add deferred tRPC router integration test cases (cross-tenant writes, OCC conflicts, dependent-conflicts) ([api-m78h](.beans/api-m78h--add-deferred-trpc-router-integration-test-cases-cr.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) E2E coverage for timer-configs CRUD ([api-qnn6](.beans/api-qnn6--e2e-coverage-for-timer-configs-crud.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Test coverage: innerworld-region.service.ts needs integration tests ([api-rdko](.beans/api-rdko--test-coverage-innerworld-regionservicets-needs-int.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Two-factor device transfer (remove code from QR) ([api-v2ar](.beans/api-v2ar--two-factor-device-transfer-remove-code-from-qr.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) OpenAPI reconciliation: constraint-aware and full deep comparison ([api-yxvn](.beans/api-yxvn--openapi-reconciliation-constraint-aware-and-full-d.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Drop messages_system_id_idx after partitioning is stable ([db-1aw7](.beans/db-1aw7--drop-messages-system-id-idx-after-partitioning-is.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Versioned Drizzle migration for PARTITION BY ([db-bqd3](.beans/db-bqd3--versioned-drizzle-migration-for-partition-by.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) audit_log retention/drop job in packages/rotation-worker ([db-d2ht](.beans/db-d2ht--audit-log-retentiondrop-job-in-packagesrotation-wo.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Explore Drizzle schema codegen from @pluralscape/types domain types ([db-mpbv](.beans/db-mpbv--explore-drizzle-schema-codegen-from-pluralscapetyp.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Schedule audit log PII cleanup as recurring job ([infra-gvgo](.beans/infra-gvgo--schedule-audit-log-pii-cleanup-as-recurring-job.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Branch coverage gap cleanup — raise low-branch business-logic files ([ps-0rdy](.beans/ps-0rdy--branch-coverage-gap-cleanup-raise-low-branch-busin.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) E2E test coverage expansion ([ps-jrsj](.beans/ps-jrsj--e2e-test-coverage-expansion.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Evaluate upgrading mobile-shr0 architecture from (B) single worker to (A) two-worker full hoist ([ps-pn2y](.beans/ps-pn2y--evaluate-upgrading-mobile-shr0-architecture-from-b.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Consolidate E2E test apps under unified naming or directory structure ([ps-vwn0](.beans/ps-vwn0--consolidate-e2e-test-apps-under-unified-naming-or.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Brand fleet expansion: Member.name, Member.pronouns, Group.name, Channel.name ([types-f3fk](.beans/types-f3fk--brand-fleet-expansion-membername-memberpronouns-gr.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Brand JournalEntry.title and WikiPage.title ([types-x37g](.beans/types-x37g--brand-journalentrytitle-and-wikipagetitle.md))
+
+## Milestone: Milestone 10: UI/UX Design ([ps-9cca](.beans/ps-9cca--milestone-10-uiux-design.md))
+
+> Stitch-generated HTML mockups for every screen family, establishing visual language, interaction patterns, and layout decisions
+
+### Epic: Onboarding & auth screen designs ([ps-nwju](.beans/ps-nwju--onboarding-auth-screen-designs.md))
+
+> Login, registration, recovery key backup, device transfer, initial setup wizard
+
+- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Account settings UI: audit log IP tracking opt-in ([mobile-zxe4](.beans/mobile-zxe4--account-settings-ui-audit-log-ip-tracking-opt-in.md))
+
+### Miscellaneous
+
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Mobile: UI/UX design for bucket-key decrypt failure diagnostics ([mobile-5bi3](.beans/mobile-5bi3--mobile-uiux-design-for-bucket-key-decrypt-failure.md))
 
 ## Milestone: Milestone 11: UI/UX Buildout ([ps-vq2h](.beans/ps-vq2h--milestone-11-uiux-buildout.md))
 
@@ -24,111 +54,34 @@
 > User-facing wizard for the SP import flow built on top of the ps-nrg4 data layer.
 
 - ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Import wizard dedup against existing Pluralscape buckets ([ps-405v](.beans/ps-405v--import-wizard-dedup-against-existing-pluralscape-b.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Harden SP import wizard against phishing baseUrl ([ps-aj1j](.beans/ps-aj1j--harden-sp-import-wizard-against-phishing-baseurl.md))
 
 ### Miscellaneous
 
+- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Handle OPFS quota exhaustion gracefully (SQLITE_FULL UX + recovery) ([ps-gexi](.beans/ps-gexi--handle-opfs-quota-exhaustion-gracefully-sqlite-ful.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Unpin fast-xml-parser once AWS SDK regression fixed ([ps-47tc](.beans/ps-47tc--unpin-fast-xml-parser-once-aws-sdk-regression-fixe.md))
+
+## Milestone: Milestone 12: Data Interpolation ([ps-8coo](.beans/ps-8coo--milestone-12-data-interpolation.md))
+
+> Wire every screen to its real data hooks, replacing placeholder data with live API data
+
+- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Implement token refresh with retry for tRPC client ([mobile-txcx](.beans/mobile-txcx--implement-token-refresh-with-retry-for-trpc-client.md))
+- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Implement sync conflict persistence with E2E encryption ([sync-qj9u](.beans/sync-qj9u--implement-sync-conflict-persistence-with-e2e-encry.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Validate ReactNativeSodiumAdapter tests in real RN environment ([crypto-jz77](.beans/crypto-jz77--validate-reactnativesodiumadapter-tests-in-real-rn.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Measure mobile bundle impact of @pluralscape/import-sp subpath imports ([mobile-1242](.beans/mobile-1242--measure-mobile-bundle-impact-of-pluralscapeimport.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Mobile: instrument bucket-key decrypt failure counters ([mobile-fk47](.beans/mobile-fk47--mobile-instrument-bucket-key-decrypt-failure-count.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add real-SQLite smoke test for expo-sqlite-driver ([mobile-l0fq](.beans/mobile-l0fq--add-real-sqlite-smoke-test-for-expo-sqlite-driver.md))
 
-## Milestone: Milestone 7: Data Portability ([ps-n8uk](.beans/ps-n8uk--milestone-7-data-portability.md))
+## Milestone: Milestone 13: Ancillary Features ([ps-lksz](.beans/ps-lksz--milestone-13-ancillary-features.md))
 
-> Import from SP/PK, export, API surface
+> Self-contained features (data export, PluralKit bridge, Littles Safe Mode, fronting history reports) built end-to-end as vertical slices
 
-### Epic: Email infrastructure ([api-7xw0](.beans/api-7xw0--email-infrastructure.md))
+### Epic: PluralKit bridge ([ps-zs93](.beans/ps-zs93--pluralkit-bridge.md))
 
-> Email sending infrastructure: provider integration, templating, job-based delivery queue. Foundation for transactional emails (recovery key alerts, account notifications).
+> Ongoing sync configuration, status dashboard, conflict resolution UI
 
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Email template system ([api-hvep](.beans/api-hvep--email-template-system.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Resend adapter ([api-s5hq](.beans/api-s5hq--resend-adapter.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) License audit for resend and nodemailer dependencies ([api-tc7x](.beans/api-tc7x--license-audit-for-resend-and-nodemailer-dependenci.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) SMTP adapter (Nodemailer) ([api-w1ia](.beans/api-w1ia--smtp-adapter-nodemailer.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) @pluralscape/email package — interface, errors, stub, contract tests ([api-zeh1](.beans/api-zeh1--pluralscapeemail-package-interface-errors-stub-con.md))
-
-### Epic: User-configurable webhooks ([api-9wze](.beans/api-9wze--user-configurable-webhooks.md))
-
-> User-configurable webhook endpoints for all supported events (encrypted payloads)
-
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Wire identity webhook events (9 events) ([api-q642](.beans/api-q642--wire-identity-webhook-events-9-events.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Wire friend webhook events (4 events) ([api-smlf](.beans/api-smlf--wire-friend-webhook-events-4-events.md))
-
-## Milestone: Milestone 6: Privacy and Social ([ps-6itw](.beans/ps-6itw--milestone-6-privacy-and-social.md))
-
-> Privacy engine, friend network, external access
-
-### Epic: Friend network ([api-rl9o](.beans/api-rl9o--friend-network.md))
-
-> Friend codes, connection management, bucket assignment. Account-level operations per ADR 021.
-
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Friend network E2E tests and OpenAPI ([api-ghp5](.beans/api-ghp5--friend-network-e2e-tests-and-openapi.md))
-
-## Milestone: Milestone 8: App Foundation & Data Layer ([ps-7j8n](.beans/ps-7j8n--milestone-8-client-app.md))
-
-> App skeleton, navigation infrastructure, provider tree, and the complete data interaction layer
-
-### Epic: PluralKit import ([client-f61z](.beans/client-f61z--pluralkit-import.md))
-
-> Client-side: parse PK JSON v2 export — 5-char hids, ISO 8601, members/switches/groups only
-
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Convert PluralKit switches to fronting sessions on import ([client-jusn](.beans/client-jusn--convert-pluralkit-switches-to-fronting-sessions-on.md))
-
-## Milestone: Milestone 9: Data Import Functionality ([ps-h2gl](.beans/ps-h2gl--milestone-9-data-import-functionality.md))
-
-> Simply Plural and PluralKit data import engines, shared import-core orchestration, import API infrastructure, mobile glue, E2E test suites.
-
-### Epic: Simply Plural import ([ps-nrg4](.beans/ps-nrg4--simply-plural-import.md))
-
-> Import flow UI, data mapping logic, progress/error handling, conflict resolution
-
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Simply Plural import Plan 3 — mobile glue + E2E ([ps-al4g](.beans/ps-al4g--simply-plural-import-plan-3-mobile-glue-e2e.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) SP seed script — first live run against real SP API ([ps-axyv](.beans/ps-axyv--sp-seed-script-first-live-run-against-real-sp-api.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Simply Plural import SQLite persister integration tests ([ps-bamk](.beans/ps-bamk--simply-plural-import-sqlite-persister-integration.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Encrypt PK API token client-side with master key ([client-cde3](.beans/client-cde3--encrypt-pk-api-token-client-side-with-master-key.md))
 
 ## No Milestone
 
-### Epic: M4 audit remediation ([ps-4ioj](.beans/ps-4ioj--m4-audit-remediation.md))
-
-> Address must-fix and should-fix findings from the M4 comprehensive audit. 12 items: 4 critical/high data integrity + security, 8 should-fix performance/quality/testing.
-
-- ![bug](https://img.shields.io/badge/bug-d73a4a?style=flat-square) Fix SQLite getCurrentFrontingComments join missing systemId ([db-vguh](.beans/db-vguh--fix-sqlite-getcurrentfrontingcomments-join-missing.md))
-- ![bug](https://img.shields.io/badge/bug-d73a4a?style=flat-square) Fix WebhookConfig.secret typed as EncryptedString ([types-yp3m](.beans/types-yp3m--fix-webhookconfigsecret-typed-as-encryptedstring.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add webhook-delivery-cleanup unit test ([api-3rtc](.beans/api-3rtc--add-webhook-delivery-cleanup-unit-test.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add next_check_in_at column to optimize timer scheduling ([api-4kp6](.beans/api-4kp6--add-next-check-in-at-column-to-optimize-timer-sche.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Batch webhook delivery cleanup deletes ([api-7yk0](.beans/api-7yk0--batch-webhook-delivery-cleanup-deletes.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Reduce over-mocking in webhook-dispatcher unit test ([api-ao1s](.beans/api-ao1s--reduce-over-mocking-in-webhook-dispatcher-unit-tes.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add fronting-report.service integration test ([api-bn0u](.beans/api-bn0u--add-fronting-reportservice-integration-test.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add missing webhook route-level tests ([api-d8jg](.beans/api-d8jg--add-missing-webhook-route-level-tests.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add webhook secret rotation endpoint ([api-f6jg](.beans/api-f6jg--add-webhook-secret-rotation-endpoint.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add per-system webhook config limit ([api-g3xl](.beans/api-g3xl--add-per-system-webhook-config-limit.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add max date span validation for custom analytics ranges ([api-h9xu](.beans/api-h9xu--add-max-date-span-validation-for-custom-analytics.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Use EncryptedBlob type in fronting-report mapper ([api-l5fo](.beans/api-l5fo--use-encryptedblob-type-in-fronting-report-mapper.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add analytics result caching ([api-q6fu](.beans/api-q6fu--add-analytics-result-caching.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Move duplicate MS_PER_DAY to shared import ([api-q6l1](.beans/api-q6l1--move-duplicate-ms-per-day-to-shared-import.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add lifecycle-event.service integration test ([api-sumw](.beans/api-sumw--add-lifecycle-eventservice-integration-test.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add analytics and fronting-report route-level tests ([api-v3zs](.beans/api-v3zs--add-analytics-and-fronting-report-route-level-test.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Refactor deriveMasterKey backward-compat shim ([crypto-nea9](.beans/crypto-nea9--refactor-derivemasterkey-backward-compat-shim.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add partial index for check-in-generate query pattern ([db-ab1h](.beans/db-ab1h--add-partial-index-for-check-in-generate-query-patt.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add M4 tables to RLS integration test ([db-afev](.beans/db-afev--add-m4-tables-to-rls-integration-test.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add LIMIT to view query helpers ([db-cwqh](.beans/db-cwqh--add-limit-to-view-query-helpers.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Remove encryptedMasterKey nullable/legacy pattern ([db-z6rp](.beans/db-z6rp--remove-encryptedmasterkey-nullablelegacy-pattern.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Handle comment/check-in migration in time-split ([sync-wh96](.beans/sync-wh96--handle-commentcheck-in-migration-in-time-split.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Deduplicate webhook event types across packages ([types-26v8](.beans/types-26v8--deduplicate-webhook-event-types-across-packages.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add sessionStartTime to FrontingComment type or document omission ([types-jf54](.beans/types-jf54--add-sessionstarttime-to-frontingcomment-type-or-do.md))
-
-### Miscellaneous
-
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) SP import: API notes fetch + comprehensive E2E + docs ([ps-wwph](.beans/ps-wwph--sp-import-api-notes-fetch-comprehensive-e2e-docs.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Implement token refresh with retry for tRPC client ([mobile-txcx](.beans/mobile-txcx--implement-token-refresh-with-retry-for-trpc-client.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Account settings UI: audit log IP tracking opt-in ([mobile-zxe4](.beans/mobile-zxe4--account-settings-ui-audit-log-ip-tracking-opt-in.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Fix friend dashboard review issues ([api-a2x5](.beans/api-a2x5--fix-friend-dashboard-review-issues.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Fix PR #333 review findings ([api-l879](.beans/api-l879--fix-pr-333-review-findings.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Fix friend dashboard review issues ([api-wk6u](.beans/api-wk6u--fix-friend-dashboard-review-issues.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) PR #373 review fixes ([ps-51wq](.beans/ps-51wq--pr-373-review-fixes.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) M4 comprehensive audit ([ps-6u44](.beans/ps-6u44--m4-comprehensive-audit.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Audit PGlite integration tests against Testcontainers requirement ([api-9kl9](.beans/api-9kl9--audit-pglite-integration-tests-against-testcontain.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add integration tests for tRPC routers ([api-kt5h](.beans/api-kt5h--add-integration-tests-for-trpc-routers.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add structure entity service with HAS_DEPENDENTS checking ([api-l9ar](.beans/api-l9ar--add-structure-entity-service-with-has-dependents-c.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Structure-entity deletion must check note dependencies ([api-m3up](.beans/api-m3up--structure-entity-deletion-must-check-note-dependen.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add real-SQLite smoke test for expo-sqlite-driver ([mobile-l0fq](.beans/mobile-l0fq--add-real-sqlite-smoke-test-for-expo-sqlite-driver.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add error-path E2E tests for SP import engine ([ps-chwx](.beans/ps-chwx--add-error-path-e2e-tests-for-sp-import-engine.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Bucket rotation full lifecycle E2E tests ([api-7spq](.beans/api-7spq--bucket-rotation-full-lifecycle-e2e-tests.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Investigate non-table-drive refactor options for row-transforms.test.ts ([mobile-thuh](.beans/mobile-thuh--investigate-non-table-drive-refactor-options-for-r.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Shared brandId<T> utility for Drizzle inferSelect to branded ID casts ([types-jmk7](.beans/types-jmk7--shared-brandidt-utility-for-drizzle-inferselect-to.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Comprehensive docs refresh ([ps-t8xa](.beans/ps-t8xa--comprehensive-docs-refresh.md))

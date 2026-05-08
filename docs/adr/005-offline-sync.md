@@ -47,8 +47,8 @@ Rejected alternatives:
 - Significant upfront engineering investment compared to adopting PowerSync
 - Must design document/topic topology carefully (per-system? per-collection? per-entity?)
 - Document size management requires garbage collection and pruning strategies
-- No built-in partial replication — must design which CRDT documents each client subscribes to
-- Must layer encryption on top (Automerge doesn't handle encryption natively)
+- No built-in partial replication. The set of CRDT documents each client subscribes to must be designed explicitly
+- Encryption must be layered on top, since Automerge doesn't handle it natively
 - The sync protocol becomes a core competency of the project, not a pluggable dependency
 
 ### License

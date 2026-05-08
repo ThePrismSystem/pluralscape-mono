@@ -11,7 +11,7 @@ Accepted (refreshed 2026-04-29). This ADR refines the original Zod-type-alignmen
 
 ## Context
 
-The 2026-04-20 comprehensive audit flagged "branded-type drift at API/DB boundaries" as a recurring pattern. Root cause: four plausible sources for the same domain shape — `packages/types`, Drizzle schema in `packages/db`, Zod schemas in `packages/validation`, and generated `api-types.ts` in `packages/api-client`. Each layer can drift independently.
+The 2026-04-20 audit flagged "branded-type drift at API/DB boundaries" as a recurring pattern. Root cause: four plausible sources for the same domain shape (`packages/types`, Drizzle schema in `packages/db`, Zod schemas in `packages/validation`, and generated `api-types.ts` in `packages/api-client`). Each layer can drift independently.
 
 Drizzle cannot be the source of truth: the server only sees metadata columns plus an opaque `encryptedData` blob. It has no knowledge of the encrypted field names or their types. The types package is the only layer that holds the full decrypted domain shape.
 

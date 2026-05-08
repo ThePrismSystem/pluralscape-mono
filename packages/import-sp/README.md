@@ -1,12 +1,12 @@
 # @pluralscape/import-sp
 
-Simply Plural import engine — pure data layer.
+Simply Plural import engine. Pure data layer.
 
 Parses Simply Plural JSON exports or SP REST API responses, validates each
 document with Zod, maps every collection to Pluralscape entities, and drives a
 resumable, checkpoint-based import via a pluggable `Persister`.
 
-This package is **mobile-compatible** — no Node streams, no `fs`, no React.
+This package is **mobile-compatible**: no Node streams, no `fs`, no React.
 The mobile glue (Expo SecureStore for tokens, file picker for exports, encrypted
 SQLite persister) lives in `apps/mobile/src/features/import-sp/` and is wired in
 Plan 3.
@@ -52,13 +52,13 @@ All factories return an `ImportDataSource` implementing `iterate(collection)`,
 ### SP API auth quirk
 
 Simply Plural's API authenticates with the raw API key sent as the
-`Authorization` header value — no `Bearer ` prefix. The api-source issues
+`Authorization` header value, with no `Bearer ` prefix. The api-source issues
 `Authorization: <token>` directly. Using the `Bearer` scheme will get a 401
 rejection.
 
 The api-source also refuses to send a token to a non-HTTPS `baseUrl` unless
-the host is loopback (`localhost`, `127.0.0.1`, `::1`) — last-line protection
-against leaking the token over cleartext.
+the host is loopback (`localhost`, `127.0.0.1`, `::1`). This is last-line
+protection against leaking the token over cleartext.
 
 ---
 
@@ -93,8 +93,8 @@ The SP REST API exposes these collections only through per-parent endpoints:
 - **boardMessages** — `GET /v1/board/member/:memberId` requires a member ID
 
 Without a bulk list endpoint, importing them requires enumerating every possible
-parent — not feasible for comments (which span multiple document types) or practical
-without significant request overhead for chat/board messages.
+parent. That's not feasible for comments (which span multiple document types) and
+not practical without significant request overhead for chat/board messages.
 
 **notes** (journal entries) are the exception: they follow the same per-parent
 pattern (`GET /v1/notes/:system/:member`) but are essential enough to warrant a
@@ -126,7 +126,7 @@ interface Persister {
 - `recordError` must never throw.
 - `flush` is called at chunk boundaries (`CHECKPOINT_CHUNK_SIZE = 50` docs).
 
-`PersistableEntity` is a discriminated union — narrow on `entityType` to access
+`PersistableEntity` is a discriminated union; narrow on `entityType` to access
 the strongly-typed `payload` without casts.
 
 ### Entity type helpers
@@ -157,8 +157,8 @@ Error classes thrown by the API source:
 ## Dedup policy
 
 Every entity is upserted by `(source: "simply-plural", sourceEntityId)`. Running
-the import twice produces identical results — the persister decides `created` /
-`updated` / `skipped` and the engine accumulates the counts in the checkpoint.
+the import twice produces identical results: the persister decides `created` /
+`updated` / `skipped`, and the engine accumulates the counts in the checkpoint.
 
 ---
 
@@ -167,7 +167,7 @@ the import twice produces identical results — the persister decides `created` 
 Mapped entity payloads are strongly typed from `@pluralscape/validation` request
 schemas (e.g. `CreateMemberBodySchema`, `CreateGroupBodySchema`). Mapper return
 types are derived with `z.infer<typeof Schema>` so the Pluralscape side of the
-mapping stays aligned with the public API contract — a schema break is a
+mapping stays aligned with the public API contract; a schema break is a
 TypeScript break. SP input documents are validated per-document with Zod before
 mapping.
 
@@ -241,7 +241,7 @@ SP import E2E tests run against a real Simply Plural API instance with seeded te
    ```bash
    source .env.sp-test && pnpm seed:sp-test
    ```
-   The seed script is idempotent — it probes SP for existing entities and reuses them.
+   The seed script is idempotent; it probes SP for existing entities and reuses them.
    After seeding, manually download the JSON export from the email SP sends.
 
 ### Running E2E tests

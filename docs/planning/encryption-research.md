@@ -28,7 +28,7 @@ This is architecturally challenging because the server must facilitate _access c
 - Group messaging uses "Sender Keys" (GroupCipher): a sender distributes a symmetric group key to all members via pairwise Olm/X3DH channels. Messages are encrypted once with the group key and broadcast.
 - The protocol handles multi-device by treating each device as a separate "participant" that needs its own pairwise session.
 
-**Fit for PluralScape:** Poor to moderate. Signal Protocol is optimized for _ephemeral message streams_ with continuous ratcheting. PluralScape's data model is _persistent state_ (member profiles, fronting status, notes) that gets read repeatedly, not message streams. The continuous ratcheting adds complexity without benefit for stored documents. The Sender Keys pattern for groups is relevant to Privacy Buckets, but Signal Protocol overall is overkill for non-messaging E2E encryption.
+**Fit for PluralScape:** Poor to moderate. Signal Protocol is optimized for _ephemeral message streams_ with continuous ratcheting. PluralScape's data model is _persistent state_ (member profiles, fronting status, notes) read repeatedly, not message streams. The continuous ratcheting adds complexity without benefit for stored documents. The Sender Keys pattern for groups is relevant to Privacy Buckets, but Signal Protocol overall is overkill for non-messaging E2E encryption.
 
 **Verdict:** Borrow the _concepts_ (per-group symmetric keys distributed via asymmetric encryption) but do not implement the full Signal Protocol.
 
@@ -60,7 +60,7 @@ This is architecturally challenging because the server must facilitate _access c
 - "Exporter" mechanism allows deriving additional encryption keys for non-messaging uses (e.g., encrypting media streams, file storage)
 - Cross-industry standard with adoption by Google Messages (RCS), Apple Messages, Discord (mandatory E2E for A/V as of March 2026)
 
-**Fit for PluralScape:** The Exporter mechanism makes MLS applicable beyond messaging. A Privacy Bucket could be modeled as an MLS group, with the exported key used to encrypt bucket data. However, MLS is heavyweight infrastructure primarily designed for real-time session key agreement. PluralScape's sharing model is more static (friend added to bucket, gains access to all bucket data) than dynamic (group membership changing frequently during active sessions).
+**Fit for PluralScape:** The Exporter mechanism makes MLS applicable beyond messaging. A Privacy Bucket could be modeled as an MLS group, with the exported key used to encrypt bucket data. However, MLS is heavyweight infrastructure designed for real-time session key agreement. PluralScape's sharing model is more static (friend added to bucket, gains access to all bucket data) than dynamic (group membership changing frequently during active sessions).
 
 **Verdict:** Worth tracking as an emerging standard. For V1, the simpler "per-bucket symmetric key" approach is more practical. MLS could be adopted later for inter-system direct messaging.
 

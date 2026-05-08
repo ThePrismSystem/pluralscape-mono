@@ -10,10 +10,10 @@ single contract that both adapters implement, keeping application code free of b
 concerns.
 
 The BullMQ adapter (backed by Valkey) serves the hosted and full self-hosted tiers. It provides
-priority queues, delayed jobs, repeatable schedules, and rate limiting — the same Valkey instance
-already required for real-time pub/sub (see ADR 007). The SQLite adapter runs in-process against
-the existing local database, polling a job table on a configurable interval. It targets the
-minimal self-hosted tier where no external services are available; throughput is lower but all
+priority queues, delayed jobs, repeatable schedules, and rate limiting; it reuses the Valkey
+instance already required for real-time pub/sub (see ADR 007). The SQLite adapter runs in-process
+against the existing local database, polling a job table on a configurable interval. It targets
+the minimal self-hosted tier where no external services are available. Throughput is lower but
 retry, backoff, DLQ, and idempotency semantics are identical.
 
 Both adapters enforce idempotency via per-job keys, support exponential backoff with configurable

@@ -1,6 +1,6 @@
 # Contributing to Pluralscape
 
-We welcome contributions from everyone. This project is community-driven by design — the predecessor app suffered from being a one-person effort, and we are building the opposite.
+Contributions from everyone are welcome. This project is community-driven by design. The predecessor app suffered from being a one-person effort, and Pluralscape is built as the opposite.
 
 ## Getting Started
 
@@ -34,7 +34,7 @@ The `/verify` command runs the full suite (format, lint, typecheck, unit, integr
 
 ### Pre-release code hygiene
 
-Pluralscape is pre-production. Remove deprecated code outright — no backwards-compatible aliases, re-exports, or `@deprecated` shims. Delete old symbols in the same PR that introduces the replacement.
+Pluralscape is pre-production. Remove deprecated code outright. No backwards-compatible aliases, re-exports, or `@deprecated` shims. Delete old symbols in the same PR that introduces the replacement.
 
 ## Commit Conventions
 
@@ -84,31 +84,31 @@ This project follows **Test-Driven Development (TDD)**. All new code should be w
 
 ### Why TDD?
 
-Pluralscape handles sensitive personal data (identity, fronting, journaling) with privacy and encryption guarantees. TDD helps us:
+Pluralscape handles sensitive personal data (identity, fronting, journaling) with privacy and encryption guarantees. TDD helps the project:
 
 - Catch regressions in privacy and encryption logic before they ship
 - Build confidence in offline-first sync behavior through repeatable tests
-- Maintain high coverage naturally, without chasing metrics after the fact
+- Maintain coverage naturally, without chasing metrics after the fact
 - Design cleaner APIs by thinking about usage before implementation
 
 ### What if I'm not used to TDD?
 
-That's okay — it's a practice, not a gatekeeping requirement. If you're new to TDD:
+That's okay. It's a practice, not a gatekeeping requirement. If you're new to TDD:
 
 - Start small: write one test before one function
 - It's fine to spike (prototype without tests) to explore an approach, then delete the spike and rebuild test-first
 - Ask for help in [Discussions](https://github.com/ThePrismSystem/pluralscape-mono/discussions) if you're stuck
 
-PRs without tests for new functionality will be asked to add them. PRs that follow the TDD cycle (test commits before implementation commits) are appreciated but not strictly required — what matters is that tests exist and cover the behavior.
+PRs without tests for new functionality will be asked to add them. PRs that follow the TDD cycle (test commits before implementation commits) are appreciated but not strictly required. What matters is that tests exist and cover the behavior.
 
 ## Code Standards
 
-- We care about the quality of the code, not the tools used to write it — AI-assisted contributions are welcome
+- Code quality matters, not the tools used to write it. AI-assisted contributions are welcome
 - Write tests for new functionality
 - Follow existing patterns and conventions in the codebase
 - Ensure accessibility (WCAG compliance) for any UI changes
 - Privacy defaults to maximum restriction (fail-closed)
-- Use community terminology, not clinical language — say "system" not "patient", "member" not "personality", "fronting" not "presenting"
+- Use community terminology, not clinical language. Say "system" not "patient", "member" not "personality", "fronting" not "presenting"
 
 ### TypeScript Strictness
 
@@ -244,7 +244,7 @@ LOC ceilings are codified per area in `tooling/eslint-config/loc-rules.js` and e
 | `**/*.constants.ts`                    | 300 |
 | Tests (`**/*.test.ts`, `__tests__/**`) | 750 |
 
-Tier B caps (api/lib, api/ws, mobile/src, sync, queue, import-core) are lockstep — they currently sit at the value above with a small buffer over the largest in-tree file, and ratchet downward as the tree shrinks. Tier A caps (routes, middleware, trpc, services, types) are target standards. Both are hard errors in CI; treat the cap as a design signal, not a number to negotiate with.
+Tier B caps (api/lib, api/ws, mobile/src, sync, queue, import-core) are lockstep. They currently sit at the value above with a small buffer over the largest in-tree file, and ratchet downward as the tree shrinks. Tier A caps (routes, middleware, trpc, services, types) are target standards. Both are hard errors in CI; treat the cap as a design signal, not a number to negotiate with.
 
 ### RLS-context wrappers
 
@@ -253,7 +253,7 @@ Every database query against an RLS-protected table must go through the wrapper 
 - `withTenantRead(systemId, fn)` — runs `fn` with `app.current_system_id` set to `systemId` on a read-only connection.
 - `withTenantTransaction(systemId, fn)` — same, inside a transaction.
 
-Bare `db.execute(...)` or `db.transaction(...)` outside the wrapper helpers (and the `cross-account-*.ts` helpers, which are the explicit exception for cross-account flows) is an ESLint error. The rule is configured in `apps/api/eslint.config.js`. The integration test `rls-unset-context.integration.test.ts` locks in the fail-silent behavior as a regression trap: un-contexted queries return `[]` rather than rows, so a missed wrapper is a privacy bug that returns empty results rather than the wrong system's data — but a privacy bug nonetheless.
+Bare `db.execute(...)` or `db.transaction(...)` outside the wrapper helpers (and the `cross-account-*.ts` helpers, which are the explicit exception for cross-account flows) is an ESLint error. The rule is configured in `apps/api/eslint.config.js`. The integration test `rls-unset-context.integration.test.ts` locks in the fail-silent behavior as a regression trap: un-contexted queries return `[]` rather than rows. A missed wrapper is a privacy bug that returns empty results rather than the wrong system's data, but a privacy bug nonetheless.
 
 ### Typed auth context
 
@@ -286,11 +286,11 @@ only if the route is moved behind authentication.
 
 ### Linting
 
-Zero warnings are tolerated. All ESLint warnings are treated as errors in CI, git hooks, and local scripts (`--max-warnings 0`). If a rule is too noisy, discuss changing its severity — do not leave warnings in the codebase.
+Zero warnings are tolerated. All ESLint warnings are treated as errors in CI, git hooks, and local scripts (`--max-warnings 0`). If a rule is too noisy, discuss changing its severity. Do not leave warnings in the codebase.
 
 ### Test Coverage Requirements
 
-Test coverage is enforced in CI. The thresholds below are minimums — aim higher where practical.
+Test coverage is enforced in CI. The thresholds below are minimums; aim higher where practical.
 
 | Test Type   | Coverage Target              | Tool       | What It Covers                                     |
 | ----------- | ---------------------------- | ---------- | -------------------------------------------------- |
@@ -299,7 +299,7 @@ Test coverage is enforced in CI. The thresholds below are minimums — aim highe
 | E2E         | Critical paths               | Playwright | User-facing flows: auth, fronting, switching, sync |
 
 - **Unit + Integration** (89% combined): Lines, functions, branches, and statements are all measured. Type-only files and barrel/index files are excluded from coverage. Measured across the combined unit + integration run.
-- **E2E tests**: No line-coverage metric — instead, all critical user journeys must have corresponding tests. Tracked via a test matrix in the test plan.
+- **E2E tests**: No line-coverage metric. All critical user journeys must have corresponding tests. Tracked via a test matrix in the test plan.
 
 Coverage is checked in CI on every PR. PRs that drop coverage below thresholds will not merge.
 

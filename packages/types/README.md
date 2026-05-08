@@ -9,9 +9,9 @@ It deliberately contains no business logic and no runtime dependencies beyond th
 standard library, keeping the dependency graph clean: every other `@pluralscape/*` package
 imports from here, never the reverse.
 
-The package solves a concrete problem: Pluralscape is E2E encrypted, and the same conceptual
+The package solves a concrete problem. Pluralscape is E2E encrypted, and the same conceptual
 entity (a member, a fronting session, a journal entry) needs precisely-typed shapes at every
-boundary — decrypted on the client, ciphertext-bearing on the server, JSON-serialized on the
+boundary: decrypted on the client, ciphertext-bearing on the server, JSON-serialized on the
 wire. Each encrypted entity therefore exposes a canonical six-link chain in its module under
 `src/entities/`:
 
@@ -27,11 +27,11 @@ wire. Each encrypted entity therefore exposes a canonical six-link chain in its 
    Brands strip, `UnixMillis` becomes `number`, `EncryptedBase64` collapses to `string`.
 
 `EncryptedWire<T>` (in `encrypted-wire.ts`) is the canonical encrypted-payload type at decrypt
-boundaries: it is the shape API handlers and clients hand to the crypto layer, with the opaque
+boundaries. It is the shape API handlers and clients hand to the crypto layer, with the opaque
 `encryptedData` blob branded as `EncryptedBase64`. Plaintext entities skip steps 2, 3, and 5
 and expose only `<Entity>`, `<Entity>ServerMetadata`, and `<Entity>Wire`. Class C entities
 (divergent encrypted payload not derivable from the domain shape) declare an auxiliary
-`<Entity>EncryptedPayload` type — see ADR-023 for the taxonomy.
+`<Entity>EncryptedPayload` type; see ADR-023 for the taxonomy.
 
 `__sot-manifest__.ts` registers every entity's slots and is consumed by parity gates in
 `@pluralscape/db`, `@pluralscape/validation`, and the OpenAPI-Wire type test (run via
@@ -48,7 +48,7 @@ A second key design decision is nominal typing via `Brand<T, B>`. Every entity I
 branded string type (`SystemId`, `MemberId`, `FrontingSessionId`, etc.), preventing cross-entity
 ID mix-ups that structural typing would silently permit. The `ID_PREFIXES` constant maps each
 entity type to its runtime prefix, which `createId()` in `runtime.ts` enforces at creation time.
-Branding extends past IDs to user-visible display strings — see "Branded value types" below.
+Branding extends past IDs to user-visible display strings; see "Branded value types" below.
 See [ADR-006](../../docs/adr/006-encryption.md) for the encryption boundary rationale and
 [ADR-013](../../docs/adr/013-api-auth-encryption.md) for the server/client data boundary.
 
@@ -57,7 +57,7 @@ See [ADR-006](../../docs/adr/006-encryption.md) for the encryption boundary rati
 - `src/entities/` — one file per domain entity. The barrel (`entities/index.ts`) is the
   exclusive home for entity-type re-exports; `src/index.ts` simply forwards `export * from
 "./entities/index.js"`. Adding a new entity means adding a file under `entities/` and a line
-  in the barrel — no edits to `src/index.ts`.
+  in the barrel; no edits to `src/index.ts`.
 - `src/api-constants/` — split into `api-limits.ts`, `error-codes.ts`, `rate-limits.ts`, and
   `time-constants.ts`, re-exported through `api-constants/index.ts`.
 - `src/ids/` — `brand.ts` (the `Brand<T, B>` utility), `prefixes.ts` (`ID_PREFIXES`), and
@@ -243,7 +243,7 @@ tooling-only and not included in consumers' dependency graphs.
 
 ## Testing
 
-Unit tests only — no integration variant exists (this package has no I/O boundaries).
+Unit tests only. There is no integration variant; this package has no I/O boundaries.
 
 ```bash
 pnpm vitest run --project types
