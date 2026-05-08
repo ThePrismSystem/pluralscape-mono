@@ -141,7 +141,7 @@ erDiagram
 
 ## 3. Members & Structure
 
-Members (headmates/alters) and the structural containers that organize them. Groups provide hierarchical folders. Structure entity types are user-defined per system (e.g. "Subsystem", "Side System", "Layer"), providing a generic, extensible hierarchy with entity-to-entity links, member-to-entity links, and directed entity associations. All member data is T1-encrypted.
+Members (headmates/alters) and the structural containers that organize them. Groups provide hierarchical folders. Structure entity types are user-defined per system (e.g. "Subsystem", "Side System", "Layer") and form a generic hierarchy with entity-to-entity links, member-to-entity links, and directed entity associations. All member data is T1-encrypted.
 
 ### 3a. Members & Groups
 
@@ -202,7 +202,7 @@ erDiagram
 
 ### 3b. Structure Entities
 
-Structure entity types are user-defined per system — for example, a system might create types called "Subsystem", "Side System", and "Layer". Entities are instances of those types. Entity links form hierarchical trees (entities within entities). Member links connect members to entities. Associations are directed cross-references between entities. All entity type and entity names/metadata are inside `encrypted_data` (T1).
+Structure entity types are user-defined per system. For example, a system might create types called "Subsystem", "Side System", and "Layer". Entities are instances of those types. Entity links form hierarchical trees (entities within entities). Member links connect members to entities. Associations are directed cross-references between entities. All entity type and entity names/metadata are inside `encrypted_data` (T1).
 
 ```mermaid
 erDiagram
