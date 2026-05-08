@@ -16,7 +16,7 @@ Client-side analytics on decrypted outtrigger reason data from fronting sessions
 
 ## Motivation
 
-Outtrigger reasons capture why a switch happened -- what external or internal event prompted a change in who is fronting. Over time, this data reveals patterns that are therapeutically valuable: which situations consistently bring specific members forward, whether certain times of day or days of the week correlate with specific switch triggers, and how outtrigger patterns change over months or years. Currently, identifying these patterns requires manual review of individual fronting sessions, which is impractical for systems with frequent switches. Automated analysis surfaces these patterns without requiring manual correlation, and exportable reports make it easy to bring structured insights to therapy sessions.
+Outtrigger reasons capture why a switch happened -- what external or internal event prompted a change in who is fronting. Over time, this data reveals therapeutically valuable patterns: which situations consistently bring specific members forward, whether certain times of day or days of the week correlate with specific switch triggers, and how outtrigger patterns change over months or years. Currently, identifying these patterns requires manual review of individual fronting sessions, which is impractical for systems with frequent switches. Automated analysis surfaces these patterns without manual correlation, and exportable reports make it easy to bring structured insights to therapy sessions.
 
 ## Proposed Behavior
 

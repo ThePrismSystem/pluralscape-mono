@@ -16,7 +16,7 @@ A configurable "Welcome to the System" resources page that serves as an onboardi
 
 ## Motivation
 
-When a new member is discovered or a dormant member returns, they often need to understand a significant amount of context: who else is in the system, how the body's daily life works (job, relationships, routines), what the system's internal agreements and rules are, who handles what responsibilities, and how to navigate shared external relationships. Currently, this information lives in the heads of established members or is scattered across journal entries and chat history.
+When a new member is discovered or a dormant member returns, they often need a lot of context: who else is in the system, how the body's daily life works (job, relationships, routines), what the system's internal agreements and rules are, who handles what responsibilities, and how shared external relationships work. Currently, this information lives in the heads of established members or is scattered across journal entries and chat history.
 
 A dedicated, curated resources page provides a single place where the system can document everything a member needs to know. This reduces the burden on established members who would otherwise need to repeatedly explain things, and gives the new or returning member agency to learn at their own pace without feeling like a burden.
 

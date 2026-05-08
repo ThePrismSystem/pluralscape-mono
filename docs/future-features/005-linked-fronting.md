@@ -16,7 +16,7 @@ Linked fronting allows systems to define relationships between members where sta
 
 ## Motivation
 
-Many systems have members who consistently front together. This may be due to subsystem relationships, protector dynamics, co-conscious partnerships, or simply the way their system works. Currently, users must manually start and end fronting sessions for each member individually, even when the pairing is predictable. This adds unnecessary friction to front logging and increases the chance of incomplete records (forgetting to log the linked member). By allowing systems to define front links, the app can automate these predictable patterns while keeping the user in control.
+Many systems have members who consistently front together. This may be due to subsystem relationships, protector dynamics, co-conscious partnerships, or simply the way their system works. Currently, users must manually start and end fronting sessions for each member individually, even when the pairing is predictable. This adds friction to front logging and increases the chance of incomplete records (forgetting to log the linked member). When systems define front links, the app can automate these predictable patterns while keeping the user in control.
 
 ## Proposed Behavior
 

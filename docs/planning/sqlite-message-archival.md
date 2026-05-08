@@ -12,7 +12,7 @@ The `messages` table stores encrypted blobs. The server cannot read the content,
 
 In the hosted PostgreSQL deployment, the `messages` table is partitioned by `timestamp`. Older partition files can be detached and moved to cold storage without touching the live table. Query performance on recent messages is unaffected by the total history size because the query planner prunes irrelevant partitions automatically.
 
-In SQLite, there is one flat `messages` table. As a self-hosted system accumulates months or years of messages, that table grows without bound. A single-user deployment sending 50 messages per day reaches ~180K rows per year. That is still fast in SQLite, but at several years of use it becomes meaningful, and index scans on `channel_id + timestamp` degrade linearly with table size.
+In SQLite, there is one flat `messages` table. As a self-hosted system accumulates months or years of messages, that table grows without bound. A single-user deployment sending 50 messages per day reaches ~180K rows per year. That is still fast in SQLite, but several years of use becomes meaningful, and index scans on `channel_id + timestamp` degrade linearly with table size.
 
 The SQLite schema as it stands (`id TEXT PRIMARY KEY`) has no composite primary key on `(id, timestamp)` unlike the PG schema — this is already a deliberate divergence. The archival strategy must work within SQLite's capabilities.
 

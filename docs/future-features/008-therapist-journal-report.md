@@ -16,7 +16,7 @@ Generate formatted, shareable reports from selected journal entries for use in t
 
 ## Motivation
 
-Journal entries are a core therapeutic tool for plural systems. Many therapists ask their clients to share journal excerpts, but the process of manually selecting, copying, and formatting entries is tedious and error-prone. Worse, it often means sharing via unencrypted channels (email, printed screenshots) with no structural context about who wrote what or what was happening at the time. A dedicated report generation feature streamlines this workflow, adds valuable context (fronting data, timeline, authorship), and ensures that privacy bucket controls are respected -- therapists see only what the system has explicitly chosen to share. This reduces session time spent on logistics and increases time spent on therapeutic work.
+Journal entries are a core therapeutic tool for plural systems. Many therapists ask their clients to share journal excerpts, but the process of manually selecting, copying, and formatting entries is tedious and error-prone. Worse, it often means sharing via unencrypted channels (email, printed screenshots) with no structural context about who wrote what or what was happening at the time. A dedicated report generator streamlines this workflow, adds valuable context (fronting data, timeline, authorship), and respects privacy bucket controls -- therapists see only what the system has explicitly chosen to share. This reduces session time spent on logistics and increases time spent on therapeutic work.
 
 ## Proposed Behavior
 

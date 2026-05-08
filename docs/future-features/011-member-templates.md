@@ -20,7 +20,7 @@ Templates store default values for: custom fields, group memberships, structure 
 
 Systems with many members often find that new members share common characteristics with existing ones. A system with a well-established subsystem structure may discover new members who belong to the same subsystem and share similar roles, tags, and custom field values. Without templates, the user must manually configure each new member from scratch, re-entering the same group memberships, structure placements, and field values each time.
 
-Templates are especially valuable for systems that experience frequent discoveries or splits. Rather than spending time on repetitive configuration, the user can select a template and adjust only what is different about the new member. This also helps maintain consistency -- if a system has a convention that all littles belong to a specific group and have certain notification settings, a "Little" template encodes that convention.
+Templates are especially valuable for systems that experience frequent discoveries or splits. Rather than repeating configuration each time, the user can select a template and adjust only what is different about the new member. This also helps maintain consistency -- if a system has a convention that all littles belong to a specific group and have certain notification settings, a "Little" template encodes that convention.
 
 The "save as template" feature makes template creation low-friction. Rather than manually building a template from scratch, a user can take a well-configured member and save their current settings as a reusable starting point.
 

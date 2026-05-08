@@ -18,9 +18,9 @@ The scope covers home screen widgets for iOS and Android: current fronter displa
 
 ## Motivation
 
-Front logging is most accurate when it is low-friction. Many systems report that the biggest barrier to consistent logging is the time it takes to unlock their phone, open the app, navigate to the fronting screen, and tap through the switch flow. This delay means switches often go unlogged, especially during busy periods or rapid switching episodes.
+Front logging is most accurate when it is low-friction. Many systems report that the biggest barrier to consistent logging is the time it takes to unlock their phone, open the app, reach the fronting screen, and tap through the switch flow. This delay means switches often go unlogged, especially during busy periods or rapid switching episodes.
 
-Home screen widgets reduce this to a single glance (who is fronting) or a single tap (log a switch). For systems that experience frequent switches or want to maintain detailed front histories, this reduction in friction can meaningfully improve the quality of their data and reduce the compulsive pressure that comes from knowing they "should" log but finding it inconvenient.
+Home screen widgets reduce this to a single glance (who is fronting) or a single tap (log a switch). For systems that experience frequent switches or want to maintain detailed front histories, less friction can meaningfully improve data quality and reduce the compulsive pressure that comes from knowing they "should" log but finding it inconvenient.
 
 ## Proposed Behavior
 

@@ -20,7 +20,7 @@ This is a core value of the project, not just a business decision. Plurality man
 
 Running a hosted service costs money. Server infrastructure, database hosting, S3 storage, push notification services, and domain/SSL costs are ongoing expenses that grow with the user base. Without a revenue model, the project either becomes unsustainable or must rely on donations alone, which historically leads to funding instability for community tools.
 
-Cosmetic monetization solves this by offering optional visual enhancements that users can purchase to support the project while getting something personally meaningful in return. Plural systems often place high value on visual customization -- member colors, avatars, and themes are important expressions of identity. Cosmetic purchases align with this existing desire rather than creating artificial scarcity.
+Cosmetic monetization addresses this by offering optional visual enhancements users can purchase to support the project while getting something personally meaningful in return. Plural systems often place high value on visual customization -- member colors, avatars, and themes are important expressions of identity. Cosmetic purchases align with this existing desire rather than creating artificial scarcity.
 
 The key constraint is that revenue covers server costs only. This is not a profit-driven model. If costs are covered, there is no pressure to upsell or expand the premium offering into functional territory.
 
