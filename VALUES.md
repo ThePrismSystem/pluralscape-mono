@@ -1,10 +1,10 @@
 # Pluralscape Core Values
 
-These values guide every decision — from architecture to community governance to what we ship.
+These values guide every decision we make, from architecture to community governance to what we ship.
 
 ## Community-Driven Development
 
-This project exists because a sole developer maintaining critical infrastructure alone is unsustainable. We reject that model entirely.
+A single developer maintaining critical infrastructure alone burns out. We've watched it happen too many times in this space, and we won't build that way.
 
 - The codebase is open source (AGPL-3.0) from day one
 - Feature prioritization is driven by community voting, not unilateral decisions
@@ -14,7 +14,7 @@ This project exists because a sole developer maintaining critical infrastructure
 
 ## Privacy as a Fundamental Right
 
-Users trust us with deeply sensitive and personal data. That trust is non-negotiable.
+You trust us with deeply sensitive personal data. That trust is non-negotiable for us.
 
 - **No telemetry or analytics without explicit opt-in**
 - **Data encrypted at rest and end-to-end encrypted in transit**
@@ -26,7 +26,7 @@ Users trust us with deeply sensitive and personal data. That trust is non-negoti
 
 ## Accessibility First
 
-Plurality apps are used during dissociative episodes, panic attacks, and sensory overload. Accessibility is not an afterthought.
+Our app gets opened during dissociative episodes, panic attacks, and sensory overload. Accessibility cannot be an afterthought when those are the conditions of use.
 
 - WCAG compliance is a hard requirement, not a stretch goal
 - Screen reader support is a first-class concern
@@ -36,7 +36,7 @@ Plurality apps are used during dissociative episodes, panic attacks, and sensory
 
 ## Anti-Gatekeeping
 
-Plurality is a lived experience. We do not require a clinical diagnosis to use this platform.
+Plurality is a lived experience. We don't require a clinical diagnosis to use this platform, and we never will.
 
 - No diagnostic gatekeeping for access to any feature
 - Language and terminology respect the full spectrum of plural experiences — avoid clinical framing, prefer community terminology
@@ -44,7 +44,7 @@ Plurality is a lived experience. We do not require a clinical diagnosis to use t
 
 ## Therapeutic Integrity
 
-The features that help people survive and heal are never locked behind a paywall.
+If a feature helps you survive or heal, we won't put it behind a paywall.
 
 - **Premium features: never.** All functionality is free
 - Monetization explores an on-device-first model (similar to Obsidian) with optional paid sync if donation funding is insufficient — this is exploratory, not guaranteed
@@ -53,7 +53,7 @@ The features that help people survive and heal are never locked behind a paywall
 
 ## Deliberate Data Lifecycle
 
-We build systems that protect user data while respecting user agency.
+We protect your data, and we respect your right to decide what happens to it.
 
 - Users can archive or permanently delete their own data
 - Deletions require explicit confirmation — no silent data loss
@@ -62,7 +62,7 @@ We build systems that protect user data while respecting user agency.
 
 ## Code Quality and Inclusion
 
-We care about what you contribute, not who you are or how you write it.
+We care about what you contribute. Who you are and how you wrote it are not the bar.
 
 - AI-assisted contributions are welcome — we judge the code, not the tools
 - Contributors are held to high standards of code quality, testing, and documentation
