@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), using milestone headers instead of version numbers during pre-production development.
+The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Milestone headers replace version numbers during pre-production development.
 
 ## 2026-05-01 — Milestone 9a closeout
 

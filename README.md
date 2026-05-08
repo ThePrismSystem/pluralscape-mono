@@ -21,11 +21,11 @@ Pluralscape helps plural systems (DID, OSDD, and beyond) manage identity trackin
 
 Milestones 0-7 built the full backend: data layer, API, sync, fronting, communication, privacy, and data portability. The REST API covers 317 operations across 32 route domains ([OpenAPI spec](docs/openapi/openapi.yaml)), with a type-safe tRPC layer mirroring the full surface for the Expo mobile client ([ADR 032](docs/adr/032-trpc-parity-enforcement.md)).
 
-Milestone 8 delivered the complete client foundation: Expo app shell with auth-gated routing, a 14-provider initialization tree (platform detection, auth state machine, encryption, sync), offline-first local data layer (SQLite + FTS5 search), 50+ domain data hooks via factory pattern (`useOfflineFirstQuery`/`useOfflineFirstInfiniteQuery`), web platform adapter (OPFS/IndexedDB), and CRDT sync coverage for all entity types.
+Milestone 8 delivered the client foundation. That includes an Expo app shell with auth-gated routing, a 14-provider initialization tree (platform detection, auth state machine, encryption, sync), an offline-first local data layer (SQLite + FTS5 search), 50+ domain data hooks via factory pattern (`useOfflineFirstQuery`/`useOfflineFirstInfiniteQuery`), the web platform adapter (OPFS/IndexedDB), and CRDT sync coverage for all entity types.
 
-Milestone 9 delivered data import: a shared import-core orchestration engine (`packages/import-core`) with checkpoint resume and pluggable Persister interface, Simply Plural import (`packages/import-sp`) covering 15 collections with file and API source modes, PluralKit import (`packages/import-pk`) for members/groups/fronting sessions, import API endpoints (REST + tRPC), mobile glue with 17 entity persisters, and E2E test infrastructure with deterministic seed scripts.
+Milestone 9 delivered data import. The shared import-core orchestration engine (`packages/import-core`) provides checkpoint resume and a pluggable Persister interface. Simply Plural import (`packages/import-sp`) covers 15 collections in file and API source modes. PluralKit import (`packages/import-pk`) handles members, groups, and fronting sessions. The release also added import API endpoints (REST + tRPC), mobile glue with 17 entity persisters, and E2E test infrastructure with deterministic seed scripts.
 
-Milestone 9a closed out the post-M9 hardening pass: types as the single source of truth across the canonical encrypted-entity chain (33 entities) and 10 plaintext clusters, the API service layer split per-verb under `services/<domain>/<verb>.ts` (Option E, ESLint-capped at 450 LOC), a three-schema-set Drizzle split ([ADR 038](docs/adr/038-three-drizzle-schema-sets.md)) covering server PG, client SQLite, and local-cache SQLite, codified per-package LOC ceilings as ESLint `max-lines` rules, and 40+ oversized test files split by concern. See the [CHANGELOG](CHANGELOG.md) for details, the [milestone roadmap](docs/planning/milestones.md) for the full plan, the [architecture overview](docs/architecture.md) for system design, and the [mobile developer guide](docs/guides/mobile-developer-guide.md) for client internals.
+Milestone 9a closed out the post-M9 hardening pass. Types now act as the single source of truth across the canonical encrypted-entity chain (33 entities) and 10 plaintext clusters. The API service layer is split per-verb under `services/<domain>/<verb>.ts` (Option E, ESLint-capped at 450 LOC). A three-schema-set Drizzle split ([ADR 038](docs/adr/038-three-drizzle-schema-sets.md)) now covers server PG, client SQLite, and local-cache SQLite. Per-package LOC ceilings are codified as ESLint `max-lines` rules, and 40+ oversized test files were split by concern. See the [CHANGELOG](CHANGELOG.md) for details, the [milestone roadmap](docs/planning/milestones.md) for the full plan, the [architecture overview](docs/architecture.md) for system design, and the [mobile developer guide](docs/guides/mobile-developer-guide.md) for client internals.
 
 ## Test Suite
 
@@ -39,7 +39,7 @@ pnpm test:coverage     # Tests with coverage report
 pnpm test:e2e          # E2E tests (Playwright)
 ```
 
-E2E suite covers auth, CRUD, fronting, sync, webhooks, timers, real-time notifications, chat, boards, notes, polls, acknowledgements, privacy buckets, friends, dashboards, notifications, report export, blobs, custom fields, relationships, innerworld, API keys, check-in records, lifecycle events, notification configs, and tRPC smoke tests. Run `pnpm test:coverage` for up-to-date numbers.
+The E2E suite covers auth and CRUD, fronting, sync, webhooks, and timers. It also covers real-time notifications, chat, boards, notes, polls, and acknowledgements; privacy buckets, friends, dashboards, and notification configs; report export, blobs, custom fields, relationships, innerworld, API keys, check-in records, lifecycle events, and tRPC smoke tests. Run `pnpm test:coverage` for up-to-date numbers.
 
 ## Values
 
@@ -108,7 +108,7 @@ docs/
 | Media        | S3-compatible (MinIO for self-hosted)           | [ADR 009](docs/adr/009-blob-media-storage.md) |
 | Job Queue    | BullMQ (Valkey) / SQLite (self-hosted fallback) | [ADR 010](docs/adr/010-background-jobs.md)    |
 
-All dependencies verified AGPL-3.0 compatible — see [license audit](docs/audits/001-license-compatibility.md). Architecture decisions documented in [38 ADRs](docs/adr/).
+All dependencies are verified AGPL-3.0 compatible. See the [license audit](docs/audits/001-license-compatibility.md). Architecture decisions are documented in [38 ADRs](docs/adr/).
 
 ## Key Libraries
 
@@ -132,7 +132,7 @@ All dependencies verified AGPL-3.0 compatible — see [license audit](docs/audit
 
 ## Features
 
-Pluralscape targets full feature parity with Simply Plural, plus new capabilities. Key feature areas:
+Pluralscape targets feature parity with Simply Plural, plus new capabilities. Key feature areas:
 
 - **Identity management** — member profiles (pronouns, avatars, colors, custom fields, tags, saturation levels), groups/folders, archival, custom fronts
 - **Fronting and analytics** — front logging with co-fronting as parallel timelines, historical editing, timeline visualization, analytics dashboards, automated check-in timers
@@ -198,7 +198,7 @@ Strict TypeScript and ESLint rules are enforced with zero warnings tolerance (`-
 
 ### Methodology
 
-This project follows **Test-Driven Development** (TDD). All new code is written test-first: write a failing test, make it pass, refactor. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full TDD guidelines.
+This project follows **Test-Driven Development** (TDD). New code is written test-first: write a failing test, make it pass, refactor. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full TDD guidelines.
 
 ## Work Tracking
 
@@ -209,11 +209,11 @@ Domain prefixes: `ps-`, `api-`, `mobile-`, `db-`, `crypto-`, `sync-`, `types-`, 
 
 ## Architecture Decision Records
 
-Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 38 accepted ADRs cover the full stack from licensing through three-schema-set Drizzle split. See the [ADR template](docs/adr/000-template.md) for the format.
+Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 38 accepted ADRs cover the stack from licensing through the three-schema-set Drizzle split. See the [ADR template](docs/adr/000-template.md) for the format.
 
 ## License
 
-[AGPL-3.0](LICENSE) — ensuring this project and all derivatives remain open source.
+[AGPL-3.0](LICENSE). This keeps the project and all derivatives open source.
 
 ## Contributing
 
