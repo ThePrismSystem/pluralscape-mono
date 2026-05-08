@@ -6,9 +6,9 @@ Client-side incremental re-encryption worker for privacy bucket key rotation.
 
 When a friend is removed from a privacy bucket, Pluralscape immediately revokes their API access and generates a new bucket key. All data previously encrypted under the old key must then be re-encrypted under the new key. This package implements that re-encryption process on the client, following the lazy rotation protocol specified in [ADR 014](../../docs/adr/014-lazy-key-rotation.md).
 
-Re-encryption proceeds in chunks. The worker claims a batch of items from the server-side rotation ledger, fetches each entity blob, decrypts it with the old key, re-encrypts it with the new key, uploads the result, and reports completion. The server never sees key material. Multiple devices owned by the same system can work concurrently — each claims independent chunks, and stale claims are automatically reclaimed after five minutes (`KEY_ROTATION.staleClaimTimeoutMs`).
+Re-encryption proceeds in chunks. The worker claims a batch of items from the server-side rotation ledger, fetches each entity blob, decrypts it with the old key, re-encrypts it with the new key, uploads the result, and reports completion. The server never sees key material. Multiple devices owned by the same system can work concurrently: each claims independent chunks, and stale claims are automatically reclaimed after five minutes (`KEY_ROTATION.staleClaimTimeoutMs`).
 
-The worker is resumable across sessions. If the device goes offline mid-rotation, progress is preserved in the server ledger. On the next session the worker picks up from where it left off. A 404 response on the rotation resource (rotation deleted or cancelled) causes the worker to stop gracefully. Per-item 404 (entity deleted) and 409 (version conflict from a concurrent newer write) are treated as successful completion of that item. If a fetched blob already reports `keyVersion >= newKeyVersion` (another device wrote it under the new key first), the item short-circuits as completed without redundant re-encryption.
+The worker is resumable across sessions. If the device goes offline mid-rotation, progress is preserved in the server ledger, and the worker picks up from where it left off on the next session. A 404 response on the rotation resource (rotation deleted or cancelled) causes the worker to stop gracefully. Per-item 404 (entity deleted) and 409 (version conflict from a concurrent newer write) are treated as successful completion of that item. If a fetched blob already reports `keyVersion >= newKeyVersion` (another device wrote it under the new key first), the item short-circuits as completed without redundant re-encryption.
 
 ### Zero key material after use
 
@@ -34,7 +34,7 @@ class RotationWorker {
 
 ### `decryptWithDualKey`
 
-Selects the correct key based on `keyVersion` and decrypts a blob. Throws `DecryptionFailedError` if the version matches neither key — fails closed rather than guessing.
+Selects the correct key based on `keyVersion` and decrypts a blob. Throws `DecryptionFailedError` if the version matches neither key. Fails closed rather than guessing.
 
 ```ts
 function decryptWithDualKey(
@@ -129,7 +129,7 @@ worker.stop();
 
 ## Testing
 
-Unit tests only (no integration variant — the worker is a pure client-side state machine that depends on an injected `RotationApiClient`).
+Unit tests only. There is no integration variant; the worker is a pure client-side state machine that depends on an injected `RotationApiClient`.
 
 ```bash
 pnpm vitest run --project rotation-worker

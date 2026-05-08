@@ -6,7 +6,7 @@ Backend-agnostic blob storage adapter interface with S3 and filesystem implement
 
 `@pluralscape/storage` provides a uniform `BlobStorageAdapter` interface that decouples the application from any specific storage backend. Concrete adapters are shipped in sub-entry points (`/s3`, `/filesystem`) so each deployment tier can import only what it needs. An in-memory adapter (`src/adapters/memory-adapter.ts`) backs the contract test suite and is not part of the public export surface.
 
-All bytes flowing through the adapter are encrypted before they arrive. The storage layer is zero-knowledge: it stores and retrieves opaque ciphertext and never has access to plaintext media. Per ADR 009, the client encrypts blobs (XChaCha20-Poly1305) before upload, and decrypts them locally after download. The server generates time-limited presigned URLs so clients upload directly to the storage backend, keeping API server bandwidth low.
+All bytes flowing through the adapter are encrypted before they arrive. The storage layer is zero-knowledge: it stores and retrieves opaque ciphertext and never has access to plaintext media. Per ADR 009, the client encrypts blobs (XChaCha20-Poly1305) before upload and decrypts them locally after download. The server generates time-limited presigned URLs so clients upload directly to the storage backend, keeping API server bandwidth low.
 
 Quota management and orphan-blob cleanup are provided via the `/quota` sub-entry point. These utilities run server-side and operate on storage-key metadata, not on blob contents.
 
@@ -49,7 +49,7 @@ import { S3BlobStorageAdapter } from "@pluralscape/storage/s3";
 import type { S3AdapterConfig } from "@pluralscape/storage/s3";
 ```
 
-Works against AWS S3, Cloudflare R2, Backblaze B2, or MinIO. Supports presigned upload and download URLs, configurable `maxSizeBytes` enforcement (throws `BlobTooLargeError` on over-sized `upload()`), and write-once semantics via `If-None-Match: *` baked into both direct PUTs and presigned URLs. Presigned uploads sign `content-length`, `content-type`, and `if-none-match` into the signature so clients cannot override them at upload time — this is required for MinIO and some S3-compatible backends that do not auto-sign those headers.
+Works against AWS S3, Cloudflare R2, Backblaze B2, or MinIO. Supports presigned upload and download URLs, configurable `maxSizeBytes` enforcement (throws `BlobTooLargeError` on over-sized `upload()`), and write-once semantics via `If-None-Match: *` baked into both direct PUTs and presigned URLs. Presigned uploads sign `content-length`, `content-type`, and `if-none-match` into the signature so clients cannot override them at upload time. This is required for MinIO and some S3-compatible backends that do not auto-sign those headers.
 
 ### `/filesystem` — Local filesystem adapter
 
@@ -72,7 +72,7 @@ import {
 } from "@pluralscape/storage/quota";
 ```
 
-`BlobQuotaService` exposes `getUsage`, `checkQuota`, `assertQuota`, and `reserveQuota` for per-system enforcement before writes. `reserveQuota` is the advisory-lock integration point — it is equivalent to `assertQuota` today and is subject to TOCTOU races until the API layer wraps reserve + upload in a serializable transaction with `pg_advisory_xact_lock`. `OrphanBlobDetector` identifies blobs whose metadata records have been deleted (with a configurable grace period, 24 h by default). `BlobCleanupHandler` drives the archival and removal job; per-key failures are isolated and reported in `CleanupResult.failedKeys` without aborting the run.
+`BlobQuotaService` exposes `getUsage`, `checkQuota`, `assertQuota`, and `reserveQuota` for per-system enforcement before writes. `reserveQuota` is the advisory-lock integration point. It is equivalent to `assertQuota` today and is subject to TOCTOU races until the API layer wraps reserve + upload in a serializable transaction with `pg_advisory_xact_lock`. `OrphanBlobDetector` identifies blobs whose metadata records have been deleted (with a configurable grace period, 24 h by default). `BlobCleanupHandler` drives the archival and removal job; per-key failures are isolated and reported in `CleanupResult.failedKeys` without aborting the run.
 
 ## Usage
 

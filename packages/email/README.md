@@ -6,8 +6,8 @@ Platform-agnostic email sending with typed security notification templates.
 
 This package provides a common `EmailAdapter` interface that decouples email delivery from the
 rest of the API. All email operations go through `send(params: EmailSendParams)`, which returns
-a `Promise<EmailSendResult>`. Switching providers requires only swapping the adapter — no
-changes to call sites.
+a `Promise<EmailSendResult>`. Switching providers requires only swapping the adapter; no call
+sites change.
 
 Four adapters ship with the package. `ResendEmailAdapter` targets hosted deployments using the
 Resend API. `SmtpEmailAdapter` targets self-hosted deployments via Nodemailer and supports
@@ -17,7 +17,7 @@ point) captures sent messages in memory for test assertions.
 
 The `./templates` entry point provides six typed security notification templates:
 `recovery-key-regenerated`, `new-device-login`, `password-changed`, `two-factor-changed`,
-`webhook-failure-digest`, and `account-change-email`. Each template is rendered to
+`webhook-failure-digest`, and `account-change-email`. Each template renders to
 `{ subject, html, text }` via `renderTemplate`, keeping HTML generation separate from delivery.
 
 This package is transport-only. Email addresses themselves are encrypted at rest on the server
@@ -46,8 +46,8 @@ ADR 030 (Email Provider Selection) for design rationale.
 | `validateSendParams`      | function  | Throws on invalid params before hitting the provider                   |
 
 `validateSendParams` checks recipient count, subject length, and the shape of optional `from`
-and `replyTo` addresses. The address check is implemented as a linear scan (not a regex) to
-avoid polynomial-time backtracking on adversarial inputs (CodeQL `js/polynomial-redos`).
+and `replyTo` addresses. The address check uses a linear scan rather than a regex to avoid
+polynomial-time backtracking on adversarial inputs (CodeQL `js/polynomial-redos`).
 
 ### Resend adapter (`@pluralscape/email/resend`)
 

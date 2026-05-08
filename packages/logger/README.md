@@ -6,7 +6,7 @@ Currently ships the mobile (React Native / Expo / Hermes) logger. The API runtim
 
 ## Overview
 
-`Logger` is the structured-logging contract used across the app. Defined in `@pluralscape/types` as three methods — `info`, `warn`, `error` — each taking a `message: string` and optional `data?: Record<string, unknown>`. This package produces runtime-specific implementations of that contract.
+`Logger` is the structured-logging contract used across the app. Defined in `@pluralscape/types`, it has three methods (`info`, `warn`, `error`) each taking a `message: string` and optional `data?: Record<string, unknown>`. This package produces runtime-specific implementations of that contract.
 
 Every logger factory in this package applies **PII redaction** by default. Callers can supply a custom redactor or opt out with `null` after manually sanitizing values. The default redactor walks the payload recursively, masking values under PII-adjacent keys, and breaks cycles with a `WeakSet` guard so self-referential payloads never crash the call site.
 
@@ -87,6 +87,6 @@ Run via `pnpm vitest run --project logger`.
 
 ## Design rationale
 
-The mobile logger intentionally wraps `console.{info,warn,error}` rather than a third-party logging framework: React Native's log pipeline (Metro, `react-native log-ios|log-android`, Hermes trace tooling) reads `console` output directly, and payloads serialize as JSON suffixes so they remain grep-friendly in captured logs.
+The mobile logger intentionally wraps `console.{info,warn,error}` rather than a third-party logging framework. React Native's log pipeline (Metro, `react-native log-ios|log-android`, Hermes trace tooling) reads `console` output directly, and payloads serialize as JSON suffixes so they remain grep-friendly in captured logs.
 
-PII redaction is enforced by default so developers cannot accidentally ship identifying data into device logs or crash reports. Opting out requires an explicit `redact: null` — matching the Pluralscape principle that privacy boundaries default to maximum restriction.
+PII redaction is enforced by default so developers cannot accidentally ship identifying data into device logs or crash reports. Opting out requires an explicit `redact: null`, matching the Pluralscape principle that privacy boundaries default to maximum restriction.

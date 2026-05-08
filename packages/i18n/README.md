@@ -4,13 +4,13 @@ Internationalization and community-terminology resolution for the Pluralscape pl
 
 ## Overview
 
-This package wraps [i18next](https://www.i18next.com/) with Pluralscape-specific defaults: namespace
-layout, missing-key handling, and synchronous React initialization via `I18nProvider`. Consumers
-create an instance with `createI18nInstance`, add any additional plugins, and call `.init()` with
-locale resources — the factory keeps the instance uninitialized so each application layer can
-compose plugins in the right order.
+This package wraps [i18next](https://www.i18next.com/) with Pluralscape-specific defaults:
+namespace layout, missing-key handling, and synchronous React initialization via `I18nProvider`.
+Consumers create an instance with `createI18nInstance`, add any additional plugins, and call
+`.init()` with locale resources. The factory keeps the instance uninitialized so each
+application layer can compose plugins in the right order.
 
-A core concern of this package is the **nomenclature system**: plural systems use widely different
+A core concern of this package is the **nomenclature system**. Plural systems use widely different
 terms for shared concepts (e.g., "headmate", "alter", "part", "insider"). Rather than hardcoding
 any one vocabulary, every community term is represented as a `CanonicalTerm` resolved against the
 system's `NomenclatureSettings` at display time. Consumers call `resolveTerm` and its variants
@@ -24,7 +24,7 @@ locales are added there alongside translation resource bundles.
 
 Pluralscape ships 13 locales: `en`, `es`, `es-419`, `fr`, `de`, `it`, `pt-BR`, `ru`, `nl`,
 `zh-Hans`, `ja`, `ko`, and `ar`. English is the source language; the other 12 are translated via
-Crowdin and delivered over-the-air. Arabic is the only RTL locale currently shipped — `he`, `fa`,
+Crowdin and delivered over-the-air. Arabic is the only RTL locale currently shipped. `he`, `fa`,
 and `ur` remain in `RTL_LOCALES` so device-detected fallbacks render correctly even though they are
 not translated yet.
 
@@ -188,7 +188,7 @@ pnpm vitest run --project i18n
 
 ## Runtime loading (mobile)
 
-Translations reach the app through three layers — bundled baseline, cached OTA, and live OTA —
+Translations reach the app through three layers (bundled baseline, cached OTA, and live OTA)
 composed behind a single i18next backend.
 
 ### Crowdin OTA proxy
@@ -224,8 +224,8 @@ The mobile app's i18next backend at `apps/mobile/src/i18n/chained-backend.ts` re
 `apps/mobile/locales/index.ts` loads each namespace via a dynamic `import()` with a literal-prefix
 template (`./${locale}/${namespace}.json`). Metro code-splits the JSON into per-chunk bundles so
 only the active locale's namespaces are parsed at runtime. `BUNDLED_NAMESPACES` is intentionally a
-subset of `NAMESPACES` — the core user-facing set (`common`, `auth`, `fronting`, `members`,
-`settings`) — keeping the shipped binary small while still giving every locale an offline-first
+subset of `NAMESPACES` (the core user-facing set: `common`, `auth`, `fronting`, `members`,
+`settings`) so the shipped binary stays small while every locale still has an offline-first
 fallback.
 
 ### Crowdin integration

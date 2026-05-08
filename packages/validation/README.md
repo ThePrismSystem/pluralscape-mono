@@ -6,16 +6,16 @@ Shared Zod v4 schemas for all API request boundaries across the Pluralscape mono
 
 `@pluralscape/validation` provides hand-written Zod schemas for every REST and tRPC request boundary in the API. Both the Hono REST routes (`apps/api/`) and tRPC procedure inputs import from this package, guaranteeing that the two transports enforce identical validation rules at runtime.
 
-All schemas import from `zod/v4` — the Zod v4 subpath. The catalog version is pinned to `^4.3.6`.
+All schemas import from `zod/v4`, the Zod v4 subpath. The catalog version is pinned to `^4.3.6`.
 
-TypeScript types in `@pluralscape/types` are the single source of truth — schema shapes are never inferred back into types. Schemas are hand-authored and locked to their domain counterparts via the parity gates documented in [ADR-023](../../docs/adr/023-zod-type-alignment.md) (amended 2026-04-29 to cover the full encrypted Class A/C/E + plaintext canonical chain). Per-entity `<Entity>EncryptedInputSchema`s mirror the `<Entity>EncryptedInput` keys-union from `packages/types`; request-body schemas mirror `Create<Entity>Body` / `Update<Entity>Body`; brand-aware fields use the `brandedString` / `brandedNumber` helpers and import the branded primitives (IDs and non-ID scalars) from `@pluralscape/types`.
+TypeScript types in `@pluralscape/types` are the single source of truth; schema shapes are never inferred back into types. Schemas are hand-authored and locked to their domain counterparts via the parity gates documented in [ADR-023](../../docs/adr/023-zod-type-alignment.md) (amended 2026-04-29 to cover the full encrypted Class A/C/E + plaintext canonical chain). Per-entity `<Entity>EncryptedInputSchema`s mirror the `<Entity>EncryptedInput` keys-union from `packages/types`; request-body schemas mirror `Create<Entity>Body` / `Update<Entity>Body`; brand-aware fields use the `brandedString` / `brandedNumber` helpers and import the branded primitives (IDs and non-ID scalars) from `@pluralscape/types`.
 
 Parity is enforced fleet-wide by `pnpm types:check-sot` — gates G2 (Drizzle ↔ Zod input), G3 (Domain ↔ Zod encrypted input), G7 (OpenAPI ↔ Wire), and G8/G9 (no hand-rolled body interfaces; no `params: unknown` + `safeParse` in services) all rely on this package. Per-entity parity tests live under `src/__tests__/type-parity/`.
 
 Scope is intentionally limited to trust-boundary types and decrypt-boundary payloads:
 
 - API request bodies, query parameters, import-job payloads, webhook inputs, and import-mapper output shapes.
-- Encrypted-payload schemas wired at decrypt boundaries — every encrypted entity exports a `<Entity>EncryptedInputSchema` parsed against the JSON output of `decryptBlob`. These are consumed by `packages/data/src/transforms/` to validate decrypted blobs and by service-side encrypt paths to validate inputs before sealing.
+- Encrypted-payload schemas wired at decrypt boundaries: every encrypted entity exports a `<Entity>EncryptedInputSchema` parsed against the JSON output of `decryptBlob`. These are consumed by `packages/data/src/transforms/` to validate decrypted blobs and by service-side encrypt paths to validate inputs before sealing.
 - Plaintext entity body schemas are consolidated here following the ps-6phh canonical chain.
 
 Internal domain types that never cross a trust boundary do not have schemas here. Adapter-local boundary schemas (e.g. BullMQ's `StoredJobDataSchema`) live in their own package; this one is the canonical home for schemas that cross the API surface or the decrypt boundary.
@@ -166,4 +166,4 @@ pnpm vitest run --project validation
 pnpm types:check-sot
 ```
 
-There is no integration variant — this package has no I/O boundaries.
+There is no integration variant; this package has no I/O boundaries.

@@ -1,9 +1,9 @@
 # @pluralscape/import-pk
 
-PluralKit import engine — maps PluralKit data to Pluralscape entities.
+PluralKit import engine. Maps PluralKit data to Pluralscape entities.
 
-Accepts two source modes — a PluralKit JSON export file or the live PK REST API
-(via `pkapi.js`) — and maps members, groups (with their member rosters),
+Accepts two source modes (a PluralKit JSON export file, or the live PK REST API
+via `pkapi.js`) and maps members, groups (with their member rosters),
 fronting sessions (derived from switches), and a synthesised privacy bucket to
 Pluralscape entities. Mapped payloads are typed against the
 `@pluralscape/validation` request schemas. The package drives a resumable,
@@ -45,12 +45,12 @@ matching the export schema, so a single set of mappers covers both modes.
 
 The file source uses `node:fs` and validates the whole export against
 `PKPayloadSchema` (Zod) on first read. To keep the size check and the read on
-the same file object — and avoid path-based TOCTOU (e.g. symlink swap) — it
+the same file object, and to avoid path-based TOCTOU (e.g. symlink swap), it
 opens a single file descriptor and pairs `fstatSync` with `readFileSync(fd)`.
 The size cap is `MAX_IMPORT_FILE_BYTES` from `@pluralscape/import-core`. Mobile
 callers should use the API source; the file source is Node-only.
 
-The API source does not re-run `PKPayloadSchema` over pkapi.js objects — the
+The API source does not re-run `PKPayloadSchema` over pkapi.js objects; the
 SDK's typed shapes act as the schema. Only the per-member `privacy` blob is
 re-parsed defensively (with a small ad-hoc Zod record schema) before being
 forwarded to the privacy-bucket synthesis pass.
@@ -80,7 +80,7 @@ wire:
 | synthetic scan | privacy-bucket     | One "PK Private" bucket synthesised from PK per-member privacy flags                   |
 
 Group → member memberships ride along inside the group payload's `memberIds`
-field — there is no separate `group-membership` collection. Unresolved member
+field; there is no separate `group-membership` collection. Unresolved member
 refs are warned-and-skipped rather than failing the group.
 
 `PK_DEPENDENCY_ORDER` (and the underlying `PK_COLLECTION_NAMES`) is
@@ -109,8 +109,8 @@ such session would be rejected by the API's ordering constraint.
 PK has per-field privacy flags on members; Pluralscape has tagged privacy
 buckets. The `privacy-bucket` batch mapper scans collected member privacy data
 and synthesises a single "PK Private" bucket when any member has at least one
-private field. Both source modes feed it: the file source reads
-`payload.members[].privacy`, and the API source collects privacy data during
+private field. Both source modes feed it. The file source reads
+`payload.members[].privacy`. The API source collects privacy data during
 member iteration and yields a synthetic `privacy-scan` document for the
 `privacy-bucket` pass.
 

@@ -10,13 +10,13 @@ This package exposes two client interfaces that serve different consumers. The R
 It is used by E2E tests and any external consumer that communicates with the HTTP API directly.
 
 The tRPC client (sub-entry `@pluralscape/api-client/trpc`) uses `@trpc/react-query` and is
-typed against `AppRouter` from `@pluralscape/api`. This is the primary interface used by the
-Expo mobile app — it provides React Query hooks, end-to-end input/output type inference, and
+typed against `AppRouter` from `@pluralscape/api`. The Expo mobile app uses this as its
+primary interface, with React Query hooks, end-to-end input/output type inference, and
 automatic request batching.
 
 REST/tRPC parity is enforced in CI (`pnpm trpc:parity`). Every tRPC procedure must have a
 corresponding REST route and vice versa. Both interfaces stay in sync with the server by
-design — neither is a secondary or optional path.
+design; neither is a secondary or optional path.
 
 Both surfaces carry brand-aware request and response types end to end. The OpenAPI-derived
 `paths` and the inferred `RouterInput` / `RouterOutput` resolve through `@pluralscape/types`
@@ -25,7 +25,7 @@ Both surfaces carry brand-aware request and response types end to end. The OpenA
 - Branded IDs (`SystemId`, `MemberId`, etc.) flow through path params, request bodies, and
   responses without manual casts.
 - Encrypted entities use the canonical `ServerMetadata` / `Wire` shapes as the wire contract
-  and `EncryptedWire<T>` at decrypt boundaries — clients see these shapes verbatim.
+  and `EncryptedWire<T>` at decrypt boundaries; clients see these shapes verbatim.
 - Brand-fleet fields (member/group display names, note title and content, poll title and
   options, field-definition names, fronting-session comments and lifecycle-event display
   values) round-trip as branded strings on both surfaces.
@@ -75,10 +75,10 @@ const { data, error } = await client.GET("/api/v1/systems/{systemId}/members", {
 The `getToken` callback may be synchronous or async and return `string | null`. When
 `null` is returned, the `Authorization` header is omitted entirely.
 
-The REST client installs an `onResponse` middleware that transparently retries a single time
-on `429 Too Many Requests`. The middleware reads the `Retry-After` response header (seconds,
-per RFC 9110), falls back to a 1 s delay when the header is absent or non-numeric, and tags
-the retry with an `X-Retry-Count` header so it cannot loop. If the retry fetch throws, the
+The REST client installs an `onResponse` middleware that transparently retries once on
+`429 Too Many Requests`. The middleware reads the `Retry-After` response header (seconds,
+per RFC 9110) and falls back to a 1 s delay when the header is absent or non-numeric. An
+`X-Retry-Count` header tags the retry so it cannot loop. If the retry fetch throws, the
 original `429` response is returned unchanged.
 
 ### tRPC client (mobile app)
@@ -142,8 +142,8 @@ type MemberListOutput = RouterOutput["member"]["list"];
 | `@trpc/react-query` | React Query integration for tRPC procedures              |
 
 Dev dependencies include `openapi-typescript` (type generation) and `@trpc/server` (router
-type inference). `@pluralscape/api` is a dev-only workspace dependency — it is never bundled,
-only used for `AppRouter` type inference at build time.
+type inference). `@pluralscape/api` is a dev-only workspace dependency; it is never bundled,
+and is used solely for `AppRouter` type inference at build time.
 
 ## Type Generation
 
