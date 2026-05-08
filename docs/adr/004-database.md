@@ -35,9 +35,9 @@ Rejected alternatives:
 
 ## Consequences
 
-- Two database targets increases testing surface — CI must test against both PostgreSQL and SQLite
-- Some PostgreSQL-specific features (RLS, JSONB operators, pgcrypto) won't be available on SQLite — feature detection or conditional code paths needed
-- Drizzle's dialect-agnostic query builder mitigates most cross-database issues but edge cases will exist
+- Two database targets increase testing surface. CI must test against both PostgreSQL and SQLite
+- Some PostgreSQL-specific features (RLS, JSONB operators, pgcrypto) won't be available on SQLite, so feature detection or conditional code paths are needed
+- Drizzle's dialect-agnostic query builder mitigates most cross-database issues, but edge cases will exist
 - Schema migrations must be validated against both targets
 
 ### License

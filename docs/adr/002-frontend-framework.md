@@ -32,9 +32,9 @@ The node-based mind map visualization (phase 2 feature) will require platform-sp
 ## Consequences
 
 - Platform-specific code needed for canvas-heavy features (mind maps, topology views)
-- JS-driven rendering is slower than Flutter's compiled pipeline for complex animations — mitigated by Hermes engine and react-native-reanimated
+- JS-driven rendering is slower than Flutter's compiled pipeline for involved animations. Hermes engine and react-native-reanimated mitigate this
 - Must maintain Expo SDK version alignment across the monorepo
-- React Native Web is in maintenance mode; Expo team is building toward React Strict DOM as the successor — this is the migration path, not a dead end
+- React Native Web is in maintenance mode. The Expo team is building toward React Strict DOM as the successor, which is the migration path rather than a dead end
 
 ### License
 

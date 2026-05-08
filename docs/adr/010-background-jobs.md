@@ -58,11 +58,11 @@ Evaluated: BullMQ, pg-boss, Temporal, custom SQLite queue, in-process setTimeout
 
 ## Consequences
 
-- Valkey becomes a harder dependency for the full deployment (already required for real-time — ADR 007)
-- SQLite queue has lower throughput and no horizontal scaling — acceptable for personal/small-group self-hosted use
+- Valkey becomes a harder dependency for the full deployment (already required for real-time per ADR 007)
+- SQLite queue has lower throughput and no horizontal scaling. Acceptable for personal/small-group self-hosted use
 - Job payloads must be carefully designed to avoid leaking plaintext data
 - Two queue backends (BullMQ + SQLite) require a shared interface/adapter pattern and testing against both
-- BullMQ's Node.js/Bun compatibility should be verified — BullMQ uses ioredis under the hood, which works with Valkey
+- BullMQ's Node.js/Bun compatibility should be verified. BullMQ uses ioredis under the hood, which works with Valkey
 
 ### License
 

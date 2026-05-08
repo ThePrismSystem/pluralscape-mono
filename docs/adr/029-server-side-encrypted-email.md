@@ -18,7 +18,7 @@ with read access.
 
 This situation is analogous to push notification tokens (ADR 015), where the
 server must read the value to perform its function. However, email addresses are
-more sensitive than push tokens -- they are personally identifiable information
+more sensitive than push tokens. They are personally identifiable information
 and a common vector for phishing and account takeover attacks. A stronger
 protection is warranted.
 
@@ -51,7 +51,7 @@ server-initiated communication (password reset emails, security alerts).
 
 Defense-in-depth. The encryption key is held in environment variables, separate
 from database credentials. A database breach alone does not expose email
-addresses. This follows the same principle as SQLCipher for local SQLite (ADR 018) -- the encryption is not a zero-knowledge guarantee, but a meaningful
+addresses. This follows the same principle as SQLCipher for local SQLite (ADR 018). The encryption is not a zero-knowledge guarantee, but a meaningful
 barrier against partial compromises.
 
 ### Key management
@@ -59,7 +59,7 @@ barrier against partial compromises.
 The `EMAIL_ENCRYPTION_KEY` is a 64-character hex string (32 bytes). It must be:
 
 - Generated once and stored securely (e.g., in a secrets manager)
-- Backed up -- losing it renders all encrypted emails unrecoverable
+- Backed up. Losing it renders all encrypted emails unrecoverable
 - Rotated by re-encrypting all rows (a future migration concern, not in scope)
 
 The key is optional in development (the column is nullable). In production,

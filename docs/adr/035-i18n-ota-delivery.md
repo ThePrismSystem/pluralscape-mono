@@ -10,7 +10,7 @@ Pluralscape ships 12 locales. Baseline translations live in the repo and are bun
 
 Directly fetching translations from Crowdin's Distribution CDN from each device would expose end-user IPs, locale tags, and launch-time metadata to a third party. That conflicts with Pluralscape's privacy posture: the server is designed to be zero-knowledge, and the app avoids leaking analytics to external services by default.
 
-At the same time, ship-only bundled translations force a full app release for every translation fix — unacceptable for a 12-locale target where translators iterate continuously in Crowdin.
+At the same time, ship-only bundled translations force a full app release for every translation fix. That is unacceptable for a 12-locale target where translators iterate continuously in Crowdin.
 
 ## Decision
 
@@ -25,9 +25,9 @@ A new rate-limit category `i18nFetch` (30/min/IP) caps unauthenticated hits on t
 
 ### Rationale
 
-- Crowdin never sees end-user IPs — only the Pluralscape API's server IPs.
+- Crowdin never sees end-user IPs, only the Pluralscape API's server IPs.
 - The bundled baseline guarantees the app works on cold start and when offline, preserving offline-first.
-- A unified 24h TTL across server Valkey and mobile AsyncStorage keeps CDN egress and device data usage low; 304s refresh the mobile cache's `fetchedAt` so re-revalidation is amortized.
+- A unified 24h TTL across server Valkey and mobile AsyncStorage keeps CDN egress and device data usage low. 304s refresh the mobile cache's `fetchedAt` so re-revalidation is amortized.
 - ETag-gated 304s make OTA refresh cheap on warm caches.
 
 ## Alternatives
@@ -42,6 +42,6 @@ A new rate-limit category `i18nFetch` (30/min/IP) caps unauthenticated hits on t
 - Crowdin never sees end-user IPs. The proxy pays nominal bandwidth cost.
 - API bundle grows by approximately 300 lines (route, service, cache adapter, tRPC mirror).
 - Baseline bundles ship a small set of keys per locale; total size grows with translation coverage. Only the active locale is parsed at runtime thanks to Metro code-splitting.
-- Failure modes are contained: OTA failure → stale cache → bundled baseline. Offline → bundled baseline.
+- Failure modes are contained. OTA failure falls back to stale cache, then to the bundled baseline. Offline falls back to the bundled baseline.
 - Rate-limit category `i18nFetch` provides anti-scrape without blocking legitimate cold-start bursts.
 - Translator fixes roll out on a best-case same-day cadence (bounded by the 24h server TTL) without app releases.

@@ -81,7 +81,7 @@ SQL and is invisible to Drizzle at runtime.
 
 ### Mutability analysis
 
-Fronting sessions are mutable — `end_time` is updated when a session closes.
+Fronting sessions are mutable: `end_time` is updated when a session closes.
 However, `start_time` (the partition key) is immutable. PostgreSQL handles
 updates to non-partition-key columns within a partition without cross-partition
 moves, so this is safe. The `end_time` update always targets the same partition

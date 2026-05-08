@@ -18,7 +18,7 @@ in-depth, and what remains to be implemented.
 
 Already implemented. Over 40 columns across the schema store `EncryptedBlob` values
 (XChaCha20-Poly1305, X25519, Argon2id via libsodium). The server never sees
-plaintext for these columns — it stores and returns opaque ciphertext blobs.
+plaintext for these columns. It stores and returns opaque ciphertext blobs.
 This is the primary privacy guarantee.
 
 See ADR 006 for the encryption protocol and ADR 013 for the API auth/encryption
@@ -53,7 +53,7 @@ boundary.
 ### Layer 3: Transit Encryption
 
 - **TLS**: all client-server communication uses TLS (HTTPS/WSS). This is
-  separate from E2E encryption — TLS protects the transport layer, while E2E
+  separate from E2E encryption. TLS protects the transport layer, while E2E
   encryption ensures the server cannot read the payload.
 - **Sync protocol**: CRDT sync payloads are E2E encrypted before transmission.
 
@@ -87,7 +87,7 @@ This is enforced at two layers for defense-in-depth:
 
 - The pgcrypto extension is available in all PG deployments for future use.
 - Operators deploying Pluralscape must configure volume-level or TDE encryption
-  independently — the application does not enforce this.
+  independently. The application does not enforce this.
 - The distinction between E2E encryption (application guarantee) and at-rest
   encryption (infrastructure guarantee) is now documented, preventing confusion
   in security reviews.

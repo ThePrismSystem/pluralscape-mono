@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-Pluralscape derives all encryption keys from the user's password via Argon2id (ADR 006). This creates a fundamental challenge: if the user forgets their password, the Master Key cannot be re-derived, and all encrypted data becomes permanently inaccessible. Unlike server-side encryption where an admin can reset access, E2E encryption means key loss = data loss.
+Pluralscape derives all encryption keys from the user's password via Argon2id (ADR 006). This creates a fundamental challenge. If the user forgets their password, the Master Key cannot be re-derived, and all encrypted data becomes permanently inaccessible. Unlike server-side encryption where an admin can reset access, E2E encryption means key loss equals data loss.
 
 The recovery mechanism must:
 
@@ -73,11 +73,11 @@ If the user has lost both their password and recovery key, and has no other logg
 
 ## Consequences
 
-- Users who lose both password and recovery key lose all data — this is the intended tradeoff for zero-knowledge encryption
-- The recovery key UX is critical — if users skip or lose it, support burden increases. The onboarding flow must be designed to make saving the key feel important without being annoying
-- Multi-device transfer requires at least one active session — does not help users who lose their only device
+- Users who lose both password and recovery key lose all data. This is the intended tradeoff for zero-knowledge encryption
+- The recovery key UX is critical. If users skip or lose it, support burden increases. The onboarding flow must be designed to make saving the key feel important without being annoying
+- Multi-device transfer requires at least one active session. It does not help users who lose their only device
 - Recovery key regeneration requires re-encrypting the MasterKey backup blob (cheap operation)
-- Web sessions are stateless (MasterKey held in memory only, re-derived from password each session) — web cannot serve as a "backup device" for key transfer unless actively open
+- Web sessions are stateless (MasterKey held in memory only, re-derived from password each session). Web cannot serve as a "backup device" for key transfer unless actively open
 
 ### License
 

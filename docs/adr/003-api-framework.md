@@ -39,10 +39,10 @@ Rejected alternatives:
 
 ## Consequences
 
-- Hono's ecosystem is younger than Fastify/NestJS — fewer battle-tested plugins
-- WebSocket support is basic compared to Phoenix Channels (no built-in pub/sub or presence tracking) — requires Valkey for horizontal scaling
-- tRPC couples frontend and backend TypeScript tightly — external clients must use REST endpoints
-- Bun runtime is the primary target; Node.js compatibility maintained as a fallback
+- Hono's ecosystem is younger than Fastify/NestJS, with fewer battle-tested plugins
+- WebSocket support is basic compared to Phoenix Channels (no built-in pub/sub or presence tracking). Horizontal scaling requires Valkey
+- tRPC couples frontend and backend TypeScript tightly. External clients must use REST endpoints
+- Bun runtime is the primary target. Node.js compatibility is maintained as a fallback
 
 ### License
 

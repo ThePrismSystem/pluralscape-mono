@@ -26,7 +26,7 @@ Key factors:
 
 ## Consequences
 
-- Bun's ecosystem is younger than Node.js — some npm packages may have edge-case incompatibilities
+- Bun's ecosystem is younger than Node.js. Some npm packages may have edge-case incompatibilities
 - The 96MB binary size (bundled Bun runtime) is larger than compiled-language alternatives but acceptable for server deployment
 - Must avoid Bun-specific APIs in application code to maintain Node.js fallback compatibility
 - CI should test against both Bun and Node.js

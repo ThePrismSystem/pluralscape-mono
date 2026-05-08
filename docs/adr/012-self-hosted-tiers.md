@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-Pluralscape offers self-hosting to give users full data sovereignty — a core value driven by the SP shutdown and community distrust of centralized services. However, the full hosted stack requires PostgreSQL, Valkey, S3-compatible storage, and push notification providers. Requiring all of these for self-hosting creates a prohibitively high barrier to entry.
+Pluralscape offers self-hosting to give users full data sovereignty. That value is driven by the SP shutdown and community distrust of centralized services. However, the full hosted stack requires PostgreSQL, Valkey, S3-compatible storage, and push notification providers. Requiring all of these for self-hosting creates a prohibitively high barrier to entry.
 
 The self-hosted deployment must:
 
@@ -85,11 +85,11 @@ Moving from minimal to full tier:
 
 ## Consequences
 
-- Two deployment targets double the integration testing surface — CI must test both tiers
-- Minimal tier has meaningful feature gaps (no push, no real-time, no horizontal scaling) — these must be clearly communicated in documentation, not discovered by surprise
-- The upgrade path (SQLite → PostgreSQL, filesystem → MinIO) requires migration tooling — this is non-trivial engineering work
-- Docker Compose simplifies the full tier but still requires Docker knowledge — truly non-technical users will use the minimal tier or the hosted service
-- Push notifications require Apple/Google developer accounts for FCM/APNs — even the full self-hosted tier cannot provide push without this external dependency
+- Two deployment targets double the integration testing surface. CI must test both tiers
+- Minimal tier has meaningful feature gaps (no push, no real-time, no horizontal scaling). These must be clearly communicated in documentation, not discovered by surprise
+- The upgrade path (SQLite → PostgreSQL, filesystem → MinIO) requires migration tooling, which is non-trivial engineering work
+- Docker Compose simplifies the full tier but still requires Docker knowledge. Truly non-technical users will use the minimal tier or the hosted service
+- Push notifications require Apple/Google developer accounts for FCM/APNs. Even the full self-hosted tier cannot provide push without this external dependency
 
 ### License
 

@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-Pluralscape's public REST API must coexist with E2E encryption (ADR 006). The server is zero-knowledge — it stores ciphertext only, and never sees raw passwords, master keys, or private keys. This creates a fundamental tension: standard API tokens prove identity to the server but cannot decrypt data.
+Pluralscape's public REST API must coexist with E2E encryption (ADR 006). The server is zero-knowledge. It stores ciphertext only and never sees raw passwords, master keys, or private keys. This creates a fundamental tension: standard API tokens prove identity to the server but cannot decrypt data.
 
 The API must support:
 
@@ -115,12 +115,12 @@ All credential-changing operations (`PUT /account/password`, `POST /auth/passwor
 
 ## Consequences
 
-- Two key types add complexity to the API documentation — must be clearly distinguished
-- Crypto keys are high-value secrets — if leaked, attacker can decrypt scoped data until revoked. The UI must communicate this clearly.
+- Two key types add complexity to the API documentation. They must be clearly distinguished
+- Crypto keys are high-value secrets. If leaked, an attacker can decrypt scoped data until revoked. The UI must communicate this clearly.
 - Crypto key creation only works from an authenticated client (needs the MasterKey to encrypt the key bundle). Cannot be done from the API itself.
-- API consumers using crypto keys must implement libsodium decryption — mitigated by providing client SDKs (future) and integration guides for common languages
-- Webhook payload encryption is optional — most integrations will use plaintext metadata payloads, reducing complexity for simple use cases
-- Scoping adds granularity but also UX complexity — the scope selection UI must be simple with sensible presets, not a raw permission matrix
+- API consumers using crypto keys must implement libsodium decryption. Client SDKs (future) and integration guides for common languages will mitigate this
+- Webhook payload encryption is optional. Most integrations will use plaintext metadata payloads, reducing complexity for simple use cases
+- Scoping adds granularity but also UX complexity. The scope selection UI must be simple, with sensible presets rather than a raw permission matrix
 
 ### License
 

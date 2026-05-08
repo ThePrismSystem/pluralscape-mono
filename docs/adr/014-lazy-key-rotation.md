@@ -10,7 +10,7 @@ ADR-006 — the O(bucket_size) synchronous bucket-key rotation stated as a conse
 
 ## Context
 
-ADR 006 specifies that on friend removal from a privacy bucket, the bucket key is rotated and all bucket content is re-encrypted with the new key. This is O(bucket_size) — a blocking, synchronous operation that either freezes the UI or creates race conditions between concurrent writers and the re-encryption process.
+ADR 006 specifies that on friend removal from a privacy bucket, the bucket key is rotated and all bucket content is re-encrypted with the new key. This is O(bucket_size): a blocking, synchronous operation that either freezes the UI or creates race conditions between concurrent writers and the re-encryption process.
 
 Architecture Audit 004 identified this as "Fix This Now" priority: the rotation protocol must be designed before T2 (per-bucket) encryption is implemented.
 
@@ -180,11 +180,11 @@ This matches the security model of Etebase, Proton Drive, and Keeper — revocat
 
 ## Consequences
 
-- Supersedes the ADR 006 consequence "Bucket key rotation on friend removal is O(bucket_size) — keep buckets reasonably sized" — buckets can now be any size, rotation is non-blocking
+- Supersedes the ADR 006 consequence "Bucket key rotation on friend removal is O(bucket_size) — keep buckets reasonably sized". Buckets can now be any size, and rotation is non-blocking
 - Adds server-side complexity (rotation ledger, claim mechanism) but keeps crypto operations client-side
-- The dual-key read window requires clients to cache two keys per bucket during rotation — bounded by the 7-day hard limit
-- Rotation items are derived from `BucketContentTag` records — if tagging is inconsistent, items may be missed. The `sealing` state re-scans for items added during migration and verifies the accounting invariant before purging the old key
-- Self-hosted deployments with single-device owners may see slower rotations — the 24-hour target is generous, and the 7-day hard limit provides a safety net
+- The dual-key read window requires clients to cache two keys per bucket during rotation, bounded by the 7-day hard limit
+- Rotation items are derived from `BucketContentTag` records. If tagging is inconsistent, items may be missed. The `sealing` state re-scans for items added during migration and verifies the accounting invariant before purging the old key
+- Self-hosted deployments with single-device owners may see slower rotations. The 24-hour target is generous, and the 7-day hard limit provides a safety net
 - The `failed` state preserves data accessibility at the cost of leaving old-key content readable by anyone who still possesses the old key material (which should be no one, since grants are revoked). Failed rotations are automatically retried on the next device session and can be manually triggered from the UI
 
 ### License
