@@ -2,9 +2,9 @@
 
 > Audience: developers implementing the sync client (mobile, web). For a high-level overview, see the [API Consumer Guide](api-consumer-guide.md#6-sync-protocol).
 
-Pluralscape uses an encrypted CRDT sync protocol for offline-first data synchronization. The server is an encrypted relay -- it stores and forwards ciphertext without ever seeing plaintext content. All encryption and decryption happen on the client.
+Pluralscape uses an encrypted CRDT sync protocol for offline-first data synchronization. The server is an encrypted relay: it stores and forwards ciphertext without ever seeing plaintext content. All encryption and decryption happen on the client.
 
-The protocol is transport-agnostic. The primary transport is WebSocket; HTTP long-polling is a fallback. The wire format is JSON with binary fields (ciphertext, nonces, signatures, public keys) encoded as Base64url strings.
+The protocol is transport-agnostic. The primary transport is WebSocket, with HTTP long-polling as a fallback. The wire format is JSON with binary fields (ciphertext, nonces, signatures, public keys) encoded as Base64url strings.
 
 ---
 
@@ -51,7 +51,7 @@ Client                                Server
 
 1. `AuthenticateRequest` must be the first message. Anything else before authentication produces `SyncError { code: "AUTH_FAILED" }` and a connection close.
 2. `ManifestRequest` must precede `SubscribeRequest`.
-3. After the handshake, messages flow concurrently -- there is no strict turn-taking.
+3. After the handshake, messages flow concurrently. There is no strict turn-taking.
 
 **Protocol version:** `AuthenticateRequest` declares `protocolVersion: 1`. If the server does not support the client's version, it responds with `SyncError { code: "PROTOCOL_MISMATCH" }` and closes.
 
@@ -251,7 +251,7 @@ After the handshake, the change submission cycle is:
 
 **Rate limiting:** see [`docs/api-limits.md`](../api-limits.md#websocket-sync-limits) for WebSocket rate limits. After 10 consecutive rate limit strikes, the server closes the connection.
 
-**Client-side materialization:** decrypted Automerge state is projected into a local SQLite **client cache** for query access. The client-cache schema is one of the three Drizzle schema sets defined in [ADR-038](../adr/038-three-drizzle-schema-sets.md) (server PG, server SQLite, client-cache SQLite); cache tables hold the decrypted projection plus FTS5 indexes for search. The materializer registry (`packages/sync/src/materializer/materializer-registry.ts`) maps each `docType` to a domain materializer, and `createMaterializerSubscriber` (in `@pluralscape/data`) subscribes to the sync engine and writes into the cache on every applied change. Materialization runs in the data-layer write path -- the same observer feeds the React Query invalidator so UI updates flow without manual refetch.
+**Client-side materialization:** decrypted Automerge state is projected into a local SQLite **client cache** for query access. The client-cache schema is one of the three Drizzle schema sets defined in [ADR-038](../adr/038-three-drizzle-schema-sets.md) (server PG, server SQLite, client-cache SQLite). Cache tables hold the decrypted projection plus FTS5 indexes for search. The materializer registry (`packages/sync/src/materializer/materializer-registry.ts`) maps each `docType` to a domain materializer, and `createMaterializerSubscriber` (in `@pluralscape/data`) subscribes to the sync engine and writes into the cache on every applied change. Materialization runs in the data-layer write path. The same observer feeds the React Query invalidator so UI updates flow without manual refetch.
 
 ## 9. Offline Queue
 
@@ -280,7 +280,7 @@ Automerge handles structural merge automatically (concurrent edits to different 
 
 **Timer config normalization:** waking-hours constraints are validated and corrected if concurrent edits produce impossible time ranges.
 
-**Conflict notifications:** all auto-resolved conflicts generate ephemeral `ConflictNotification` records. These are not persisted to the CRDT document -- they are delivered to the client callback for UI display.
+**Conflict notifications:** all auto-resolved conflicts generate ephemeral `ConflictNotification` records. These are not persisted to the CRDT document; they are delivered to the client callback for UI display.
 
 **Correction envelopes:** all corrections are submitted as new encrypted changes, so they become part of the document's CRDT history and propagate to all devices.
 
