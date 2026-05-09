@@ -1,3 +1,6 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import eslintCommentsPlugin from "@eslint-community/eslint-plugin-eslint-comments/configs";
 import eslintConfigPrettier from "eslint-config-prettier";
 import importPlugin from "eslint-plugin-import-x";
@@ -8,10 +11,18 @@ import { locRules } from "./loc-rules.js";
 import noBearerPrefixOnSpAuth from "./rules/no-bearer-prefix-on-sp-auth.js";
 import noDeepTypesImports from "./rules/no-deep-types-imports.js";
 import noDoubleCast from "./rules/no-double-cast.js";
+import noHandRolledDomainTypes, {
+  loadManifestEntities,
+} from "./rules/no-hand-rolled-domain-types.js";
 import noHandRolledRequestTypes from "./rules/no-hand-rolled-request-types.js";
 import noLocalEncryptedFields from "./rules/no-local-encrypted-fields.js";
 import noParamsUnknown from "./rules/no-params-unknown.js";
 import noServicesBarrel from "./rules/no-services-barrel.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const MANIFEST_PATH = path.resolve(__dirname, "../../packages/types/src/__sot-manifest__.ts");
+const MANIFEST_ENTITIES = loadManifestEntities(MANIFEST_PATH);
 
 export default tseslint.config(
   {
@@ -21,6 +32,7 @@ export default tseslint.config(
           "no-bearer-prefix-on-sp-auth": noBearerPrefixOnSpAuth,
           "no-deep-types-imports": noDeepTypesImports,
           "no-double-cast": noDoubleCast,
+          "no-hand-rolled-domain-types": noHandRolledDomainTypes,
           "no-hand-rolled-request-types": noHandRolledRequestTypes,
           "no-local-encrypted-fields": noLocalEncryptedFields,
           "no-params-unknown": noParamsUnknown,
@@ -184,6 +196,12 @@ export default tseslint.config(
     rules: {
       "pluralscape/no-deep-types-imports": "error",
       "pluralscape/no-double-cast": "error",
+    },
+  },
+  {
+    files: ["apps/**/*.{ts,tsx}", "packages/!(types)/**/*.{ts,tsx}"],
+    rules: {
+      "pluralscape/no-hand-rolled-domain-types": ["error", { manifestEntities: MANIFEST_ENTITIES }],
     },
   },
   {
