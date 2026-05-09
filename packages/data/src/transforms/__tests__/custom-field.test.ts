@@ -14,14 +14,11 @@ import {
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type {
-  FieldDefinitionDecrypted,
-  FieldDefinitionEncryptedInput,
-  FieldValueDecrypted,
-} from "../custom-field.js";
+import type { FieldDefinitionDecrypted, FieldValueDecrypted } from "../custom-field.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
   FieldDefinition,
+  FieldDefinitionEncryptedInput,
   FieldDefinitionId,
   FieldDefinitionLabel,
   FieldValueId,

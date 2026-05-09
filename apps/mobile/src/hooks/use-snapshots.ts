@@ -17,10 +17,9 @@ import {
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   SnapshotDecrypted,
-  SnapshotPage as SnapshotRawPage,
-  SnapshotRaw,
+  SnapshotPage as SystemSnapshotWirePage,
 } from "@pluralscape/data/transforms/snapshot";
-import type { SystemSnapshotId } from "@pluralscape/types";
+import type { SystemSnapshotId, SystemSnapshotWire } from "@pluralscape/types";
 
 interface SnapshotListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -30,7 +29,7 @@ export function useSnapshot(
   snapshotId: SystemSnapshotId,
   opts?: SystemIdOverride,
 ): DataQuery<SnapshotDecrypted> {
-  return useOfflineFirstQuery<SnapshotRaw, SnapshotDecrypted>({
+  return useOfflineFirstQuery<SystemSnapshotWire, SnapshotDecrypted>({
     queryKey: ["snapshots", snapshotId],
     table: "snapshots",
     entityId: snapshotId,
@@ -49,7 +48,7 @@ export function useSnapshot(
 }
 
 export function useSnapshotsList(opts?: SnapshotListOpts): DataListQuery<SnapshotDecrypted> {
-  return useOfflineFirstInfiniteQuery<SnapshotRaw, SnapshotDecrypted>({
+  return useOfflineFirstInfiniteQuery<SystemSnapshotWire, SnapshotDecrypted>({
     queryKey: ["snapshots", "list"],
     table: "snapshots",
     // Snapshots are remote-only; local path never executes
@@ -66,7 +65,7 @@ export function useSnapshotsList(opts?: SnapshotListOpts): DataListQuery<Snapsho
         },
         {
           enabled,
-          getNextPageParam: (lastPage: SnapshotRawPage) => lastPage.nextCursor,
+          getNextPageParam: (lastPage: SystemSnapshotWirePage) => lastPage.nextCursor,
           select,
         },
       ) as DataListQuery<SnapshotDecrypted>,

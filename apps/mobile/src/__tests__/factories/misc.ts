@@ -24,14 +24,11 @@ import { brandId, brandValue } from "@pluralscape/types";
 
 import { NOW, TEST_MASTER_KEY, TEST_SYSTEM_ID } from "./shared.js";
 
-import type { SnapshotRaw } from "@pluralscape/data/transforms/snapshot";
 import type { NomenclatureSettingsWire } from "@pluralscape/data/transforms/system-settings";
-import type {
-  CheckInRecordRaw,
-  TimerConfigServerWire,
-} from "@pluralscape/data/transforms/timer-check-in";
+import type { TimerConfigServerWire } from "@pluralscape/data/transforms/timer-check-in";
 import type {
   CheckInRecordId,
+  CheckInRecordWire,
   FieldDefinitionLabel,
   FieldDefinitionWire,
   FieldValueWire,
@@ -45,6 +42,7 @@ import type {
   SystemSettingsId,
   SystemSettingsWire,
   SystemSnapshotId,
+  SystemSnapshotWire,
   TimerId,
 } from "@pluralscape/types";
 
@@ -250,7 +248,10 @@ export function makeRawRelationship(
   };
 }
 
-export function makeRawSnapshot(id: string, overrides?: Partial<SnapshotRaw>): SnapshotRaw {
+export function makeRawSnapshot(
+  id: string,
+  overrides?: Partial<SystemSnapshotWire>,
+): SystemSnapshotWire {
   const content = makeSnapshotContent();
   const encrypted = encryptSnapshotInput(content, TEST_MASTER_KEY);
   return {
@@ -331,8 +332,8 @@ export function makeRawTimer(
 
 export function makeRawCheckIn(
   id: string,
-  overrides?: Partial<CheckInRecordRaw>,
-): CheckInRecordRaw {
+  overrides?: Partial<CheckInRecordWire>,
+): CheckInRecordWire {
   return {
     id: brandId<CheckInRecordId>(id),
     timerConfigId: brandId<TimerId>("tmr-1"),
@@ -343,6 +344,7 @@ export function makeRawCheckIn(
     dismissed: false,
     archived: false,
     archivedAt: null,
+    encryptedData: null,
     ...overrides,
   };
 }
