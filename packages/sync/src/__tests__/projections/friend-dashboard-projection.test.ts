@@ -1,4 +1,5 @@
 import * as Automerge from "@automerge/automerge";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import { createBucketDocument } from "../../factories/document-factory.js";
@@ -7,7 +8,7 @@ import {
   projectDashboardSnapshot,
 } from "../../projections/friend-dashboard-projection.js";
 
-import type { FriendDashboardResponse } from "@pluralscape/types";
+import type { FriendDashboardResponse, FrontingSessionId, MemberId } from "@pluralscape/types";
 
 // ── Test helpers ────────────────────────────────────────────────
 
@@ -53,19 +54,19 @@ describe("projectDashboardSnapshot", () => {
       activeFronting: {
         sessions: [
           {
-            id: "fs_1" as never,
-            memberId: "mem_1" as never,
+            id: brandId<FrontingSessionId>("fs_1"),
+            memberId: brandId<MemberId>("mem_1"),
             customFrontId: null,
             structureEntityId: null,
-            startTime: 1000 as never,
+            startTime: toUnixMillis(1000),
             encryptedData: "base64data",
           },
           {
-            id: "fs_2" as never,
-            memberId: "mem_2" as never,
+            id: brandId<FrontingSessionId>("fs_2"),
+            memberId: brandId<MemberId>("mem_2"),
             customFrontId: null,
             structureEntityId: null,
-            startTime: 2000 as never,
+            startTime: toUnixMillis(2000),
             encryptedData: "base64data2",
           },
         ],
