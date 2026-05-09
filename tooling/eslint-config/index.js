@@ -5,6 +5,7 @@ import unicornPlugin from "eslint-plugin-unicorn";
 import tseslint from "typescript-eslint";
 
 import { locRules } from "./loc-rules.js";
+import noBearerPrefixOnSpAuth from "./rules/no-bearer-prefix-on-sp-auth.js";
 import noHandRolledRequestTypes from "./rules/no-hand-rolled-request-types.js";
 import noParamsUnknown from "./rules/no-params-unknown.js";
 import noServicesBarrel from "./rules/no-services-barrel.js";
@@ -14,6 +15,7 @@ export default tseslint.config(
     plugins: {
       pluralscape: {
         rules: {
+          "no-bearer-prefix-on-sp-auth": noBearerPrefixOnSpAuth,
           "no-hand-rolled-request-types": noHandRolledRequestTypes,
           "no-params-unknown": noParamsUnknown,
           "no-services-barrel": noServicesBarrel,
@@ -163,6 +165,12 @@ export default tseslint.config(
     files: ["apps/api/src/services/**"],
     rules: {
       "pluralscape/no-services-barrel": "error",
+    },
+  },
+  {
+    files: ["packages/import-sp/src/**"],
+    rules: {
+      "pluralscape/no-bearer-prefix-on-sp-auth": "error",
     },
   },
   {
