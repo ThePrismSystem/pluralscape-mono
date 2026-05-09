@@ -27,7 +27,16 @@ describe("validateEncryptedBlob", () => {
   });
 
   it("returns EncryptedBlob for valid base64 data", () => {
-    const fakeBlob = { type: 1, ciphertext: new Uint8Array([1, 2, 3]) } as never as EncryptedBlob;
+    // Build a structurally-complete T1EncryptedBlob literal — direct
+    // assignment to the discriminated union, no cast required.
+    const fakeBlob: EncryptedBlob = {
+      tier: 1,
+      ciphertext: new Uint8Array([1, 2, 3]),
+      nonce: new Uint8Array(24),
+      algorithm: "xchacha20-poly1305",
+      keyVersion: null,
+      bucketId: null,
+    };
     vi.mocked(deserializeEncryptedBlob).mockReturnValue(fakeBlob);
 
     const smallPayload = Buffer.from("hello").toString("base64");

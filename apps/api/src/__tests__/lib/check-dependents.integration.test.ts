@@ -274,5 +274,9 @@ function stubDb(opts: {
       }),
     }),
   };
-  return stub as never as import("drizzle-orm/postgres-js").PostgresJsDatabase;
+  // Widen via `unknown` so a single `as` assertion lands at the
+  // PostgresJsDatabase return — duck-compatible at runtime; only the
+  // PostgresJsDatabase brand is bridged.
+  const opaque: unknown = stub;
+  return opaque as import("drizzle-orm/postgres-js").PostgresJsDatabase;
 }

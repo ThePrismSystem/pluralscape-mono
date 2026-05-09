@@ -20,7 +20,6 @@ import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { RegistrationCommitResult } from "../../services/auth/register.js";
 import type { SignSecretKey } from "@pluralscape/crypto";
-import type * as schema from "@pluralscape/db/pg";
 import type {
   AccountId,
   AcknowledgementId,
@@ -50,7 +49,7 @@ import type {
   WebhookDeliveryId,
   WebhookId,
 } from "@pluralscape/types";
-import type { PgliteDatabase } from "drizzle-orm/pglite";
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export { testBlob };
@@ -59,9 +58,18 @@ export { testBlob };
  * Cast PGlite DB to PostgresJsDatabase for service functions.
  * Both are PgDatabase subclasses with identical query APIs; this bridge
  * is only valid in tests where the query result HKT difference is irrelevant.
+ *
+ * Implementation: parameter widens to PgDatabase with an unknown schema
+ * generic (`Record<string, unknown>`); the return type is PostgresJsDatabase
+ * with its default schema generic. The single assertion bridges the nominal
+ * HKT difference (PgliteQueryResultHKT → PostgresJsQueryResultHKT) and the
+ * schema variance simultaneously — both are runtime-immaterial but
+ * type-system-distinct.
  */
-export function asDb(db: PgliteDatabase<typeof schema>): PostgresJsDatabase {
-  return db as never as PostgresJsDatabase;
+export function asDb(
+  db: PgDatabase<PgQueryResultHKT, Record<string, unknown>>,
+): PostgresJsDatabase {
+  return db as PostgresJsDatabase;
 }
 
 /**

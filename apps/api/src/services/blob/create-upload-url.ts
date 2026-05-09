@@ -12,6 +12,7 @@ import {
 import { HTTP_BAD_REQUEST, HTTP_CONTENT_TOO_LARGE } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
+import { asInternalStorageKey } from "../../lib/storage-key-brand.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
 import { PRESIGNED_UPLOAD_TTL_MS } from "../../routes/blobs/blobs.constants.js";
@@ -81,7 +82,7 @@ export async function createUploadUrl(
     await tx.insert(blobMetadata).values({
       id: blobId,
       systemId,
-      storageKey: storageKey as string as ServerInternal<string>,
+      storageKey: asInternalStorageKey(storageKey),
       mimeType,
       sizeBytes,
       encryptionTier: encryptionTier as ServerInternal<typeof encryptionTier>,

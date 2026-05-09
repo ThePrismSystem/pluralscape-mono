@@ -2,8 +2,10 @@ import { blobMetadata } from "@pluralscape/db/pg";
 import { now } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 
+import { asInternalStorageKey } from "./storage-key-brand.js";
+
 import type { BlobArchiver } from "@pluralscape/storage/quota";
-import type { ServerInternal, StorageKey } from "@pluralscape/types";
+import type { StorageKey } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /**
@@ -25,9 +27,10 @@ export class BlobArchiverImpl implements BlobArchiver {
       .where(
         and(
           // The storage_key column is branded `ServerInternal<string>` for
-          // wire-strip; the input is a `StorageKey` (a peer brand). Drop
-          // through `string` to align both for the typed `eq()` overload.
-          eq(blobMetadata.storageKey, storageKey as string as ServerInternal<string>),
+          // wire-strip; the input is a `StorageKey` (a peer brand). Re-tag
+          // through the shared helper so the typed `eq()` overload accepts
+          // the value with a single assertion inside the helper.
+          eq(blobMetadata.storageKey, asInternalStorageKey(storageKey)),
           eq(blobMetadata.archived, false),
         ),
       );

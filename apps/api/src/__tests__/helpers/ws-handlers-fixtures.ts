@@ -119,7 +119,11 @@ export function mockDb(authorPublicKey: Uint8Array = pubkey(10)): PostgresJsData
     execute: vi.fn().mockResolvedValue(undefined),
     transaction: vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(db)),
   };
-  return db as never as PostgresJsDatabase;
+  // Widen via `unknown` (the structural common parent) so the assertion
+  // is a single `as` step — the runtime shape is duck-compatible with
+  // PostgresJsDatabase for the methods exercised in tests.
+  const opaque: unknown = db;
+  return opaque as PostgresJsDatabase;
 }
 
 /** Account ID used across the happy-path handlers tests. */

@@ -6,13 +6,18 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
  * Cast a mock chain to PostgresJsDatabase for service function calls.
  *
  * MockChain provides the same chainable API as PostgresJsDatabase at runtime
- * but the nominal types don't overlap. This dedicated cast function keeps the
- * bridge in one place rather than scattering `as` casts across every test.
+ * but the nominal types don't overlap. The argument is `unknown` (the
+ * widest no-op input type) so a single `as PostgresJsDatabase` assertion
+ * lands at the call site without a double-cast.
  */
 export function asDb(
   mock: MockChain | Record<string, ReturnType<typeof vi.fn>>,
 ): PostgresJsDatabase {
-  return mock as never as PostgresJsDatabase;
+  // Widen via a typed local so the assertion has a single `as` on a
+  // sufficiently-wide source. The chainable surface is what tests rely on,
+  // not the PostgresJsDatabase brand.
+  const opaque: unknown = mock;
+  return opaque as PostgresJsDatabase;
 }
 
 export interface MockChain {
@@ -62,10 +67,17 @@ export function mockDb(overrides?: Partial<MockChain>): {
     having: vi.fn(),
   };
 
-  // Apply overrides after construction so Partial<MockChain> doesn't widen types
+  // Apply overrides after construction so Partial<MockChain> doesn't widen
+  // types. Iterate via typed `(keyof MockChain)[]` so the assignment is
+  // narrowed at each step without a runtime `as` — TS understands
+  // `chain[k] = overrides[k]` when `k` is a known key of both objects.
   if (overrides) {
-    for (const [key, value] of Object.entries(overrides)) {
-      (chain as never as Record<string, unknown>)[key] = value;
+    const overrideKeys = Object.keys(overrides) as (keyof MockChain)[];
+    for (const key of overrideKeys) {
+      const value = overrides[key];
+      if (value !== undefined) {
+        chain[key] = value;
+      }
     }
   }
 

@@ -101,7 +101,11 @@ export function mockDb(publicKeys: Uint8Array[] = []): PostgresJsDatabase {
     execute: vi.fn().mockResolvedValue(undefined),
     transaction: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn(db)),
   };
-  return db as never as PostgresJsDatabase;
+  // Widen via `unknown` (the structural common parent) so the assertion
+  // is a single `as` step — runtime shape is duck-compatible with
+  // PostgresJsDatabase for the methods exercised in tests.
+  const opaque: unknown = db;
+  return opaque as PostgresJsDatabase;
 }
 
 export function brandedBytes(size: number, fill: number): BrandedBytes {

@@ -25,13 +25,13 @@ import { encryptEmail, getEmailEncryptionKey } from "../../lib/email-encrypt.js"
 import { hashEmail } from "../../lib/email-hash.js";
 import { fromHex, toHex } from "../../lib/hex.js";
 import { withAccountTransaction } from "../../lib/rls-context.js";
+import { asChallengeNonce, asInternalBytes } from "../../lib/server-internal-brand.js";
 import { generateSessionToken, hashSessionToken } from "../../lib/session-token.js";
 import { isUniqueViolation } from "../../lib/unique-violation.js";
 import { EMAIL_SALT_BYTES, CHALLENGE_NONCE_TTL_MS } from "../../routes/auth/auth.constants.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { ClientPlatform } from "../../routes/auth/auth.constants.js";
-import type { ChallengeNonce } from "@pluralscape/crypto";
 import type {
   AccountId,
   AccountType,
@@ -95,7 +95,7 @@ export async function initiateRegistration(
         authKeyHash: placeholderAuthKeyHash,
         kdfSalt: kdfSaltHex,
         encryptedMasterKey: placeholderEncryptedMasterKey,
-        challengeNonce: challengeNonce as Uint8Array as ServerInternal<Uint8Array>,
+        challengeNonce: asInternalBytes(challengeNonce),
         challengeExpiresAt: challengeExpiresAt as ServerInternal<UnixMillis>,
         encryptedEmail: encryptedEmailBytes as ServerInternal<Uint8Array> | null,
         createdAt: timestamp,
@@ -200,7 +200,7 @@ export async function commitRegistration(
   const signatureValid = verifyChallenge(
     // Drop the `ServerInternal<…>` brand on the way to the crypto helper —
     // the bytes are still a valid ChallengeNonce, the brand is wire-strip only.
-    account.challengeNonce as Uint8Array as ChallengeNonce,
+    asChallengeNonce(account.challengeNonce),
     signatureBytes,
     publicSigningKeyBytes,
   );
