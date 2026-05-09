@@ -8,6 +8,7 @@ import { locRules } from "./loc-rules.js";
 import noBearerPrefixOnSpAuth from "./rules/no-bearer-prefix-on-sp-auth.js";
 import noDeepTypesImports from "./rules/no-deep-types-imports.js";
 import noHandRolledRequestTypes from "./rules/no-hand-rolled-request-types.js";
+import noLocalEncryptedFields from "./rules/no-local-encrypted-fields.js";
 import noParamsUnknown from "./rules/no-params-unknown.js";
 import noServicesBarrel from "./rules/no-services-barrel.js";
 
@@ -19,6 +20,7 @@ export default tseslint.config(
           "no-bearer-prefix-on-sp-auth": noBearerPrefixOnSpAuth,
           "no-deep-types-imports": noDeepTypesImports,
           "no-hand-rolled-request-types": noHandRolledRequestTypes,
+          "no-local-encrypted-fields": noLocalEncryptedFields,
           "no-params-unknown": noParamsUnknown,
           "no-services-barrel": noServicesBarrel,
         },
@@ -179,6 +181,12 @@ export default tseslint.config(
     files: ["**/*.ts", "**/*.tsx"],
     rules: {
       "pluralscape/no-deep-types-imports": "error",
+    },
+  },
+  {
+    files: ["packages/data/src/transforms/**", "packages/sync/src/**"],
+    rules: {
+      "pluralscape/no-local-encrypted-fields": "error",
     },
   },
   {
