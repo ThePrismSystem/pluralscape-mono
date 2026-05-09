@@ -19,20 +19,15 @@ import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
   EncryptedBlob,
-  EncryptedWire,
   PaginatedResult,
   SnapshotTrigger,
   SystemId,
   SystemSnapshotId,
-  SystemSnapshotServerMetadata,
+  SystemSnapshotResult,
 } from "@pluralscape/types";
 import type { CreateSnapshotBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { z } from "zod/v4";
-
-// ── Types ───────────────────────────────────────────────────────────
-
-export type SnapshotResult = EncryptedWire<SystemSnapshotServerMetadata>;
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -42,7 +37,7 @@ function toSnapshotResult(row: {
   snapshotTrigger: string;
   encryptedData: EncryptedBlob;
   createdAt: number;
-}): SnapshotResult {
+}): SystemSnapshotResult {
   return {
     id: brandId<SystemSnapshotId>(row.id),
     systemId: brandId<SystemId>(row.systemId),
@@ -60,7 +55,7 @@ export async function createSnapshot(
   body: z.infer<typeof CreateSnapshotBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
-): Promise<SnapshotResult> {
+): Promise<SystemSnapshotResult> {
   assertSystemOwnership(systemId, auth);
 
   const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
@@ -103,7 +98,7 @@ export async function listSnapshots(
   auth: AuthContext,
   cursor?: string,
   limit = DEFAULT_PAGE_LIMIT,
-): Promise<PaginatedResult<SnapshotResult>> {
+): Promise<PaginatedResult<SystemSnapshotResult>> {
   assertSystemOwnership(systemId, auth);
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
@@ -133,7 +128,7 @@ export async function getSnapshot(
   systemId: SystemId,
   snapshotId: SystemSnapshotId,
   auth: AuthContext,
-): Promise<SnapshotResult> {
+): Promise<SystemSnapshotResult> {
   assertSystemOwnership(systemId, auth);
 
   return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
