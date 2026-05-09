@@ -30,7 +30,7 @@
     "@t3-oss/env-core": "^0.13.10",
     "@trpc/server": "catalog:",
     "drizzle-orm": "catalog:",
-    "hono": "^4.12.12",
+    "hono": "^4.12.18",
     "pino": "^10.0.0",
     "postgres": "catalog:",
     "uuid": "^14.0.0",
