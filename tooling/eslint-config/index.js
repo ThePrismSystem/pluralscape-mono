@@ -7,6 +7,7 @@ import tseslint from "typescript-eslint";
 import { locRules } from "./loc-rules.js";
 import noHandRolledRequestTypes from "./rules/no-hand-rolled-request-types.js";
 import noParamsUnknown from "./rules/no-params-unknown.js";
+import noServicesBarrel from "./rules/no-services-barrel.js";
 
 export default tseslint.config(
   {
@@ -15,6 +16,7 @@ export default tseslint.config(
         rules: {
           "no-hand-rolled-request-types": noHandRolledRequestTypes,
           "no-params-unknown": noParamsUnknown,
+          "no-services-barrel": noServicesBarrel,
         },
       },
     },
@@ -155,6 +157,12 @@ export default tseslint.config(
 
       // Curly braces required
       curly: "error",
+    },
+  },
+  {
+    files: ["apps/api/src/services/**"],
+    rules: {
+      "pluralscape/no-services-barrel": "error",
     },
   },
   {
