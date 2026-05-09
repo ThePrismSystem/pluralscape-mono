@@ -17,6 +17,7 @@ import noHandRolledDomainTypes, {
 import noHandRolledRequestTypes from "./rules/no-hand-rolled-request-types.js";
 import noLocalEncryptedFields from "./rules/no-local-encrypted-fields.js";
 import noParamsUnknown from "./rules/no-params-unknown.js";
+import noPrOrBeanRefsInCode from "./rules/no-pr-or-bean-refs-in-code.js";
 import noServicesBarrel from "./rules/no-services-barrel.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -36,6 +37,7 @@ export default tseslint.config(
           "no-hand-rolled-request-types": noHandRolledRequestTypes,
           "no-local-encrypted-fields": noLocalEncryptedFields,
           "no-params-unknown": noParamsUnknown,
+          "no-pr-or-bean-refs-in-code": noPrOrBeanRefsInCode,
           "no-services-barrel": noServicesBarrel,
         },
       },
@@ -208,6 +210,12 @@ export default tseslint.config(
     files: ["packages/data/src/transforms/**", "packages/sync/src/**"],
     rules: {
       "pluralscape/no-local-encrypted-fields": "error",
+    },
+  },
+  {
+    files: ["apps/**/*.{ts,tsx}", "packages/**/*.{ts,tsx}"],
+    rules: {
+      "pluralscape/no-pr-or-bean-refs-in-code": "error",
     },
   },
   {
