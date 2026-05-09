@@ -7,6 +7,7 @@ import tseslint from "typescript-eslint";
 import { locRules } from "./loc-rules.js";
 import noBearerPrefixOnSpAuth from "./rules/no-bearer-prefix-on-sp-auth.js";
 import noDeepTypesImports from "./rules/no-deep-types-imports.js";
+import noDoubleCast from "./rules/no-double-cast.js";
 import noHandRolledRequestTypes from "./rules/no-hand-rolled-request-types.js";
 import noLocalEncryptedFields from "./rules/no-local-encrypted-fields.js";
 import noParamsUnknown from "./rules/no-params-unknown.js";
@@ -19,6 +20,7 @@ export default tseslint.config(
         rules: {
           "no-bearer-prefix-on-sp-auth": noBearerPrefixOnSpAuth,
           "no-deep-types-imports": noDeepTypesImports,
+          "no-double-cast": noDoubleCast,
           "no-hand-rolled-request-types": noHandRolledRequestTypes,
           "no-local-encrypted-fields": noLocalEncryptedFields,
           "no-params-unknown": noParamsUnknown,
@@ -181,6 +183,7 @@ export default tseslint.config(
     files: ["**/*.ts", "**/*.tsx"],
     rules: {
       "pluralscape/no-deep-types-imports": "error",
+      "pluralscape/no-double-cast": "error",
     },
   },
   {
