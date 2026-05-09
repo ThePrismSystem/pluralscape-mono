@@ -8,6 +8,7 @@ import unicornPlugin from "eslint-plugin-unicorn";
 import tseslint from "typescript-eslint";
 
 import { locRules } from "./loc-rules.js";
+import noAsNeverInFixtures from "./rules/no-as-never-in-fixtures.js";
 import noBearerPrefixOnSpAuth from "./rules/no-bearer-prefix-on-sp-auth.js";
 import noDeepTypesImports from "./rules/no-deep-types-imports.js";
 import noDoubleCast from "./rules/no-double-cast.js";
@@ -30,6 +31,7 @@ export default tseslint.config(
     plugins: {
       pluralscape: {
         rules: {
+          "no-as-never-in-fixtures": noAsNeverInFixtures,
           "no-bearer-prefix-on-sp-auth": noBearerPrefixOnSpAuth,
           "no-deep-types-imports": noDeepTypesImports,
           "no-double-cast": noDoubleCast,
@@ -216,6 +218,12 @@ export default tseslint.config(
     files: ["apps/**/*.{ts,tsx}", "packages/**/*.{ts,tsx}"],
     rules: {
       "pluralscape/no-pr-or-bean-refs-in-code": "error",
+    },
+  },
+  {
+    files: ["**/*.test.ts", "**/*.test.tsx", "**/__tests__/**/*.ts", "**/__tests__/**/*.tsx"],
+    rules: {
+      "pluralscape/no-as-never-in-fixtures": "error",
     },
   },
   {

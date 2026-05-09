@@ -18,7 +18,7 @@ import {
 } from "../crypto.constants.js";
 import { DecryptionFailedError, InvalidInputError } from "../errors.js";
 
-import type { BoxNonce, PwhashSalt, Signature } from "../types.js";
+import type { AeadKey, BoxNonce, PwhashSalt, Signature } from "../types.js";
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -61,8 +61,8 @@ describe("BaseSodiumAdapter (via WasmSodiumAdapter)", () => {
     });
 
     it("rejects invalid key length", () => {
-      const badKey = new Uint8Array(16);
-      expect(() => adapter.aeadEncrypt(enc.encode("data"), null, badKey as never)).toThrow(
+      const badKey = new Uint8Array(16) as AeadKey;
+      expect(() => adapter.aeadEncrypt(enc.encode("data"), null, badKey)).toThrow(
         InvalidInputError,
       );
     });
