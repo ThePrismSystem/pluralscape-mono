@@ -6,8 +6,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
 
 import type { LocalDatabase } from "../../data/local-database.js";
-import type { DataListQuery, DataQuery } from "../types.js";
-import type { SystemId } from "@pluralscape/types";
+import type { DataListQuery, DataQuery, TRPCMutation } from "../types.js";
+import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type { MemberId, SystemId } from "@pluralscape/types";
 
 // ── Fixture registry (accessible from vi.mock via hoisting) ──────────
 const { fixtures } = vi.hoisted(() => {
@@ -98,6 +99,12 @@ function createMockLocalDb(rows: Record<string, unknown>[]) {
   };
 }
 
+// `member.get`/`member.list` use-query option bags carry React Query
+// generics that conflict with the loosely-typed mock. Tag each option bag with
+// the local `MockQueryOpts` type so the cast is a single direct cast.
+type MockQueryOpts = Parameters<typeof trpc.member.get.useQuery>[1];
+type MockListOpts = Parameters<typeof trpc.member.list.useInfiniteQuery>[1];
+
 // ── Test hooks that exercise each factory ────────────────────────────
 
 function useEncryptedGet(id: string) {
@@ -108,10 +115,10 @@ function useEncryptedGet(id: string) {
     rowTransform: (row) => ({ decryptedName: String(row["name"]) }),
     decrypt: (raw) => ({ decryptedName: `decrypted:${raw.name}` }),
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.member.get.useQuery({ systemId, memberId: id as never }, { enabled, select } as Record<
-        string,
-        unknown
-      >) as DataQuery<DecEntity>,
+      trpc.member.get.useQuery({ systemId, memberId: brandId<MemberId>(id) }, {
+        enabled,
+        select,
+      } as MockQueryOpts) as DataQuery<DecEntity>,
   });
 }
 
@@ -122,10 +129,10 @@ function usePlaintextGet(id: string) {
     entityId: id,
     rowTransform: (row) => ({ name: String(row["name"]) }),
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.member.get.useQuery({ systemId, memberId: id as never }, { enabled, select } as Record<
-        string,
-        unknown
-      >) as DataQuery<RawEntity>,
+      trpc.member.get.useQuery({ systemId, memberId: brandId<MemberId>(id) }, {
+        enabled,
+        select,
+      } as MockQueryOpts) as DataQuery<RawEntity>,
   });
 }
 
@@ -141,10 +148,10 @@ function useLocalGet(
     decrypt: (raw) => ({ decryptedName: `decrypted:${raw.name}` }),
     localQueryFn,
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.member.get.useQuery({ systemId, memberId: id as never }, { enabled, select } as Record<
-        string,
-        unknown
-      >) as DataQuery<DecEntity>,
+      trpc.member.get.useQuery({ systemId, memberId: brandId<MemberId>(id) }, {
+        enabled,
+        select,
+      } as MockQueryOpts) as DataQuery<DecEntity>,
   });
 }
 
@@ -159,7 +166,7 @@ function useEncryptedList() {
         enabled,
         select,
         getNextPageParam: (lp: { nextCursor: string | null }) => lp.nextCursor,
-      } as never) as DataListQuery<DecEntity>,
+      } as MockListOpts) as DataListQuery<DecEntity>,
   });
 }
 
@@ -173,7 +180,7 @@ function usePlaintextList() {
         enabled,
         select,
         getNextPageParam: (lp: { nextCursor: string | null }) => lp.nextCursor,
-      } as never) as DataListQuery<RawEntity>,
+      } as MockListOpts) as DataListQuery<RawEntity>,
   });
 }
 
@@ -415,7 +422,7 @@ describe("useOfflineFirstInfiniteQuery (local source)", () => {
             enabled,
             select,
             getNextPageParam: (lp: { nextCursor: string | null }) => lp.nextCursor,
-          } as never) as DataListQuery<RawEntity>,
+          } as MockListOpts) as DataListQuery<RawEntity>,
       });
     }
 
@@ -459,19 +466,25 @@ describe("useDomainMutation", () => {
   it("calls onInvalidate with utils, systemId, data, and vars on success", async () => {
     const onInvalidate = vi.fn();
 
-    function useTestMutation() {
-      return useDomainMutation<{ id: string }, { input: string }>({
+    // Use the real router input/output types so the cast lines up
+    // exactly with what `trpc.member.create.useMutation()` returns.
+    type RealData = RouterOutput["member"]["create"];
+    type RealVars = RouterInput["member"]["create"];
+    function useTestMutation(): TRPCMutation<RealData, RealVars> {
+      return useDomainMutation<RealData, RealVars>({
         useMutation: (opts) =>
           trpc.member.create.useMutation({
-            onSuccess: opts.onSuccess as (() => void) | undefined,
-          }) as never,
+            onSuccess: opts.onSuccess as (data: RealData, vars: RealVars) => void,
+          }),
         onInvalidate,
       });
     }
 
     const { result } = renderHookWithProviders(() => useTestMutation());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(onInvalidate).toHaveBeenCalledTimes(1);
@@ -496,7 +509,7 @@ function useRemoteOnlyGet(id: string) {
   return useRemoteOnlyQuery<RawEntity>({
     useRemote: ({ systemId, enabled }) =>
       trpc.member.get.useQuery(
-        { systemId, memberId: id as never },
+        { systemId, memberId: brandId<MemberId>(id) },
         { enabled },
       ) as DataQuery<RawEntity>,
   });
@@ -507,7 +520,7 @@ function useRemoteOnlyGetWithOverride(id: string, systemId: SystemId) {
     systemIdOverride: { systemId },
     useRemote: ({ systemId: resolvedId, enabled }) =>
       trpc.member.get.useQuery(
-        { systemId: resolvedId, memberId: id as never },
+        { systemId: resolvedId, memberId: brandId<MemberId>(id) },
         { enabled },
       ) as DataQuery<RawEntity>,
   });
@@ -557,7 +570,7 @@ describe("table name validation", () => {
         rowTransform: (row) => ({ name: String(row["name"]) }),
         useRemote: ({ systemId, enabled }) =>
           trpc.member.get.useQuery(
-            { systemId, memberId: "x" as never },
+            { systemId, memberId: brandId<MemberId>("x") },
             { enabled },
           ) as DataQuery<RawEntity>,
       });
@@ -574,9 +587,9 @@ describe("table name validation", () => {
         rowTransform: (row) => ({ name: String(row["name"]) }),
         useRemote: ({ enabled }) =>
           trpc.member.list.useInfiniteQuery(
-            { systemId: "sys-test" as never },
+            { systemId: brandId<SystemId>("sys-test") },
             { enabled, getNextPageParam: () => null },
-          ) as never,
+          ) as DataListQuery<RawEntity>,
       });
     }
     expect(() => renderHookWithProviders(() => useBadInfiniteTable())).toThrow(
@@ -596,7 +609,7 @@ describe("table name validation", () => {
           rowTransform: (row) => ({ name: String(row["name"]) }),
           useRemote: ({ systemId, enabled }) =>
             trpc.member.get.useQuery(
-              { systemId, memberId: "x" as never },
+              { systemId, memberId: brandId<MemberId>("x") },
               { enabled },
             ) as DataQuery<RawEntity>,
         }),

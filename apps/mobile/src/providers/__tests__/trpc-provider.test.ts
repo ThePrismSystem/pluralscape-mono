@@ -99,26 +99,26 @@ describe("isTRPCClientError", () => {
 describe("shouldRetryRateLimit", () => {
   it("returns true for 429 httpStatus under 3 attempts", () => {
     const opts = { error: { data: { httpStatus: 429, code: "OTHER" } }, attempts: 1 };
-    expect(shouldRetryRateLimit(opts as never)).toBe(true);
+    expect(shouldRetryRateLimit(opts as Parameters<typeof shouldRetryRateLimit>[0])).toBe(true);
   });
 
   it("returns true for TOO_MANY_REQUESTS code under 3 attempts", () => {
     const opts = { error: { data: { httpStatus: 400, code: "TOO_MANY_REQUESTS" } }, attempts: 2 };
-    expect(shouldRetryRateLimit(opts as never)).toBe(true);
+    expect(shouldRetryRateLimit(opts as Parameters<typeof shouldRetryRateLimit>[0])).toBe(true);
   });
 
   it("returns false for non-429 errors", () => {
     const opts = { error: { data: { httpStatus: 500, code: "INTERNAL_ERROR" } }, attempts: 1 };
-    expect(shouldRetryRateLimit(opts as never)).toBe(false);
+    expect(shouldRetryRateLimit(opts as Parameters<typeof shouldRetryRateLimit>[0])).toBe(false);
   });
 
   it("returns false after 3 attempts", () => {
     const opts = { error: { data: { httpStatus: 429, code: "TOO_MANY_REQUESTS" } }, attempts: 3 };
-    expect(shouldRetryRateLimit(opts as never)).toBe(false);
+    expect(shouldRetryRateLimit(opts as Parameters<typeof shouldRetryRateLimit>[0])).toBe(false);
   });
 
   it("returns false when error data is missing", () => {
     const opts = { error: {}, attempts: 1 };
-    expect(shouldRetryRateLimit(opts as never)).toBe(false);
+    expect(shouldRetryRateLimit(opts as Parameters<typeof shouldRetryRateLimit>[0])).toBe(false);
   });
 });

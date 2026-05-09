@@ -213,7 +213,9 @@ describe("useCreateStructureEntityType", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateStructureEntityType());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.structure.entityType.list.invalidate).toHaveBeenCalledWith({
@@ -227,7 +229,11 @@ describe("useUpdateStructureEntityType", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdateStructureEntityType());
 
-    await act(() => result.current.mutateAsync({ entityTypeId: "stet_1" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        entityTypeId: brandId<SystemStructureEntityTypeId>("stet_1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.structure.entityType.get.invalidate).toHaveBeenCalledWith({
@@ -245,7 +251,11 @@ describe("useArchiveStructureEntityType", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useArchiveStructureEntityType());
 
-    await act(() => result.current.mutateAsync({ entityTypeId: "stet_2" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        entityTypeId: brandId<SystemStructureEntityTypeId>("stet_2"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.structure.entityType.get.invalidate).toHaveBeenCalledWith({
@@ -263,7 +273,11 @@ describe("useRestoreStructureEntityType", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useRestoreStructureEntityType());
 
-    await act(() => result.current.mutateAsync({ entityTypeId: "stet_3" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        entityTypeId: brandId<SystemStructureEntityTypeId>("stet_3"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.structure.entityType.get.invalidate).toHaveBeenCalledWith({
@@ -281,7 +295,11 @@ describe("useDeleteStructureEntityType", () => {
   it("invalidates get, list, and entity list on success", async () => {
     const { result } = renderHookWithProviders(() => useDeleteStructureEntityType());
 
-    await act(() => result.current.mutateAsync({ entityTypeId: "stet_4" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        entityTypeId: brandId<SystemStructureEntityTypeId>("stet_4"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.structure.entityType.get.invalidate).toHaveBeenCalledWith({

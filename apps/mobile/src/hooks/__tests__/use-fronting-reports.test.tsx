@@ -183,7 +183,9 @@ describe("useGenerateReport", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useGenerateReport());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.frontingReport.list.invalidate).toHaveBeenCalledWith({
@@ -197,7 +199,11 @@ describe("useDeleteReport", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useDeleteReport());
 
-    await act(() => result.current.mutateAsync({ reportId: "fr-1" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        reportId: brandId<FrontingReportId>("fr-1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.frontingReport.get.invalidate).toHaveBeenCalledWith({

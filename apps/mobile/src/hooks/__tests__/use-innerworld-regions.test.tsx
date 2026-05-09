@@ -223,7 +223,9 @@ describe("useCreateInnerWorldRegion", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateInnerWorldRegion());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.innerworld.region.list.invalidate).toHaveBeenCalledWith({
@@ -237,7 +239,11 @@ describe("useUpdateInnerWorldRegion", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdateInnerWorldRegion());
 
-    await act(() => result.current.mutateAsync({ regionId: "r-1" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        regionId: brandId<InnerWorldRegionId>("r-1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.innerworld.region.get.invalidate).toHaveBeenCalledWith({
@@ -255,7 +261,11 @@ describe("useArchiveInnerWorldRegion", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useArchiveInnerWorldRegion());
 
-    await act(() => result.current.mutateAsync({ regionId: "r-2" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        regionId: brandId<InnerWorldRegionId>("r-2"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.innerworld.region.get.invalidate).toHaveBeenCalledWith({
@@ -273,7 +283,11 @@ describe("useRestoreInnerWorldRegion", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useRestoreInnerWorldRegion());
 
-    await act(() => result.current.mutateAsync({ regionId: "r-3" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        regionId: brandId<InnerWorldRegionId>("r-3"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.innerworld.region.get.invalidate).toHaveBeenCalledWith({
@@ -291,7 +305,11 @@ describe("useDeleteInnerWorldRegion", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useDeleteInnerWorldRegion());
 
-    await act(() => result.current.mutateAsync({ regionId: "r-4" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        regionId: brandId<InnerWorldRegionId>("r-4"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.innerworld.region.get.invalidate).toHaveBeenCalledWith({

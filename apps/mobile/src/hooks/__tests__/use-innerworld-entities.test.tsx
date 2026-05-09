@@ -330,7 +330,9 @@ describe("useCreateInnerWorldEntity", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateInnerWorldEntity());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.innerworld.entity.list.invalidate).toHaveBeenCalledWith({
@@ -344,7 +346,11 @@ describe("useUpdateInnerWorldEntity", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdateInnerWorldEntity());
 
-    await act(() => result.current.mutateAsync({ entityId: "e-1" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        entityId: brandId<InnerWorldEntityId>("e-1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.innerworld.entity.get.invalidate).toHaveBeenCalledWith({
@@ -362,7 +368,11 @@ describe("useArchiveInnerWorldEntity", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useArchiveInnerWorldEntity());
 
-    await act(() => result.current.mutateAsync({ entityId: "e-2" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        entityId: brandId<InnerWorldEntityId>("e-2"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.innerworld.entity.get.invalidate).toHaveBeenCalledWith({
@@ -380,7 +390,11 @@ describe("useRestoreInnerWorldEntity", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useRestoreInnerWorldEntity());
 
-    await act(() => result.current.mutateAsync({ entityId: "e-3" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        entityId: brandId<InnerWorldEntityId>("e-3"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.innerworld.entity.get.invalidate).toHaveBeenCalledWith({
@@ -398,7 +412,11 @@ describe("useDeleteInnerWorldEntity", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useDeleteInnerWorldEntity());
 
-    await act(() => result.current.mutateAsync({ entityId: "e-4" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        entityId: brandId<InnerWorldEntityId>("e-4"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.innerworld.entity.get.invalidate).toHaveBeenCalledWith({

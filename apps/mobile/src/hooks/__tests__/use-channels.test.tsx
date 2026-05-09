@@ -204,7 +204,9 @@ describe("useCreateChannel", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateChannel());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.channel.list.invalidate).toHaveBeenCalledWith({
@@ -218,7 +220,11 @@ describe("useUpdateChannel", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdateChannel());
 
-    await act(() => result.current.mutateAsync({ channelId: "ch-1" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        channelId: brandId<ChannelId>("ch-1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.channel.get.invalidate).toHaveBeenCalledWith({
@@ -236,7 +242,11 @@ describe("useArchiveChannel", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useArchiveChannel());
 
-    await act(() => result.current.mutateAsync({ channelId: "ch-2" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        channelId: brandId<ChannelId>("ch-2"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.channel.get.invalidate).toHaveBeenCalledWith({
@@ -254,7 +264,11 @@ describe("useRestoreChannel", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useRestoreChannel());
 
-    await act(() => result.current.mutateAsync({ channelId: "ch-3" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        channelId: brandId<ChannelId>("ch-3"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.channel.get.invalidate).toHaveBeenCalledWith({
@@ -272,7 +286,11 @@ describe("useDeleteChannel", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useDeleteChannel());
 
-    await act(() => result.current.mutateAsync({ channelId: "ch-4" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        channelId: brandId<ChannelId>("ch-4"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.channel.get.invalidate).toHaveBeenCalledWith({

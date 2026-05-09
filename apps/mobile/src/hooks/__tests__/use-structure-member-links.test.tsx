@@ -83,7 +83,9 @@ describe("useCreateStructureMemberLink", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateStructureMemberLink());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.structure.memberLink.list.invalidate).toHaveBeenCalledWith({
@@ -97,7 +99,9 @@ describe("useDeleteStructureMemberLink", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useDeleteStructureMemberLink());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.structure.memberLink.list.invalidate).toHaveBeenCalledWith({

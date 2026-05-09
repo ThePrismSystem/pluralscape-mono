@@ -86,7 +86,9 @@ describe("useCreateStructureAssociation", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateStructureAssociation());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.structure.association.list.invalidate).toHaveBeenCalledWith({
@@ -100,7 +102,9 @@ describe("useDeleteStructureAssociation", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useDeleteStructureAssociation());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.structure.association.list.invalidate).toHaveBeenCalledWith({

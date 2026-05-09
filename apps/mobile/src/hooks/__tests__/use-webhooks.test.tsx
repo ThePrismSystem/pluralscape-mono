@@ -252,7 +252,9 @@ describe("useCreateWebhookConfig", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateWebhookConfig());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.webhookConfig.list.invalidate).toHaveBeenCalledWith({
@@ -266,7 +268,11 @@ describe("useUpdateWebhookConfig", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdateWebhookConfig());
 
-    await act(() => result.current.mutateAsync({ webhookId: "wh_1" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        webhookId: brandId<WebhookId>("wh_1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.webhookConfig.get.invalidate).toHaveBeenCalledWith({
@@ -284,7 +290,11 @@ describe("useDeleteWebhookConfig", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useDeleteWebhookConfig());
 
-    await act(() => result.current.mutateAsync({ webhookId: "wh_2" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        webhookId: brandId<WebhookId>("wh_2"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.webhookConfig.get.invalidate).toHaveBeenCalledWith({
@@ -302,7 +312,11 @@ describe("useArchiveWebhookConfig", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useArchiveWebhookConfig());
 
-    await act(() => result.current.mutateAsync({ webhookId: "wh_3" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        webhookId: brandId<WebhookId>("wh_3"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.webhookConfig.get.invalidate).toHaveBeenCalledWith({
@@ -320,7 +334,11 @@ describe("useRestoreWebhookConfig", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useRestoreWebhookConfig());
 
-    await act(() => result.current.mutateAsync({ webhookId: "wh_4" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        webhookId: brandId<WebhookId>("wh_4"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.webhookConfig.get.invalidate).toHaveBeenCalledWith({
@@ -338,7 +356,11 @@ describe("useRotateWebhookSecret", () => {
   it("invalidates get on success (secret changed)", async () => {
     const { result } = renderHookWithProviders(() => useRotateWebhookSecret());
 
-    await act(() => result.current.mutateAsync({ webhookId: "wh_5" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        webhookId: brandId<WebhookId>("wh_5"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.webhookConfig.get.invalidate).toHaveBeenCalledWith({
@@ -355,7 +377,9 @@ describe("useTestWebhook", () => {
   it("does not invalidate any cache", async () => {
     const { result } = renderHookWithProviders(() => useTestWebhook());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
@@ -409,7 +433,11 @@ describe("useDeleteWebhookDelivery", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useDeleteWebhookDelivery());
 
-    await act(() => result.current.mutateAsync({ deliveryId: "wd_1" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        deliveryId: brandId<WebhookDeliveryId>("wd_1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.webhookDelivery.get.invalidate).toHaveBeenCalledWith({

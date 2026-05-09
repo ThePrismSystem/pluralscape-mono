@@ -328,7 +328,9 @@ describe("useCreatePoll", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreatePoll());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.poll.list.invalidate).toHaveBeenCalledWith({
@@ -342,7 +344,11 @@ describe("useUpdatePoll", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdatePoll());
 
-    await act(() => result.current.mutateAsync({ pollId: "p-1" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        pollId: brandId<PollId>("p-1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.poll.get.invalidate).toHaveBeenCalledWith({
@@ -360,7 +366,11 @@ describe("useClosePoll", () => {
   it("invalidates get, list, and results on success", async () => {
     const { result } = renderHookWithProviders(() => useClosePoll());
 
-    await act(() => result.current.mutateAsync({ pollId: "p-1" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        pollId: brandId<PollId>("p-1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.poll.get.invalidate).toHaveBeenCalledWith({
@@ -382,7 +392,11 @@ describe("useArchivePoll", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useArchivePoll());
 
-    await act(() => result.current.mutateAsync({ pollId: "p-2" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        pollId: brandId<PollId>("p-2"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.poll.get.invalidate).toHaveBeenCalledWith({
@@ -400,7 +414,11 @@ describe("useRestorePoll", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useRestorePoll());
 
-    await act(() => result.current.mutateAsync({ pollId: "p-3" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        pollId: brandId<PollId>("p-3"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.poll.get.invalidate).toHaveBeenCalledWith({
@@ -418,7 +436,11 @@ describe("useDeletePoll", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useDeletePoll());
 
-    await act(() => result.current.mutateAsync({ pollId: "p-4" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        pollId: brandId<PollId>("p-4"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.poll.get.invalidate).toHaveBeenCalledWith({
@@ -436,7 +458,11 @@ describe("useCastVote", () => {
   it("invalidates results, listVotes, and get on success", async () => {
     const { result } = renderHookWithProviders(() => useCastVote());
 
-    await act(() => result.current.mutateAsync({ pollId: "p-1" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        pollId: brandId<PollId>("p-1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.poll.results.invalidate).toHaveBeenCalledWith({
@@ -459,7 +485,11 @@ describe("useUpdateVote", () => {
   it("invalidates results, listVotes, and get on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdateVote());
 
-    await act(() => result.current.mutateAsync({ pollId: "p-2" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        pollId: brandId<PollId>("p-2"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.poll.results.invalidate).toHaveBeenCalledWith({
@@ -482,7 +512,11 @@ describe("useDeleteVote", () => {
   it("invalidates results, listVotes, and get on success", async () => {
     const { result } = renderHookWithProviders(() => useDeleteVote());
 
-    await act(() => result.current.mutateAsync({ pollId: "p-3" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        pollId: brandId<PollId>("p-3"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.poll.results.invalidate).toHaveBeenCalledWith({

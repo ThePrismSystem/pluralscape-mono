@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderHookWithProviders } from "./helpers/render-hook-with-providers.js";
 
+import type { RouterInput } from "@pluralscape/api-client/trpc";
+
 const mockUtils = {
   account: {
     getRecoveryKeyStatus: { invalidate: vi.fn() },
@@ -79,35 +81,45 @@ beforeEach(() => {
 describe("useSetPin", () => {
   it("can be called", async () => {
     const { result } = renderHookWithProviders(() => useSetPin());
-    await expect(act(() => result.current.mutateAsync({} as never))).resolves.not.toThrow();
+    await expect(
+      act(() => result.current.mutateAsync({} as RouterInput["account"]["setPin"])),
+    ).resolves.not.toThrow();
   });
 });
 
 describe("useRemovePin", () => {
   it("can be called", async () => {
     const { result } = renderHookWithProviders(() => useRemovePin());
-    await expect(act(() => result.current.mutateAsync({} as never))).resolves.not.toThrow();
+    await expect(
+      act(() => result.current.mutateAsync({} as RouterInput["account"]["removePin"])),
+    ).resolves.not.toThrow();
   });
 });
 
 describe("useVerifyPin", () => {
   it("can be called", async () => {
     const { result } = renderHookWithProviders(() => useVerifyPin());
-    await expect(act(() => result.current.mutateAsync({} as never))).resolves.not.toThrow();
+    await expect(
+      act(() => result.current.mutateAsync({} as RouterInput["account"]["verifyPin"])),
+    ).resolves.not.toThrow();
   });
 });
 
 describe("useEnrollBiometric", () => {
   it("can be called", async () => {
     const { result } = renderHookWithProviders(() => useEnrollBiometric());
-    await expect(act(() => result.current.mutateAsync({} as never))).resolves.not.toThrow();
+    await expect(
+      act(() => result.current.mutateAsync({} as RouterInput["account"]["enrollBiometric"])),
+    ).resolves.not.toThrow();
   });
 });
 
 describe("useVerifyBiometric", () => {
   it("can be called", async () => {
     const { result } = renderHookWithProviders(() => useVerifyBiometric());
-    await expect(act(() => result.current.mutateAsync({} as never))).resolves.not.toThrow();
+    await expect(
+      act(() => result.current.mutateAsync({} as RouterInput["account"]["verifyBiometric"])),
+    ).resolves.not.toThrow();
   });
 });
 
@@ -122,7 +134,9 @@ describe("useRegenerateRecoveryKey", () => {
   it("invalidates getRecoveryKeyStatus on success", async () => {
     const { result } = renderHookWithProviders(() => useRegenerateRecoveryKey());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as RouterInput["account"]["regenerateRecoveryKey"]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.account.getRecoveryKeyStatus.invalidate).toHaveBeenCalled();

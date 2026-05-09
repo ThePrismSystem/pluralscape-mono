@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
 
+import type { RouterInput } from "@pluralscape/api-client/trpc";
+
 type CapturedInput = Record<string, unknown>;
 let lastGetInput: CapturedInput = {};
 let lastListInput: CapturedInput = {};
@@ -49,6 +51,9 @@ vi.mock("@pluralscape/api-client/trpc", async () => {
 const { useNotificationConfig, useNotificationConfigList, useUpdateNotificationConfig } =
   await import("../use-notification-config.js");
 
+const SWITCH_REMINDER_EVENT: RouterInput["notificationConfig"]["get"]["eventType"] =
+  "switch-reminder";
+
 beforeEach(() => {
   lastGetInput = {};
   lastListInput = {};
@@ -57,9 +62,9 @@ beforeEach(() => {
 
 describe("useNotificationConfig", () => {
   it("passes systemId and eventType to query", () => {
-    renderHookWithProviders(() => useNotificationConfig("front_start" as never));
+    renderHookWithProviders(() => useNotificationConfig(SWITCH_REMINDER_EVENT));
     expect(lastGetInput["systemId"]).toBe(TEST_SYSTEM_ID);
-    expect(lastGetInput["eventType"]).toBe("front_start");
+    expect(lastGetInput["eventType"]).toBe("switch-reminder");
   });
 });
 
@@ -75,13 +80,16 @@ describe("useUpdateNotificationConfig", () => {
     const { result } = renderHookWithProviders(() => useUpdateNotificationConfig());
 
     await act(() =>
-      result.current.mutateAsync({ eventType: "front_start", enabled: true } as never),
+      result.current.mutateAsync({
+        eventType: SWITCH_REMINDER_EVENT,
+        enabled: true,
+      } as Parameters<typeof result.current.mutateAsync>[0]),
     );
 
     await waitFor(() => {
       expect(mockUtils.notificationConfig.get.invalidate).toHaveBeenCalledWith({
         systemId: TEST_SYSTEM_ID,
-        eventType: "front_start",
+        eventType: "switch-reminder",
       });
       expect(mockUtils.notificationConfig.list.invalidate).toHaveBeenCalledWith({
         systemId: TEST_SYSTEM_ID,

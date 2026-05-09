@@ -94,7 +94,9 @@ describe("useCreateStructureLink", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateStructureLink());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.structure.link.list.invalidate).toHaveBeenCalledWith({
@@ -108,7 +110,9 @@ describe("useUpdateStructureLink", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdateStructureLink());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.structure.link.list.invalidate).toHaveBeenCalledWith({
@@ -122,7 +126,9 @@ describe("useDeleteStructureLink", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useDeleteStructureLink());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.structure.link.list.invalidate).toHaveBeenCalledWith({

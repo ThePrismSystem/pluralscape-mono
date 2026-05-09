@@ -250,7 +250,9 @@ describe("useCreateField", () => {
   it("invalidates definition list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateField());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.field.definition.list.invalidate).toHaveBeenCalledWith({
@@ -264,7 +266,11 @@ describe("useUpdateField", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdateField());
 
-    await act(() => result.current.mutateAsync({ fieldDefinitionId: "fd-1" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        fieldDefinitionId: brandId<FieldDefinitionId>("fd-1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.field.definition.get.invalidate).toHaveBeenCalledWith({
@@ -282,7 +288,11 @@ describe("useDeleteField", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useDeleteField());
 
-    await act(() => result.current.mutateAsync({ fieldDefinitionId: "fd-2" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        fieldDefinitionId: brandId<FieldDefinitionId>("fd-2"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.field.definition.get.invalidate).toHaveBeenCalledWith({
@@ -301,7 +311,9 @@ describe("useUpdateMemberFieldValues", () => {
     const { result } = renderHookWithProviders(() => useUpdateMemberFieldValues());
 
     const owner = { kind: "member" as const, id: brandId<MemberId>("m-1") };
-    await act(() => result.current.mutateAsync({ owner } as never));
+    await act(() =>
+      result.current.mutateAsync({ owner } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.field.value.list.invalidate).toHaveBeenCalledWith({

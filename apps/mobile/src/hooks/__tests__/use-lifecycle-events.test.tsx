@@ -238,7 +238,9 @@ describe("useCreateLifecycleEvent", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateLifecycleEvent());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.lifecycleEvent.list.invalidate).toHaveBeenCalledWith({
@@ -252,7 +254,11 @@ describe("useUpdateLifecycleEvent", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdateLifecycleEvent());
 
-    await act(() => result.current.mutateAsync({ eventId: "evt-1" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        eventId: brandId<LifecycleEventId>("evt-1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.lifecycleEvent.get.invalidate).toHaveBeenCalledWith({
@@ -270,7 +276,11 @@ describe("useArchiveLifecycleEvent", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useArchiveLifecycleEvent());
 
-    await act(() => result.current.mutateAsync({ eventId: "evt-2" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        eventId: brandId<LifecycleEventId>("evt-2"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.lifecycleEvent.get.invalidate).toHaveBeenCalledWith({
@@ -288,7 +298,11 @@ describe("useRestoreLifecycleEvent", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useRestoreLifecycleEvent());
 
-    await act(() => result.current.mutateAsync({ eventId: "evt-3" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        eventId: brandId<LifecycleEventId>("evt-3"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.lifecycleEvent.get.invalidate).toHaveBeenCalledWith({
@@ -306,7 +320,11 @@ describe("useDeleteLifecycleEvent", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useDeleteLifecycleEvent());
 
-    await act(() => result.current.mutateAsync({ eventId: "evt-4" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        eventId: brandId<LifecycleEventId>("evt-4"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.lifecycleEvent.get.invalidate).toHaveBeenCalledWith({

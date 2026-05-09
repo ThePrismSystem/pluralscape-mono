@@ -203,7 +203,9 @@ describe("useCreateNote", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateNote());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.note.list.invalidate).toHaveBeenCalledWith({
@@ -217,7 +219,11 @@ describe("useUpdateNote", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdateNote());
 
-    await act(() => result.current.mutateAsync({ noteId: "note-1" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        noteId: brandId<NoteId>("note-1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.note.get.invalidate).toHaveBeenCalledWith({
@@ -235,7 +241,11 @@ describe("useArchiveNote", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useArchiveNote());
 
-    await act(() => result.current.mutateAsync({ noteId: "note-2" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        noteId: brandId<NoteId>("note-2"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.note.get.invalidate).toHaveBeenCalledWith({
@@ -253,7 +263,11 @@ describe("useRestoreNote", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useRestoreNote());
 
-    await act(() => result.current.mutateAsync({ noteId: "note-3" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        noteId: brandId<NoteId>("note-3"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.note.get.invalidate).toHaveBeenCalledWith({
@@ -271,7 +285,11 @@ describe("useDeleteNote", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useDeleteNote());
 
-    await act(() => result.current.mutateAsync({ noteId: "note-4" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        noteId: brandId<NoteId>("note-4"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.note.get.invalidate).toHaveBeenCalledWith({

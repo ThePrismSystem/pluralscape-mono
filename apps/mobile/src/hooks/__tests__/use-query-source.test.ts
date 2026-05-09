@@ -22,10 +22,16 @@ import { useSync } from "../../sync/sync-context.js";
 import { useLocalDb, useQuerySource } from "../use-query-source.js";
 
 import type { DataLayerContextValue } from "../../data/DataLayerProvider.js";
+import type { LocalDatabase } from "../../data/local-database.js";
 import type { PlatformContext } from "../../platform/types.js";
 import type { SyncContextValue } from "../../sync/sync-context.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
-import type { SqliteDriver } from "@pluralscape/sync/adapters";
+import type { DataLayerEventMap, EventBus } from "@pluralscape/sync";
+import type {
+  OfflineQueueAdapter,
+  SqliteDriver,
+  SyncStorageAdapter,
+} from "@pluralscape/sync/adapters";
 import type { MaterializerDb } from "@pluralscape/sync/materializer";
 
 const mockUsePlatform = vi.mocked(usePlatform);
@@ -60,10 +66,10 @@ function makePlatform(backend: "sqlite" | "indexeddb"): PlatformContext {
     },
     storage: {
       backend: "indexeddb",
-      storageAdapter: {} as never,
-      offlineQueueAdapter: {} as never,
+      storageAdapter: mock<SyncStorageAdapter>(),
+      offlineQueueAdapter: mock<OfflineQueueAdapter>(),
     },
-    crypto: {} as never,
+    crypto: mock<SodiumAdapter>(),
   };
 }
 
@@ -119,10 +125,10 @@ describe("useQuerySource", () => {
 
 describe("useLocalDb", () => {
   it("returns localDb when DataLayer context is available", () => {
-    const fakeLocalDb = { initialize: vi.fn(), queryAll: vi.fn() };
+    const fakeLocalDb = mock<LocalDatabase>();
     const fakeContext: DataLayerContextValue = {
-      localDb: fakeLocalDb as never,
-      eventBus: {} as never,
+      localDb: fakeLocalDb,
+      eventBus: mock<EventBus<DataLayerEventMap>>(),
     };
     mockUseDataLayerOptional.mockReturnValue(fakeContext);
 

@@ -88,7 +88,9 @@ describe("useRegisterDeviceToken", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useRegisterDeviceToken());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.deviceToken.list.invalidate).toHaveBeenCalledWith({
@@ -102,7 +104,9 @@ describe("useUpdateDeviceToken", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdateDeviceToken());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.deviceToken.list.invalidate).toHaveBeenCalledWith({
@@ -116,7 +120,9 @@ describe("useRevokeDeviceToken", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useRevokeDeviceToken());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.deviceToken.list.invalidate).toHaveBeenCalledWith({
@@ -130,7 +136,9 @@ describe("useDeleteDeviceToken", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useDeleteDeviceToken());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.deviceToken.list.invalidate).toHaveBeenCalledWith({

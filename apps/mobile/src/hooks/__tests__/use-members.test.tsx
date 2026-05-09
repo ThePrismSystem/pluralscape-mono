@@ -203,7 +203,9 @@ describe("useCreateMember", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateMember());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.member.list.invalidate).toHaveBeenCalledWith({
@@ -217,7 +219,11 @@ describe("useUpdateMember", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdateMember());
 
-    await act(() => result.current.mutateAsync({ memberId: "m-1" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        memberId: brandId<MemberId>("m-1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.member.get.invalidate).toHaveBeenCalledWith({
@@ -235,7 +241,11 @@ describe("useArchiveMember", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useArchiveMember());
 
-    await act(() => result.current.mutateAsync({ memberId: "m-2" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        memberId: brandId<MemberId>("m-2"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.member.get.invalidate).toHaveBeenCalledWith({
@@ -253,7 +263,11 @@ describe("useRestoreMember", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useRestoreMember());
 
-    await act(() => result.current.mutateAsync({ memberId: "m-3" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        memberId: brandId<MemberId>("m-3"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.member.get.invalidate).toHaveBeenCalledWith({
@@ -271,7 +285,9 @@ describe("useDuplicateMember", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useDuplicateMember());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.member.list.invalidate).toHaveBeenCalledWith({

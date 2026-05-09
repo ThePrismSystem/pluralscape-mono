@@ -104,7 +104,9 @@ describe("useUpsertCanvas", () => {
   it("invalidates canvas get on success", async () => {
     const { result } = renderHookWithProviders(() => useUpsertCanvas());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.innerworld.canvas.get.invalidate).toHaveBeenCalledWith({
