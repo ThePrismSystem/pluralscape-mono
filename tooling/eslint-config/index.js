@@ -6,6 +6,7 @@ import tseslint from "typescript-eslint";
 
 import { locRules } from "./loc-rules.js";
 import noBearerPrefixOnSpAuth from "./rules/no-bearer-prefix-on-sp-auth.js";
+import noDeepTypesImports from "./rules/no-deep-types-imports.js";
 import noHandRolledRequestTypes from "./rules/no-hand-rolled-request-types.js";
 import noParamsUnknown from "./rules/no-params-unknown.js";
 import noServicesBarrel from "./rules/no-services-barrel.js";
@@ -16,6 +17,7 @@ export default tseslint.config(
       pluralscape: {
         rules: {
           "no-bearer-prefix-on-sp-auth": noBearerPrefixOnSpAuth,
+          "no-deep-types-imports": noDeepTypesImports,
           "no-hand-rolled-request-types": noHandRolledRequestTypes,
           "no-params-unknown": noParamsUnknown,
           "no-services-barrel": noServicesBarrel,
@@ -171,6 +173,12 @@ export default tseslint.config(
     files: ["packages/import-sp/src/**"],
     rules: {
       "pluralscape/no-bearer-prefix-on-sp-auth": "error",
+    },
+  },
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+    rules: {
+      "pluralscape/no-deep-types-imports": "error",
     },
   },
   {
