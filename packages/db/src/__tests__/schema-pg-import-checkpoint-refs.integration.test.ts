@@ -17,7 +17,12 @@ import {
 } from "./helpers/import-export-fixtures.js";
 
 import type { PGlite } from "@electric-sql/pglite";
-import type { ImportCheckpointState, ImportJobId, ServerInternal } from "@pluralscape/types";
+import type {
+  ImportCheckpointState,
+  ImportEntityType,
+  ImportJobId,
+  ServerInternal,
+} from "@pluralscape/types";
 
 describe("PG import-export schema — checkpoint state & entity refs", () => {
   let client: PGlite;
@@ -220,13 +225,17 @@ describe("PG import-export schema — checkpoint state & entity refs", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
 
+      // Test that the DB CHECK constraint rejects an unknown source type. The
+      // string is intentionally outside the ImportEntityType union; we widen
+      // through `string` so TS accepts the single cast at the values() call.
+      const invalidEntityType: string = "not-a-real-type";
       await expect(
         db.insert(importEntityRefs).values({
           id: brandId<ImportJobId>(crypto.randomUUID()),
           accountId,
           systemId,
           source: "simply-plural",
-          sourceEntityType: "not-a-real-type" as never,
+          sourceEntityType: invalidEntityType as ImportEntityType,
           sourceEntityId: "x",
           pluralscapeEntityId: "y",
           importedAt: fixtureNow(),
