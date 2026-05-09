@@ -34,7 +34,7 @@ describe("REST client 429 retry middleware", () => {
       getToken: () => "token",
     });
 
-    const result = await client.GET("/api/v1/health" as never);
+    const result = await client.GET("/account");
     expect(result.response.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
@@ -50,7 +50,7 @@ describe("REST client 429 retry middleware", () => {
     });
 
     const start = Date.now();
-    await client.GET("/api/v1/health" as never);
+    await client.GET("/account");
     const elapsed = Date.now() - start;
     // Should have waited ~2000ms (allow tolerance for test execution)
     expect(elapsed).toBeGreaterThanOrEqual(1800);
@@ -66,7 +66,7 @@ describe("REST client 429 retry middleware", () => {
       getToken: () => "token",
     });
 
-    await client.GET("/api/v1/health" as never);
+    await client.GET("/account");
     // Should not throw; should retry with default delay
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
@@ -79,7 +79,7 @@ describe("REST client 429 retry middleware", () => {
       getToken: () => "token",
     });
 
-    const result = await client.GET("/api/v1/health" as never);
+    const result = await client.GET("/account");
     expect(result.response.status).toBe(500);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
@@ -94,7 +94,7 @@ describe("REST client 429 retry middleware", () => {
       getToken: () => "token",
     });
 
-    const result = await client.GET("/api/v1/health" as never);
+    const result = await client.GET("/account");
     expect(result.response.status).toBe(429);
     // Only 2 fetches: original + 1 retry, NOT infinite
     expect(fetchSpy).toHaveBeenCalledTimes(2);
@@ -110,7 +110,7 @@ describe("REST client 429 retry middleware", () => {
       getToken: () => "token",
     });
 
-    const result = await client.GET("/api/v1/health" as never);
+    const result = await client.GET("/account");
     expect(result.response.status).toBe(429);
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
