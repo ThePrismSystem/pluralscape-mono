@@ -38,7 +38,7 @@ describe("PaginatedResult", () => {
       nextCursor: null,
       hasMore: false,
       totalCount: null,
-    } as PaginatedResult<string>;
+    };
     // @ts-expect-error readonly property
     result.hasMore = true;
   });

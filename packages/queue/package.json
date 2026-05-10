@@ -15,7 +15,7 @@
   "dependencies": {
     "@pluralscape/db": "workspace:*",
     "@pluralscape/types": "workspace:*",
-    "bullmq": "^5.74.1",
+    "bullmq": "^5.76.6",
     "drizzle-orm": "catalog:",
     "ioredis": "5.10.1",
     "zod": "catalog:"

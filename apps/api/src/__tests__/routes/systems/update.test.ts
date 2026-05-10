@@ -50,7 +50,7 @@ describe("PUT /systems/:id", () => {
   it("returns 200 with updated profile", async () => {
     vi.mocked(updateSystemProfile).mockResolvedValueOnce({
       id: brandId<SystemId>("sys_550e8400-e29b-41d4-a716-446655440000"),
-      encryptedData: "dGVzdA==" as EncryptedBase64,
+      encryptedData: "dGVzdA==",
       version: 2,
       createdAt: toUnixMillis(1000),
       updatedAt: toUnixMillis(2000),
@@ -67,7 +67,7 @@ describe("PUT /systems/:id", () => {
   it("forwards systemId, body, auth, and audit writer to service", async () => {
     vi.mocked(updateSystemProfile).mockResolvedValueOnce({
       id: brandId<SystemId>("sys_550e8400-e29b-41d4-a716-446655440000"),
-      encryptedData: "dGVzdA==" as EncryptedBase64,
+      encryptedData: "dGVzdA==",
       version: 2,
       createdAt: toUnixMillis(1000),
       updatedAt: toUnixMillis(2000),

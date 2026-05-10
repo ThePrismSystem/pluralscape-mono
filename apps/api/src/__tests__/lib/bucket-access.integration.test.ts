@@ -153,7 +153,7 @@ describe("loadBucketTags (PGlite integration)", () => {
 
     // Batch-insert tags to avoid inserting one-by-one
     const tagRows = entityIds.map((entityId) => ({
-      entityType: "member" as BucketContentEntityType,
+      entityType: "member" as const,
       entityId,
       bucketId: bucket,
       systemId,

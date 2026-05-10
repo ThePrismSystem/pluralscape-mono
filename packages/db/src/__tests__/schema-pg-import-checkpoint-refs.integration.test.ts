@@ -64,17 +64,13 @@ describe("PG import-export schema — checkpoint state & entity refs", () => {
           selectedCategories: {
             member: true,
             group: true,
-          } as Record<string, boolean | undefined>,
+          },
           avatarMode: "api",
         },
         totals: {
           perCollection: {
             member: { total: 20, imported: 20, updated: 0, skipped: 0, failed: 0 },
-          } as Record<
-            string,
-            | { total: number; imported: number; updated: number; skipped: number; failed: number }
-            | undefined
-          >,
+          },
         },
       };
 

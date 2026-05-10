@@ -474,7 +474,7 @@ describe("useDomainMutation", () => {
       return useDomainMutation<RealData, RealVars>({
         useMutation: (opts) =>
           trpc.member.create.useMutation({
-            onSuccess: opts.onSuccess as (data: RealData, vars: RealVars) => void,
+            onSuccess: opts.onSuccess,
           }),
         onInvalidate,
       });

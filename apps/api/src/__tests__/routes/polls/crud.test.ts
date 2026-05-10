@@ -105,7 +105,7 @@ const MOCK_VOTE: PollVoteResult = {
   voter: null,
   isVeto: false,
   votedAt: toUnixMillis(1000),
-  encryptedData: "dGVzdA==" as EncryptedBase64,
+  encryptedData: "dGVzdA==",
   version: 1,
   archived: false,
   archivedAt: null,

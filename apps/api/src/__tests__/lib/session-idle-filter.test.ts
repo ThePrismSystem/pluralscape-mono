@@ -17,7 +17,7 @@ function walkChunks(chunks: readonly unknown[], visitor: ChunkVisitor): void {
         walkChunks((chunk as { queryChunks: readonly unknown[] }).queryChunks, visitor);
       }
       if ("value" in chunk) {
-        const val = (chunk as { value: unknown }).value;
+        const val = chunk.value;
         if (Array.isArray(val)) {
           for (const v of val) {
             if (typeof v === "string") visitor.onString?.(v);

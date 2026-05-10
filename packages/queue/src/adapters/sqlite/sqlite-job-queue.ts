@@ -139,7 +139,7 @@ export class SqliteJobQueue implements JobQueue {
 
           tx.update(jobs)
             .set({
-              status: "running" as JobStatus,
+              status: "running",
               startedAt: currentTime,
               lastHeartbeatAt: currentTime,
             })
@@ -172,7 +172,7 @@ export class SqliteJobQueue implements JobQueue {
     this.db
       .update(jobs)
       .set({
-        status: "completed" as JobStatus,
+        status: "completed",
         completedAt: currentTime,
         result: jobResult,
       })
@@ -197,7 +197,7 @@ export class SqliteJobQueue implements JobQueue {
       this.db
         .update(jobs)
         .set({
-          status: "dead-letter" as JobStatus,
+          status: "dead-letter",
           attempts: newAttempts,
           error,
           result: { success: false, message: error, completedAt: currentTime },
@@ -217,7 +217,7 @@ export class SqliteJobQueue implements JobQueue {
     this.db
       .update(jobs)
       .set({
-        status: "pending" as JobStatus,
+        status: "pending",
         attempts: newAttempts,
         error,
         nextRetryAt: toUnixMillis(currentTime + backoff),
@@ -242,7 +242,7 @@ export class SqliteJobQueue implements JobQueue {
     this.db
       .update(jobs)
       .set({
-        status: "pending" as JobStatus,
+        status: "pending",
         attempts: 0,
         error: null,
         nextRetryAt: null,
@@ -263,11 +263,7 @@ export class SqliteJobQueue implements JobQueue {
       );
     }
 
-    this.db
-      .update(jobs)
-      .set({ status: "cancelled" as JobStatus })
-      .where(eq(jobs.id, jobId))
-      .run();
+    this.db.update(jobs).set({ status: "cancelled" }).where(eq(jobs.id, jobId)).run();
 
     return Promise.resolve(this.requireJob(jobId));
   }

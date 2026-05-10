@@ -49,9 +49,7 @@ export function useStructureEntity(
     decrypt: decryptStructureEntity,
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.structure.entity.get.useQuery({ systemId, entityId }, { enabled, select }) as DataQuery<
-        SystemStructureEntity | Archived<SystemStructureEntity>
-      >,
+      trpc.structure.entity.get.useQuery({ systemId, entityId }, { enabled, select }),
   });
 }
 
@@ -104,7 +102,7 @@ export function useStructureEntitiesList(
           getNextPageParam: (lastPage: SystemStructureEntityWirePage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<SystemStructureEntity | Archived<SystemStructureEntity>>,
+      ),
   });
 }
 

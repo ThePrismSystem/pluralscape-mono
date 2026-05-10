@@ -37,9 +37,7 @@ export function useChannel(
     decrypt: decryptChannel,
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.channel.get.useQuery({ systemId, channelId }, { enabled, select }) as DataQuery<
-        Channel | Archived<Channel>
-      >,
+      trpc.channel.get.useQuery({ systemId, channelId }, { enabled, select }),
   });
 }
 
@@ -65,7 +63,7 @@ export function useChannelsList(
           getNextPageParam: (lastPage: ChannelWirePage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<Channel | Archived<Channel>>,
+      ),
   });
 }
 

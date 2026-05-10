@@ -376,8 +376,7 @@ describe("SyncProvider bootstrap", () => {
     setUnlocked();
     mockConnectionStatus = "connected";
     mockBootstrap.mockImplementationOnce(() => {
-      const literal: unknown = "string failure";
-      return Promise.reject(literal as Error);
+      return Promise.reject(new Error("string failure"));
     });
 
     const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });

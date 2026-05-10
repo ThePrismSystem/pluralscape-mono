@@ -338,7 +338,7 @@ describe("normalizeFrontingSessions: additional edge cases", () => {
       sodium,
     });
 
-    const result = normalizeFrontingSessions(session as EncryptedSyncSession<unknown>);
+    const result = normalizeFrontingSessions(session);
 
     expect(result.count).toBe(0);
     expect(result.notifications).toHaveLength(0);

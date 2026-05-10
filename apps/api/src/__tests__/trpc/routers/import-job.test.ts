@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { assertProcedureRateLimited, makeCallerFactory, MOCK_SYSTEM_ID } from "../test-helpers.js";
 
 import type { ImportJobResult } from "../../../services/system/import-jobs/internal.js";
-import type { AccountId, ImportCollectionType, ImportJobId, UnixMillis } from "@pluralscape/types";
+import type { AccountId, ImportJobId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -70,7 +70,7 @@ describe("importJob router", () => {
       const result = await caller.importJob.create({
         systemId: MOCK_SYSTEM_ID,
         source: "simply-plural",
-        selectedCategories: { member: true } as Record<ImportCollectionType, boolean | undefined>,
+        selectedCategories: { member: true },
         avatarMode: "skip",
       });
 
@@ -85,7 +85,7 @@ describe("importJob router", () => {
         caller.importJob.create({
           systemId: MOCK_SYSTEM_ID,
           source: "simply-plural",
-          selectedCategories: { member: true } as Record<ImportCollectionType, boolean | undefined>,
+          selectedCategories: { member: true },
           avatarMode: "skip",
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "UNAUTHORIZED" }));
@@ -221,7 +221,7 @@ describe("importJob router", () => {
         caller.importJob.create({
           systemId: MOCK_SYSTEM_ID,
           source: "simply-plural",
-          selectedCategories: { member: true } as Record<ImportCollectionType, boolean | undefined>,
+          selectedCategories: { member: true },
           avatarMode: "skip",
         }),
       "write",

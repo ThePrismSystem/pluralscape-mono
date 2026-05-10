@@ -223,7 +223,7 @@ describe("replayOfflineQueue", () => {
         maxConcurrentDocs = Math.max(maxConcurrentDocs, documentsInFlight.size);
         return gate.then(() => {
           documentsInFlight.delete(docId);
-          return { ...change, seq: 1 } as EncryptedChangeEnvelope;
+          return { ...change, seq: 1 };
         });
       });
 

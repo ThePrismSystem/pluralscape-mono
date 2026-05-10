@@ -36,10 +36,7 @@ export function useFrontingReport(
     decrypt: decryptFrontingReport,
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.frontingReport.get.useQuery(
-        { systemId, reportId },
-        { enabled, select },
-      ) as DataQuery<FrontingReport>,
+      trpc.frontingReport.get.useQuery({ systemId, reportId }, { enabled, select }),
   });
 }
 
@@ -65,7 +62,7 @@ export function useFrontingReportsList(
           getNextPageParam: (lastPage: FrontingReportPage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<FrontingReport>,
+      ),
   });
 }
 

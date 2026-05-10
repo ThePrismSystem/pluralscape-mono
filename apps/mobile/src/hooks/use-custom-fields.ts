@@ -50,10 +50,7 @@ export function useFieldDefinition(
     decrypt: decryptFieldDefinition,
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.field.definition.get.useQuery(
-        { systemId, fieldDefinitionId },
-        { enabled, select },
-      ) as DataQuery<FieldDefinitionDecrypted>,
+      trpc.field.definition.get.useQuery({ systemId, fieldDefinitionId }, { enabled, select }),
   });
 }
 
@@ -79,7 +76,7 @@ export function useFieldDefinitionsList(
           getNextPageParam: (lastPage: FieldDefinitionPage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<FieldDefinitionDecrypted>,
+      ),
   });
 }
 
@@ -183,7 +180,7 @@ export function useMemberFieldValues(
       trpc.field.value.list.useQuery(
         { systemId, owner: { kind: "member", id: memberId } },
         { enabled, select },
-      ) as DataQuery<ReadonlyArray<FieldValueDecrypted>>,
+      ),
   });
 }
 

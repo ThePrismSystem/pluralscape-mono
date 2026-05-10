@@ -307,7 +307,7 @@ describe("PostMergeValidator: normalizeSortOrder edge cases", () => {
       sodium,
     });
 
-    const result = normalizeSortOrder(session as EncryptedSyncSession<unknown>);
+    const result = normalizeSortOrder(session);
 
     expect(result.patches).toHaveLength(0);
     expect(result.envelope).toBeNull();

@@ -31,7 +31,6 @@ import type {
   BucketKeyRotationId,
   BucketRotationItemId,
   KeyGrantId,
-  RotationItemStatus,
   SystemId,
 } from "@pluralscape/types";
 import type { InitiateRotationBodySchema } from "@pluralscape/validation";
@@ -123,7 +122,7 @@ export async function initiateRotation(
           systemId,
           entityType: tag.entityType,
           entityId: tag.entityId,
-          status: ROTATION_ITEM_STATUSES.pending as RotationItemStatus,
+          status: ROTATION_ITEM_STATUSES.pending,
           attempts: 0,
         })),
       );

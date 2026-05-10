@@ -46,7 +46,7 @@ export function useStructureMemberLinksList(
           getNextPageParam: (lastPage: MemberLinkPage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<SystemStructureEntityMemberLink>,
+      ),
   });
 }
 

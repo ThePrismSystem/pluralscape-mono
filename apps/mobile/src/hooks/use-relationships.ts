@@ -45,10 +45,7 @@ export function useRelationship(
     decrypt: decryptRelationship,
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.relationship.get.useQuery(
-        { systemId, relationshipId },
-        { enabled, select },
-      ) as DataQuery<Relationship | Archived<Relationship>>,
+      trpc.relationship.get.useQuery({ systemId, relationshipId }, { enabled, select }),
   });
 }
 
@@ -90,7 +87,7 @@ export function useRelationshipsList(
           getNextPageParam: (lastPage: RelationshipWirePage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<Relationship | Archived<Relationship>>,
+      ),
   });
 }
 

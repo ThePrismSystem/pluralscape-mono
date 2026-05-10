@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createSecureHeaders } from "../middleware/secure-headers.js";
 
 const mockEnv = vi.hoisted(() => ({
-  NODE_ENV: "test" as "development" | "test" | "production",
+  NODE_ENV: "test",
 }));
 
 vi.mock("../env.js", () => ({ env: mockEnv }));

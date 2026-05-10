@@ -42,9 +42,7 @@ export function useInnerWorldRegion(
     decrypt: decryptInnerWorldRegion,
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.innerworld.region.get.useQuery({ systemId, regionId }, { enabled, select }) as DataQuery<
-        InnerWorldRegion | Archived<InnerWorldRegion>
-      >,
+      trpc.innerworld.region.get.useQuery({ systemId, regionId }, { enabled, select }),
   });
 }
 
@@ -73,7 +71,7 @@ export function useInnerWorldRegionsList(
           getNextPageParam: (lastPage: InnerWorldRegionWirePage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<InnerWorldRegion | Archived<InnerWorldRegion>>,
+      ),
   });
 }
 

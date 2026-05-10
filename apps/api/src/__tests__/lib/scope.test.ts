@@ -29,16 +29,16 @@ describe("hasScope", () => {
 
   it("returns true for read:audit-log with read-all scope", () => {
     const auth = apiKeyAuth(["read-all"]);
-    expect(hasScope(auth, "read:audit-log" as RequiredScope)).toBe(true);
+    expect(hasScope(auth, "read:audit-log")).toBe(true);
   });
 
   it("returns true for read:audit-log with delete-all scope", () => {
     const auth = apiKeyAuth(["delete-all"]);
-    expect(hasScope(auth, "read:audit-log" as RequiredScope)).toBe(true);
+    expect(hasScope(auth, "read:audit-log")).toBe(true);
   });
 
   it("returns true for read:audit-log with specific scope", () => {
-    const auth = apiKeyAuth(["read:audit-log" as ApiKeyScope]);
-    expect(hasScope(auth, "read:audit-log" as RequiredScope)).toBe(true);
+    const auth = apiKeyAuth(["read:audit-log"]);
+    expect(hasScope(auth, "read:audit-log")).toBe(true);
   });
 });

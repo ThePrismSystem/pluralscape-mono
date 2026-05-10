@@ -152,7 +152,7 @@ export function makeWebhookSession(
 ): EncryptedSyncSession<WebhookTestDocument> {
   const base = fromDoc({ timers: {}, webhookConfigs: {} });
   return new EncryptedSyncSession<WebhookTestDocument>({
-    doc: Automerge.clone(base) as Automerge.Doc<WebhookTestDocument>,
+    doc: Automerge.clone(base),
     keys,
     documentId: asSyncDocId(docId),
     sodium,

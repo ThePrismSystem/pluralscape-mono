@@ -57,9 +57,7 @@ export function useTimerConfig(
     decrypt: decryptTimerConfig,
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.timerConfig.get.useQuery({ systemId, timerId }, { enabled, select }) as DataQuery<
-        TimerConfig | Archived<TimerConfig>
-      >,
+      trpc.timerConfig.get.useQuery({ systemId, timerId }, { enabled, select }),
   });
 }
 
@@ -85,7 +83,7 @@ export function useTimerConfigsList(
           getNextPageParam: (lastPage: TimerConfigPage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<TimerConfig | Archived<TimerConfig>>,
+      ),
   });
 }
 

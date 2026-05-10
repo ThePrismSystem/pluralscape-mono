@@ -389,10 +389,10 @@ describe("SyncEngine event bus integration", () => {
       const networkAdapter: SyncNetworkAdapter = {
         submitChange: vi
           .fn()
-          .mockImplementation(
-            async (_docId: string, c: Omit<typeof change, "seq">) =>
-              ({ ...c, seq: await relay.submit(c) }) as typeof change,
-          ),
+          .mockImplementation(async (_docId: string, c: Omit<typeof change, "seq">) => ({
+            ...c,
+            seq: await relay.submit(c),
+          })),
         fetchChangesSince: vi.fn().mockResolvedValue([]),
         submitSnapshot: vi.fn().mockResolvedValue(undefined),
         fetchLatestSnapshot: vi.fn().mockResolvedValue(null),

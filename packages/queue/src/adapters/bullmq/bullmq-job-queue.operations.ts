@@ -67,7 +67,7 @@ function buildEnqueueData<T extends JobType>(
   return {
     systemId: params.systemId ?? null,
     type: params.type,
-    payload: params.payload as Record<string, unknown>,
+    payload: params.payload,
     status: "pending",
     attempts: 0,
     maxAttempts: params.maxAttempts ?? policy.maxRetries + 1,

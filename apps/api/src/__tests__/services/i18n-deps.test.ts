@@ -13,12 +13,12 @@ import type { ValkeyClient } from "../../middleware/stores/valkey-store.js";
  */
 const { mockEnv, mockGetShared } = vi.hoisted(() => ({
   mockEnv: {
-    NODE_ENV: "test" as "development" | "test" | "production",
+    NODE_ENV: "test",
     LOG_LEVEL: "info" as const,
     TRUST_PROXY: false,
     DISABLE_RATE_LIMIT: false,
     ALLOW_IN_MEMORY_CACHE: undefined as "0" | "1" | undefined,
-    CROWDIN_DISTRIBUTION_HASH: "hash" as string | undefined,
+    CROWDIN_DISTRIBUTION_HASH: "hash",
     CROWDIN_OTA_BASE_URL: "https://distributions.crowdin.net",
   },
   mockGetShared: vi.fn<() => ValkeyClient | undefined>(),

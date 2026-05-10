@@ -13,7 +13,6 @@ import { brandId, brandValue } from "@pluralscape/types";
 import { NOW, TEST_MASTER_KEY, TEST_SYSTEM_ID } from "./shared.js";
 
 import type {
-  EncryptedBase64,
   FrontingCommentWire,
   FrontingReportWire,
   FrontingSessionComment,
@@ -53,9 +52,9 @@ export function makeRawFrontingSession(
     updatedAt: NOW,
     archived: false,
     archivedAt: null,
-    encryptedData: encrypted.encryptedData as EncryptedBase64,
+    encryptedData: encrypted.encryptedData,
     ...overrides,
-  } as FrontingSessionWire;
+  };
 }
 
 export function makeRawFrontingComment(
@@ -78,7 +77,7 @@ export function makeRawFrontingComment(
     archivedAt: null,
     ...encrypted,
     ...overrides,
-  } as FrontingCommentWire;
+  };
 }
 
 export function makeRawFrontingReport(

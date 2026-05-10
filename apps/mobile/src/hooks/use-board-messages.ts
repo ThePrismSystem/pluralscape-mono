@@ -37,10 +37,7 @@ export function useBoardMessage(
     decrypt: decryptBoardMessage,
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.boardMessage.get.useQuery(
-        { systemId, boardMessageId },
-        { enabled, select },
-      ) as DataQuery<BoardMessage | Archived<BoardMessage>>,
+      trpc.boardMessage.get.useQuery({ systemId, boardMessageId }, { enabled, select }),
   });
 }
 
@@ -66,7 +63,7 @@ export function useBoardMessagesList(
           getNextPageParam: (lastPage: BoardMessageWirePage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<BoardMessage | Archived<BoardMessage>>,
+      ),
   });
 }
 

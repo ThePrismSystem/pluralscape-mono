@@ -88,7 +88,7 @@ function extractJunctionEntities(raw: unknown, columnNames: readonly string[]): 
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return [];
   const rows: EntityRow[] = [];
   const nonIdColumns = columnNames.filter((c) => c !== "id");
-  for (const compoundKey of Object.keys(raw as Record<string, unknown>)) {
+  for (const compoundKey of Object.keys(raw)) {
     const parts = compoundKey.split(":");
     if (parts.length !== nonIdColumns.length) {
       throw new Error(
@@ -99,7 +99,7 @@ function extractJunctionEntities(raw: unknown, columnNames: readonly string[]): 
     for (let i = 0; i < nonIdColumns.length; i++) {
       entityObj[nonIdColumns[i] ?? ""] = parts[i];
     }
-    rows.push({ id: compoundKey, ...entityObj } as EntityRow);
+    rows.push({ id: compoundKey, ...entityObj });
   }
   return rows;
 }

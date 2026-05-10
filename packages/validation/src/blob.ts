@@ -41,7 +41,7 @@ export const CreateUploadUrlBodySchema = z
   })
   .readonly()
   .superRefine((data, ctx) => {
-    const allowed = ALLOWED_MIME_TYPES[data.purpose as BlobPurpose];
+    const allowed = ALLOWED_MIME_TYPES[data.purpose];
     if (!allowed.includes(data.mimeType)) {
       ctx.addIssue({
         code: "custom",

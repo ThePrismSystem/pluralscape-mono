@@ -59,7 +59,7 @@ describe("recovery key queries (SQLite)", () => {
 
   describe("sqliteStoreRecoveryKeyBackup", () => {
     it("inserts a row that can be retrieved", () => {
-      const accountId = sqliteInsertAccount(db as BetterSQLite3Database<Record<string, unknown>>);
+      const accountId = sqliteInsertAccount(db);
       const row = makeRow(accountId);
       sqliteStoreRecoveryKeyBackup(db as BetterSQLite3Database<Record<string, unknown>>, row);
 
@@ -70,7 +70,7 @@ describe("recovery key queries (SQLite)", () => {
     });
 
     it("stores encryptedMasterKey bytes faithfully", () => {
-      const accountId = sqliteInsertAccount(db as BetterSQLite3Database<Record<string, unknown>>);
+      const accountId = sqliteInsertAccount(db);
       const row = makeRow(accountId);
       sqliteStoreRecoveryKeyBackup(db as BetterSQLite3Database<Record<string, unknown>>, row);
 
@@ -81,7 +81,7 @@ describe("recovery key queries (SQLite)", () => {
 
   describe("sqliteGetActiveRecoveryKey", () => {
     it("returns null when no recovery key exists", () => {
-      const accountId = sqliteInsertAccount(db as BetterSQLite3Database<Record<string, unknown>>);
+      const accountId = sqliteInsertAccount(db);
       const result = sqliteGetActiveRecoveryKey(
         db as BetterSQLite3Database<Record<string, unknown>>,
         accountId,
@@ -90,7 +90,7 @@ describe("recovery key queries (SQLite)", () => {
     });
 
     it("returns the active key when one exists", () => {
-      const accountId = sqliteInsertAccount(db as BetterSQLite3Database<Record<string, unknown>>);
+      const accountId = sqliteInsertAccount(db);
       const row = makeRow(accountId);
       sqliteStoreRecoveryKeyBackup(db as BetterSQLite3Database<Record<string, unknown>>, row);
 
@@ -103,7 +103,7 @@ describe("recovery key queries (SQLite)", () => {
     });
 
     it("returns null when the only key is revoked", () => {
-      const accountId = sqliteInsertAccount(db as BetterSQLite3Database<Record<string, unknown>>);
+      const accountId = sqliteInsertAccount(db);
       const row = makeRow(accountId);
       sqliteStoreRecoveryKeyBackup(db as BetterSQLite3Database<Record<string, unknown>>, row);
       sqliteRevokeRecoveryKey(
@@ -120,7 +120,7 @@ describe("recovery key queries (SQLite)", () => {
     });
 
     it("ignores revoked keys and returns active one", () => {
-      const accountId = sqliteInsertAccount(db as BetterSQLite3Database<Record<string, unknown>>);
+      const accountId = sqliteInsertAccount(db);
       const oldRow = makeRow(accountId, { createdAt: fixtureNowPlus(-10_000) });
       const newRow = makeRow(accountId);
       sqliteStoreRecoveryKeyBackup(db as BetterSQLite3Database<Record<string, unknown>>, oldRow);
@@ -141,7 +141,7 @@ describe("recovery key queries (SQLite)", () => {
 
   describe("sqliteRevokeRecoveryKey", () => {
     it("sets revokedAt on the target row", () => {
-      const accountId = sqliteInsertAccount(db as BetterSQLite3Database<Record<string, unknown>>);
+      const accountId = sqliteInsertAccount(db);
       const row = makeRow(accountId);
       sqliteStoreRecoveryKeyBackup(db as BetterSQLite3Database<Record<string, unknown>>, row);
 
@@ -167,7 +167,7 @@ describe("recovery key queries (SQLite)", () => {
     });
 
     it("does not affect other rows", () => {
-      const accountId = sqliteInsertAccount(db as BetterSQLite3Database<Record<string, unknown>>);
+      const accountId = sqliteInsertAccount(db);
       const row1 = makeRow(accountId);
       const row2 = makeRow(accountId);
       sqliteStoreRecoveryKeyBackup(db as BetterSQLite3Database<Record<string, unknown>>, row1);
@@ -187,7 +187,7 @@ describe("recovery key queries (SQLite)", () => {
 
   describe("sqliteReplaceRecoveryKeyBackup", () => {
     it("revokes old key and inserts new one atomically", () => {
-      const accountId = sqliteInsertAccount(db as BetterSQLite3Database<Record<string, unknown>>);
+      const accountId = sqliteInsertAccount(db);
       const oldRow = makeRow(accountId);
       sqliteStoreRecoveryKeyBackup(db as BetterSQLite3Database<Record<string, unknown>>, oldRow);
 
@@ -210,7 +210,7 @@ describe("recovery key queries (SQLite)", () => {
     });
 
     it("throws when revokeId does not exist", () => {
-      const accountId = sqliteInsertAccount(db as BetterSQLite3Database<Record<string, unknown>>);
+      const accountId = sqliteInsertAccount(db);
       const newRow = makeRow(accountId);
       expect(() => {
         sqliteReplaceRecoveryKeyBackup(db as BetterSQLite3Database<Record<string, unknown>>, {
@@ -222,7 +222,7 @@ describe("recovery key queries (SQLite)", () => {
     });
 
     it("new key is the only active key after replacement", () => {
-      const accountId = sqliteInsertAccount(db as BetterSQLite3Database<Record<string, unknown>>);
+      const accountId = sqliteInsertAccount(db);
       const oldRow = makeRow(accountId);
       sqliteStoreRecoveryKeyBackup(db as BetterSQLite3Database<Record<string, unknown>>, oldRow);
 

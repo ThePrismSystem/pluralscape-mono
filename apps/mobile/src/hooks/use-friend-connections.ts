@@ -112,7 +112,7 @@ export function useFriendConnectionsList(
           getNextPageParam: (lastPage: FriendConnectionPage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<FriendConnection | ArchivedFriendConnection>,
+      ),
   });
 }
 

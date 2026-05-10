@@ -15,7 +15,7 @@
     "@pluralscape/sync": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
     "@pluralscape/types": "workspace:*",
-    "@types/node": "^24.12.2",
+    "@types/node": "^24.12.3",
     "esbuild": "^0.28.0",
     "typescript": "catalog:"
   }

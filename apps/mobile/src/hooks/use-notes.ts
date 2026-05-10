@@ -37,9 +37,7 @@ export function useNote(noteId: NoteId, opts?: SystemIdOverride): DataQuery<Note
     decrypt: decryptNote,
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.note.get.useQuery({ systemId, noteId }, { enabled, select }) as DataQuery<
-        Note | Archived<Note>
-      >,
+      trpc.note.get.useQuery({ systemId, noteId }, { enabled, select }),
   });
 }
 
@@ -82,7 +80,7 @@ export function useNotesList(opts?: NoteListOpts): DataListQuery<Note | Archived
           getNextPageParam: (lastPage: NoteWirePage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<Note | Archived<Note>>,
+      ),
   });
 }
 

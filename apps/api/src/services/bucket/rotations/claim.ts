@@ -31,7 +31,7 @@ import type { z } from "zod/v4";
 
 function toItemResult(row: typeof bucketRotationItems.$inferSelect): BucketRotationItem {
   return {
-    id: row.id as BucketRotationItem["id"],
+    id: row.id,
     rotationId: brandId<BucketKeyRotationId>(row.rotationId),
     entityType: row.entityType,
     entityId: row.entityId,

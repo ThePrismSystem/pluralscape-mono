@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { isAllowedOrigin } from "../../ws/origin-validation.js";
 
 const mockEnv = vi.hoisted(() => ({
-  NODE_ENV: "test" as "development" | "test" | "production",
+  NODE_ENV: "test",
   ALLOWED_ORIGINS: undefined as string | undefined,
 }));
 

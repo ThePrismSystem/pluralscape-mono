@@ -80,12 +80,6 @@ function makeJobPayload(overrides: Record<string, unknown> = {}): {
     platform: PLATFORM,
     payload: MOCK_PAYLOAD,
     ...overrides,
-  } as {
-    accountId: AccountId;
-    systemId: SystemId;
-    deviceTokenId: DeviceTokenId;
-    platform: DeviceTokenPlatform;
-    payload: PushPayload;
   };
 }
 

@@ -59,10 +59,7 @@ export function useMessage(
       return rowToMessage(row);
     },
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.message.get.useQuery(
-        { systemId, channelId, messageId },
-        { enabled, select },
-      ) as DataQuery<ChatMessage | ArchivedChatMessage>,
+      trpc.message.get.useQuery({ systemId, channelId, messageId }, { enabled, select }),
   });
 }
 
@@ -100,7 +97,7 @@ export function useMessagesList(
           getNextPageParam: (lastPage: MessageWirePage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<ChatMessage | ArchivedChatMessage>,
+      ),
   });
 }
 

@@ -38,9 +38,7 @@ export function usePrivacyBucket(
     rowTransform: rowToPrivacyBucket,
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.bucket.get.useQuery({ systemId, bucketId }, { enabled, select }) as DataQuery<
-        PrivacyBucket | ArchivedPrivacyBucket
-      >,
+      trpc.bucket.get.useQuery({ systemId, bucketId }, { enabled, select }),
   });
 }
 
@@ -65,7 +63,7 @@ export function usePrivacyBucketsList(
           getNextPageParam: (lastPage: BucketPage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<PrivacyBucket | ArchivedPrivacyBucket>,
+      ),
   });
 }
 

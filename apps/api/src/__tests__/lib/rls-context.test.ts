@@ -63,7 +63,7 @@ interface RlsTestCase {
 const cases: RlsTestCase[] = [
   {
     name: "withTenantTransaction",
-    fn: withTenantTransaction as (...args: never[]) => Promise<unknown>,
+    fn: withTenantTransaction,
     setupFn: "setTenantContext",
     readOnly: false,
     callArgs: (db, callback) => {
@@ -73,7 +73,7 @@ const cases: RlsTestCase[] = [
   },
   {
     name: "withTenantRead",
-    fn: withTenantRead as (...args: never[]) => Promise<unknown>,
+    fn: withTenantRead,
     setupFn: "setTenantContext",
     readOnly: true,
     callArgs: (db, callback) => {
@@ -83,7 +83,7 @@ const cases: RlsTestCase[] = [
   },
   {
     name: "withAccountTransaction",
-    fn: withAccountTransaction as (...args: never[]) => Promise<unknown>,
+    fn: withAccountTransaction,
     setupFn: "setAccountId",
     readOnly: false,
     callArgs: (db, callback) => {
@@ -93,7 +93,7 @@ const cases: RlsTestCase[] = [
   },
   {
     name: "withAccountRead",
-    fn: withAccountRead as (...args: never[]) => Promise<unknown>,
+    fn: withAccountRead,
     setupFn: "setAccountId",
     readOnly: true,
     callArgs: (db, callback) => {

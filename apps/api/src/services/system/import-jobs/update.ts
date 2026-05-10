@@ -13,14 +13,7 @@ import { parseErrorLog, toImportJobResult } from "./internal.js";
 import type { ImportJobResult } from "./internal.js";
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type {
-  ImportCheckpointState,
-  ImportError,
-  ImportJobId,
-  ImportJobStatus,
-  ServerInternal,
-  SystemId,
-} from "@pluralscape/types";
+import type { ImportError, ImportJobId, ImportJobStatus, SystemId } from "@pluralscape/types";
 import type { UpdateImportJobBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { z } from "zod/v4";
@@ -133,11 +126,10 @@ export async function updateImportJob(
     if (body.chunksTotal !== undefined) updates.chunksTotal = body.chunksTotal;
     if (body.chunksCompleted !== undefined) updates.chunksCompleted = body.chunksCompleted;
     if (body.errorLog !== undefined) {
-      updates.errorLog = body.errorLog as readonly ImportError[] | null;
+      updates.errorLog = body.errorLog;
     }
     if (body.checkpointState !== undefined) {
-      updates.checkpointState =
-        body.checkpointState as ServerInternal<ImportCheckpointState> | null;
+      updates.checkpointState = body.checkpointState;
     }
 
     if (terminalTransition) {

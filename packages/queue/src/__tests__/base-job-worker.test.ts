@@ -85,7 +85,7 @@ function stubQueue(overrides: Partial<JobQueue> = {}): JobQueue {
     setRetryPolicy: vi.fn(),
     setEventHooks: vi.fn(),
     ...overrides,
-  } as JobQueue;
+  };
 }
 
 function makeJob(overrides: Partial<JobDefinition> = {}): JobDefinition {
@@ -134,26 +134,26 @@ describe("BaseJobWorker", () => {
     it("registers a handler and exposes it via registeredTypes", () => {
       const queue = stubQueue();
       worker = new TestJobWorker(queue, { logger: mockLogger() });
-      worker.registerHandler("sync-push" as JobType, noop);
+      worker.registerHandler("sync-push", noop);
       expect(worker.registeredTypes()).toContain("sync-push");
     });
 
     it("throws DuplicateHandlerError for the same type", () => {
       const queue = stubQueue();
       worker = new TestJobWorker(queue, { logger: mockLogger() });
-      worker.registerHandler("sync-push" as JobType, noop);
+      worker.registerHandler("sync-push", noop);
       expect(() => {
-        worker.registerHandler("sync-push" as JobType, noop);
+        worker.registerHandler("sync-push", noop);
       }).toThrow(DuplicateHandlerError);
     });
 
     it("throws WorkerAlreadyRunningError when called after start", async () => {
       const queue = stubQueue();
       worker = new TestJobWorker(queue, { logger: mockLogger(), pollIntervalMs: 500 });
-      worker.registerHandler("sync-push" as JobType, noop);
+      worker.registerHandler("sync-push", noop);
       await worker.start();
       expect(() => {
-        worker.registerHandler("sync-pull" as JobType, noop);
+        worker.registerHandler("sync-pull", noop);
       }).toThrow(WorkerAlreadyRunningError);
     });
   });
@@ -170,7 +170,7 @@ describe("BaseJobWorker", () => {
     it("rejects double start", async () => {
       const queue = stubQueue();
       worker = new TestJobWorker(queue, { logger: mockLogger(), pollIntervalMs: 500 });
-      worker.registerHandler("sync-push" as JobType, noop);
+      worker.registerHandler("sync-push", noop);
       await worker.start();
       await expect(worker.start()).rejects.toThrow(WorkerAlreadyRunningError);
     });
@@ -178,7 +178,7 @@ describe("BaseJobWorker", () => {
     it("calls onStart during start and onStop during stop", async () => {
       const queue = stubQueue();
       worker = new TestJobWorker(queue, { logger: mockLogger(), pollIntervalMs: 500 });
-      worker.registerHandler("sync-push" as JobType, noop);
+      worker.registerHandler("sync-push", noop);
       expect(worker.onStartCalled).toBe(false);
       await worker.start();
       expect(worker.onStartCalled).toBe(true);
@@ -190,7 +190,7 @@ describe("BaseJobWorker", () => {
     it("isRunning reflects lifecycle state", async () => {
       const queue = stubQueue();
       worker = new TestJobWorker(queue, { logger: mockLogger(), pollIntervalMs: 500 });
-      worker.registerHandler("sync-push" as JobType, noop);
+      worker.registerHandler("sync-push", noop);
       expect(worker.isRunning()).toBe(false);
       await worker.start();
       expect(worker.isRunning()).toBe(true);
@@ -213,7 +213,7 @@ describe("BaseJobWorker", () => {
       const queue = stubQueue({ acknowledge: ackFn });
       worker = new TestJobWorker(queue, { logger: mockLogger(), pollIntervalMs: 50 });
       const handlerFn = vi.fn().mockResolvedValue(undefined);
-      worker.registerHandler("sync-push" as JobType, handlerFn);
+      worker.registerHandler("sync-push", handlerFn);
 
       const job = makeJob();
       worker.feedJob(job);
@@ -233,9 +233,7 @@ describe("BaseJobWorker", () => {
       const failFn = vi.fn().mockResolvedValue({});
       const queue = stubQueue({ fail: failFn });
       worker = new TestJobWorker(queue, { logger: mockLogger(), pollIntervalMs: 50 });
-      worker.registerHandler("sync-push" as JobType, () =>
-        Promise.reject(new Error("handler boom")),
-      );
+      worker.registerHandler("sync-push", () => Promise.reject(new Error("handler boom")));
 
       const job = makeJob();
       worker.feedJob(job);
@@ -250,7 +248,7 @@ describe("BaseJobWorker", () => {
       const failFn = vi.fn().mockResolvedValue({});
       const queue = stubQueue({ fail: failFn });
       worker = new TestJobWorker(queue, { logger: mockLogger(), pollIntervalMs: 50 });
-      worker.registerHandler("blob-upload" as JobType, noop);
+      worker.registerHandler("blob-upload", noop);
 
       const job = makeJob({ type: "sync-push" as JobType });
       worker.feedJob(job);
@@ -270,7 +268,7 @@ describe("BaseJobWorker", () => {
       const logger: Logger = { info: vi.fn(), warn: warnFn, error: vi.fn() };
       const queue = stubQueue({ acknowledge: ackFn });
       worker = new TestJobWorker(queue, { logger, pollIntervalMs: 50 });
-      worker.registerHandler("sync-push" as JobType, noop);
+      worker.registerHandler("sync-push", noop);
 
       const job = makeJob();
       worker.feedJob(job);
@@ -292,7 +290,7 @@ describe("BaseJobWorker", () => {
       const logger: Logger = { info: vi.fn(), warn: vi.fn(), error: errorFn };
       const queue = stubQueue({ acknowledge: ackFn });
       worker = new TestJobWorker(queue, { logger, pollIntervalMs: 50 });
-      worker.registerHandler("sync-push" as JobType, noop);
+      worker.registerHandler("sync-push", noop);
 
       const job = makeJob();
       worker.feedJob(job);
@@ -317,7 +315,7 @@ describe("BaseJobWorker", () => {
       worker = new TestJobWorker(queue, { logger: mockLogger(), pollIntervalMs: 50 });
 
       let heartbeatCalled = false;
-      worker.registerHandler("sync-push" as JobType, async (_job, ctx) => {
+      worker.registerHandler("sync-push", async (_job, ctx) => {
         await ctx.heartbeat.heartbeat();
         heartbeatCalled = true;
       });
@@ -342,7 +340,7 @@ describe("BaseJobWorker", () => {
       worker = new TestJobWorker(queue, { logger: mockLogger(), pollIntervalMs: 50 });
 
       let signalAborted = false;
-      worker.registerHandler("sync-push" as JobType, async (_job, ctx) => {
+      worker.registerHandler("sync-push", async (_job, ctx) => {
         await new Promise<void>((resolve) => {
           ctx.signal.addEventListener("abort", () => {
             signalAborted = true;
@@ -377,7 +375,7 @@ describe("BaseJobWorker", () => {
         pollIntervalMs: 50,
         clock: () => clockValue,
       });
-      worker.registerHandler("sync-push" as JobType, noop);
+      worker.registerHandler("sync-push", noop);
 
       // Start with failures enabled
       worker.pollShouldFail = true;
@@ -427,7 +425,7 @@ describe("BaseJobWorker", () => {
       const errorFn = vi.fn();
       const logger: Logger = { info: vi.fn(), warn: vi.fn(), error: errorFn };
       worker = new TestJobWorker(queue, { logger, pollIntervalMs: 50 });
-      worker.registerHandler("blob-upload" as JobType, noop);
+      worker.registerHandler("blob-upload", noop);
 
       const job = makeJob({ type: "sync-push" as JobType });
       worker.feedJob(job);
@@ -447,9 +445,7 @@ describe("BaseJobWorker", () => {
       const errorFn = vi.fn();
       const logger: Logger = { info: vi.fn(), warn: vi.fn(), error: errorFn };
       worker = new TestJobWorker(queue, { logger, pollIntervalMs: 50 });
-      worker.registerHandler("sync-push" as JobType, () =>
-        Promise.reject(new Error("handler error")),
-      );
+      worker.registerHandler("sync-push", () => Promise.reject(new Error("handler error")));
 
       const job = makeJob();
       worker.feedJob(job);
@@ -473,7 +469,7 @@ describe("BaseJobWorker", () => {
       const logger = mockLogger();
       const queue = stubQueue({ acknowledge: ackFn, fail: failFn });
       worker = new TestJobWorker(queue, { logger, pollIntervalMs: 50 });
-      worker.registerHandler("sync-push" as JobType, noop);
+      worker.registerHandler("sync-push", noop);
 
       const job = makeJob();
       worker.feedJob(job);
@@ -501,7 +497,7 @@ describe("BaseJobWorker", () => {
 
       // Handler that never finishes and ignores abort
       worker.registerHandler(
-        "sync-push" as JobType,
+        "sync-push",
         () =>
           new Promise<void>(() => {
             // intentionally never resolves

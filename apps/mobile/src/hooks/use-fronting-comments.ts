@@ -44,10 +44,7 @@ export function useFrontingComment(
     decrypt: decryptFrontingComment,
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.frontingComment.get.useQuery(
-        { systemId, sessionId, commentId },
-        { enabled, select },
-      ) as DataQuery<FrontingComment | Archived<FrontingComment>>,
+      trpc.frontingComment.get.useQuery({ systemId, sessionId, commentId }, { enabled, select }),
   });
 }
 
@@ -85,7 +82,7 @@ export function useFrontingCommentsList(
           getNextPageParam: (lastPage: FrontingCommentPage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<FrontingComment | Archived<FrontingComment>>,
+      ),
   });
 }
 

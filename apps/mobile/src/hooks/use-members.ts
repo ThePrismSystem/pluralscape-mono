@@ -39,9 +39,7 @@ export function useMember(
     decrypt: decryptMember,
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.member.get.useQuery({ systemId, memberId }, { enabled, select }) as DataQuery<
-        Member | Archived<Member>
-      >,
+      trpc.member.get.useQuery({ systemId, memberId }, { enabled, select }),
   });
 }
 
@@ -66,7 +64,7 @@ export function useMembersList(opts?: MemberListOpts): DataListQuery<Member | Ar
           getNextPageParam: (lastPage: MemberWirePage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<Member | Archived<Member>>,
+      ),
   });
 }
 

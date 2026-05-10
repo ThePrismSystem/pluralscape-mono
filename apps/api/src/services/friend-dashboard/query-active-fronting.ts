@@ -17,7 +17,6 @@ import type {
   MemberId,
   SystemId,
   SystemStructureEntityId,
-  UnixMillis,
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
@@ -118,7 +117,7 @@ export async function queryVisibleActiveFronting(
     structureEntityId: r.structureEntityId
       ? brandId<SystemStructureEntityId>(r.structureEntityId)
       : null,
-    startTime: r.startTime as UnixMillis,
+    startTime: r.startTime,
     encryptedData: encryptedBlobToBase64(r.encryptedData),
   }));
 

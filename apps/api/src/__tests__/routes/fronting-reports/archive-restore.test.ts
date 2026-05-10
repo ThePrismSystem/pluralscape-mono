@@ -9,7 +9,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_SYSTEM_ID, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse, EncryptedBase64, FrontingReportId } from "@pluralscape/types";
+import type { ApiErrorResponse, FrontingReportId } from "@pluralscape/types";
 
 vi.mock("../../../services/fronting-report/lifecycle.js", () => ({
   archiveFrontingReport: vi.fn(),
@@ -89,7 +89,7 @@ describe("POST /systems/:id/fronting-reports/:reportId/restore", () => {
     vi.mocked(restoreFrontingReport).mockResolvedValueOnce({
       id: brandId<FrontingReportId>("fr_660e8400-e29b-41d4-a716-446655440000"),
       systemId: MOCK_SYSTEM_ID,
-      encryptedData: "dGVzdA==" as EncryptedBase64,
+      encryptedData: "dGVzdA==",
       format: "html" as const,
       generatedAt: toUnixMillis(5000),
       version: 2,

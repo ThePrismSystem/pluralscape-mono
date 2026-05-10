@@ -9,7 +9,7 @@ import { requestIdMiddleware } from "../middleware/request-id.js";
 import type { ApiErrorResponse } from "@pluralscape/types";
 
 const mockEnv = vi.hoisted(() => ({
-  NODE_ENV: "test" as "development" | "test" | "production",
+  NODE_ENV: "test",
 }));
 
 vi.mock("../env.js", () => ({ env: mockEnv }));

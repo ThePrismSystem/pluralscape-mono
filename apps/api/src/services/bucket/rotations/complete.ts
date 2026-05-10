@@ -147,7 +147,7 @@ export async function completeRotationChunk(
             systemId,
             entityType: tag.entityType,
             entityId: tag.entityId,
-            status: ROTATION_ITEM_STATUSES.pending as RotationItemStatus,
+            status: ROTATION_ITEM_STATUSES.pending,
             attempts: 0,
           })),
         );

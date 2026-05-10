@@ -186,7 +186,7 @@ async function queryExportPage(
     const lastRow = rows[rows.length - 1];
     if (lastRow) {
       lastRawRow = lastRow;
-      currentCursor = { sortValue: lastRawRow.updatedAt as number, id: lastRawRow.id };
+      currentCursor = { sortValue: lastRawRow.updatedAt, id: lastRawRow.id };
     }
 
     if (dbExhausted) break;
@@ -201,7 +201,7 @@ async function queryExportPage(
   // re-fetching any invisible rows between visible items as expected.
   const lastItem = items[items.length - 1];
   const nextCursor =
-    hasMore && lastItem ? toCompositeCursor(lastItem.updatedAt as number, lastItem.id) : null;
+    hasMore && lastItem ? toCompositeCursor(lastItem.updatedAt, lastItem.id) : null;
 
   // ETag from visible items on this page
   let maxUpdatedAt: UnixMillis | null = null;

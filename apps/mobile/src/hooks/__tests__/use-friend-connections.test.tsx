@@ -127,7 +127,7 @@ describe("useAcceptFriendConnection", () => {
     await act(() =>
       result.current.mutateAsync({
         connectionId: brandId<FriendConnectionId>("fc_test"),
-      } as Parameters<typeof result.current.mutateAsync>[0]),
+      }),
     );
 
     await waitFor(() => {
@@ -144,7 +144,7 @@ describe("useRejectFriendConnection", () => {
     await act(() =>
       result.current.mutateAsync({
         connectionId: brandId<FriendConnectionId>("fc_test"),
-      } as Parameters<typeof result.current.mutateAsync>[0]),
+      }),
     );
 
     await waitFor(() => {
@@ -161,7 +161,7 @@ describe("useBlockFriendConnection", () => {
     await act(() =>
       result.current.mutateAsync({
         connectionId: brandId<FriendConnectionId>("fc_test"),
-      } as Parameters<typeof result.current.mutateAsync>[0]),
+      }),
     );
 
     await waitFor(() => {
@@ -178,7 +178,7 @@ describe("useRemoveFriendConnection", () => {
     await act(() =>
       result.current.mutateAsync({
         connectionId: brandId<FriendConnectionId>("fc_test"),
-      } as Parameters<typeof result.current.mutateAsync>[0]),
+      }),
     );
 
     await waitFor(() => {
@@ -195,7 +195,7 @@ describe("useArchiveFriendConnection", () => {
     await act(() =>
       result.current.mutateAsync({
         connectionId: brandId<FriendConnectionId>("fc_test"),
-      } as Parameters<typeof result.current.mutateAsync>[0]),
+      }),
     );
 
     await waitFor(() => {
@@ -212,7 +212,7 @@ describe("useRestoreFriendConnection", () => {
     await act(() =>
       result.current.mutateAsync({
         connectionId: brandId<FriendConnectionId>("fc_test"),
-      } as Parameters<typeof result.current.mutateAsync>[0]),
+      }),
     );
 
     await waitFor(() => {

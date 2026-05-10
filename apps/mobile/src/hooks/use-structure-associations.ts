@@ -46,7 +46,7 @@ export function useStructureAssociationsList(
           getNextPageParam: (lastPage: AssociationPage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<SystemStructureEntityAssociation>,
+      ),
   });
 }
 

@@ -162,10 +162,7 @@ export function useTestWebhook(): TRPCMutation<
   RouterOutput["webhookConfig"]["test"],
   RouterInput["webhookConfig"]["test"]
 > {
-  return trpc.webhookConfig.test.useMutation() as TRPCMutation<
-    RouterOutput["webhookConfig"]["test"],
-    RouterInput["webhookConfig"]["test"]
-  >;
+  return trpc.webhookConfig.test.useMutation();
 }
 
 // ---------------------------------------------------------------------------

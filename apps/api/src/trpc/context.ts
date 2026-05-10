@@ -3,7 +3,7 @@ import { getDb } from "../lib/db.js";
 import { extractRequestMeta } from "../lib/request-meta.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
-import type { AuthContext, AuthEnv } from "../lib/auth-context.js";
+import type { AuthContext, AuthEnv, OptionalAuthEnv } from "../lib/auth-context.js";
 import type { RequestMeta } from "../lib/request-meta.js";
 import type { SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -46,8 +46,10 @@ export function createTRPCContextInner(opts: TRPCContext): TRPCContext {
 export async function createTRPCContext(c: Context<AuthEnv>): Promise<TRPCContext> {
   const db = await getDb();
   // Auth is optional for tRPC — public procedures run without auth.
-  // AuthEnv types auth as required, so the undefined cast is necessary.
-  const auth: AuthContext | null = (c.get("auth") as AuthContext | undefined) ?? null;
+  // AuthEnv types auth as required, but the tRPC route's optional auth
+  // middleware only sets it when a valid Bearer token is present.
+  const optionalAuthCtx = c as Context<OptionalAuthEnv>;
+  const auth: AuthContext | null = optionalAuthCtx.get("auth") ?? null;
 
   return createTRPCContextInner({
     db,

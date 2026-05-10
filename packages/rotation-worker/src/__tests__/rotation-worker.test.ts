@@ -503,7 +503,7 @@ describe("RotationWorker", () => {
 
   function makeConfig(overrides?: Partial<RotationWorkerConfig>): RotationWorkerConfig {
     return {
-      apiClient: apiClient as RotationApiClient,
+      apiClient,
       bucketId: BUCKET_ID,
       rotationId: ROTATION_ID,
       oldKey: OLD_KEY,

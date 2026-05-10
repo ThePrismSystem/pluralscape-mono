@@ -9,7 +9,6 @@ import { mockOwnershipFailure } from "./helpers/mock-ownership.js";
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext, SessionAuthContext } from "../lib/auth-context.js";
 import type {
-  EncryptedBase64,
   AccountId,
   EncryptedBlob,
   SessionId,
@@ -118,7 +117,7 @@ describe("createSnapshot", () => {
       createSnapshot(
         db,
         SYSTEM_ID,
-        { snapshotTrigger: "manual", encryptedData: "abc" as EncryptedBase64 },
+        { snapshotTrigger: "manual", encryptedData: "abc" },
         stubAuth(),
         stubAudit(),
       ),
@@ -135,7 +134,7 @@ describe("createSnapshot", () => {
     const result = await createSnapshot(
       db,
       SYSTEM_ID,
-      { snapshotTrigger: "manual", encryptedData: "abc" as EncryptedBase64 },
+      { snapshotTrigger: "manual", encryptedData: "abc" },
       stubAuth(),
       audit,
     );
@@ -158,7 +157,7 @@ describe("createSnapshot", () => {
       createSnapshot(
         db,
         SYSTEM_ID,
-        { snapshotTrigger: "manual", encryptedData: "abc" as EncryptedBase64 },
+        { snapshotTrigger: "manual", encryptedData: "abc" },
         stubAuth(),
         stubAudit(),
       ),

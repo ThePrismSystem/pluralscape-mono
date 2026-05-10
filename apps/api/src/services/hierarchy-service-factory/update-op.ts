@@ -55,7 +55,7 @@ export async function updateEntity<
         updatedAt: timestamp,
         version: sql`${columns.version} + 1`,
         ...extraValues,
-      } as Record<string, unknown>)
+      })
       .where(
         and(
           eq(columns.id, entityId),

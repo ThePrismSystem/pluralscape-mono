@@ -15,7 +15,7 @@ const { assertAccountOwnership } = await import("../../lib/account-ownership.js"
 const ACCOUNT_ID = brandId<AccountId>("acct_test-account");
 
 const AUTH = makeTestAuth({
-  accountId: ACCOUNT_ID as string,
+  accountId: ACCOUNT_ID,
   sessionId: "sess_test-session",
 });
 
@@ -48,7 +48,7 @@ describe("assertAccountOwnership", () => {
 
   it("works for viewer accounts with no owned systems", () => {
     const viewerAuth = makeTestAuth({
-      accountId: ACCOUNT_ID as string,
+      accountId: ACCOUNT_ID,
       systemId: undefined,
       sessionId: "sess_test-session",
       accountType: "viewer",
