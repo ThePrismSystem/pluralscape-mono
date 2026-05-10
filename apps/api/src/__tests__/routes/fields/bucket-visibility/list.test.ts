@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -7,7 +8,7 @@ import {
 } from "../../../helpers/common-route-mocks.js";
 import { createRouteApp } from "../../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, BucketId, FieldDefinitionId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -50,8 +51,8 @@ describe("GET /systems/:id/fields/:fieldDefinitionId/bucket-visibility", () => {
   it("returns 200 with visibility list", async () => {
     vi.mocked(listFieldBucketVisibility).mockResolvedValueOnce([
       {
-        fieldDefinitionId: FIELD_ID as never,
-        bucketId: "bkt_770e8400-e29b-41d4-a716-446655440000" as never,
+        fieldDefinitionId: brandId<FieldDefinitionId>(FIELD_ID),
+        bucketId: brandId<BucketId>("bkt_770e8400-e29b-41d4-a716-446655440000"),
       },
     ]);
 

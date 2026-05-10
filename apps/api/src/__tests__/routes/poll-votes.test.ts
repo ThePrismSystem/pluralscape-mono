@@ -1,4 +1,4 @@
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -9,7 +9,15 @@ import {
 } from "../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp, putJSON } from "../helpers/route-test-setup.js";
 
-import type { EncryptedBase64, ApiErrorResponse, MemberId } from "@pluralscape/types";
+import type {
+  ApiErrorResponse,
+  EncryptedBase64,
+  MemberId,
+  PollId,
+  PollOptionId,
+  PollVoteId,
+  SystemId,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -61,19 +69,19 @@ const VOTE_URL = `${BASE_URL}/${VOTE_ID}`;
 const RESULTS_URL = `/systems/${SYS_ID}/polls/${POLL_ID}/results`;
 
 const MOCK_VOTE = {
-  id: VOTE_ID as never,
-  systemId: SYS_ID as never,
-  pollId: POLL_ID as never,
-  optionId: "opt_550e8400-e29b-41d4-a716-446655440003" as never,
+  id: brandId<PollVoteId>(VOTE_ID),
+  systemId: brandId<SystemId>(SYS_ID),
+  pollId: brandId<PollId>(POLL_ID),
+  optionId: brandId<PollOptionId>("opt_550e8400-e29b-41d4-a716-446655440003"),
   voter: { entityType: "member" as const, entityId: brandId<MemberId>("mem_test") },
   isVeto: false,
-  votedAt: 1000 as never,
+  votedAt: toUnixMillis(1000),
   encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
   archived: false,
   archivedAt: null,
-  createdAt: 1000 as never,
-  updatedAt: 1000 as never,
+  createdAt: toUnixMillis(1000),
+  updatedAt: toUnixMillis(1000),
 };
 
 const VALID_UPDATE_BODY = {
@@ -82,7 +90,7 @@ const VALID_UPDATE_BODY = {
 };
 
 const MOCK_RESULTS = {
-  pollId: POLL_ID as never,
+  pollId: brandId<PollId>(POLL_ID),
   totalVotes: 5,
   vetoCount: 1,
   optionCounts: [

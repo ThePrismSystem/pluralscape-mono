@@ -5,6 +5,7 @@ import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
 import type { NotificationConfigId, NotificationEventType, SystemId } from "@pluralscape/types";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Mock tx ──────────────────────────────────────────────────────────
 
@@ -35,6 +36,14 @@ function wireChain(): void {
 // ── Mocks ────────────────────────────────────────────────────────────
 
 const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+
+/**
+ * The service routes through a mocked tenant tx that ignores the db argument;
+ * tests pass an opaque stub. Widen via `unknown` so the cast to
+ * PostgresJsDatabase is a single `as` step.
+ */
+const MOCK_DB_STUB: unknown = {};
+const MOCK_DB = MOCK_DB_STUB as PostgresJsDatabase;
 
 vi.mock("../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn(),
@@ -132,7 +141,7 @@ describe("notification-config service", () => {
     it("returns existing config when found", async () => {
       mockTx.limit.mockResolvedValueOnce([makeConfigRow({ enabled: true })]);
 
-      const result = await getOrCreateNotificationConfig({} as never, SYSTEM_ID, EVENT_TYPE, AUTH);
+      const result = await getOrCreateNotificationConfig(MOCK_DB, SYSTEM_ID, EVENT_TYPE, AUTH);
 
       expect(result.id).toBe(CONFIG_ID);
       expect(result.eventType).toBe(EVENT_TYPE);
@@ -143,7 +152,7 @@ describe("notification-config service", () => {
       mockTx.limit.mockResolvedValueOnce([]); // no existing config
       mockTx.returning.mockResolvedValueOnce([makeConfigRow({ id: "ncfg_test-id" })]);
 
-      const result = await getOrCreateNotificationConfig({} as never, SYSTEM_ID, EVENT_TYPE, AUTH);
+      const result = await getOrCreateNotificationConfig(MOCK_DB, SYSTEM_ID, EVENT_TYPE, AUTH);
 
       expect(result.id).toBe("ncfg_test-id");
       expect(result.enabled).toBe(false);
@@ -155,7 +164,7 @@ describe("notification-config service", () => {
       mockTx.returning.mockResolvedValueOnce([]);
 
       await expect(
-        getOrCreateNotificationConfig({} as never, SYSTEM_ID, EVENT_TYPE, AUTH),
+        getOrCreateNotificationConfig(MOCK_DB, SYSTEM_ID, EVENT_TYPE, AUTH),
       ).rejects.toThrow("Notification config insert returned no rows");
     });
 
@@ -163,7 +172,7 @@ describe("notification-config service", () => {
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
       await expect(
-        getOrCreateNotificationConfig({} as never, SYSTEM_ID, EVENT_TYPE, AUTH),
+        getOrCreateNotificationConfig(MOCK_DB, SYSTEM_ID, EVENT_TYPE, AUTH),
       ).rejects.toThrow(expect.objectContaining({ status: 404 }));
     });
   });
@@ -175,7 +184,7 @@ describe("notification-config service", () => {
       mockTx.returning.mockResolvedValueOnce([makeConfigRow({ enabled: false })]);
 
       const result = await updateNotificationConfig(
-        {} as never,
+        MOCK_DB,
         SYSTEM_ID,
         EVENT_TYPE,
         { enabled: false },
@@ -196,7 +205,7 @@ describe("notification-config service", () => {
         .mockResolvedValueOnce([makeConfigRow({ enabled: false, pushEnabled: false })]); // insert
 
       const result = await updateNotificationConfig(
-        {} as never,
+        MOCK_DB,
         SYSTEM_ID,
         EVENT_TYPE,
         { enabled: false, pushEnabled: false },
@@ -218,7 +227,7 @@ describe("notification-config service", () => {
       mockTx.returning.mockResolvedValueOnce([makeConfigRow({ enabled: false })]);
 
       const result = await updateNotificationConfig(
-        {} as never,
+        MOCK_DB,
         SYSTEM_ID,
         EVENT_TYPE,
         { enabled: false },
@@ -233,7 +242,7 @@ describe("notification-config service", () => {
       mockTx.returning.mockResolvedValueOnce([makeConfigRow({ pushEnabled: false })]);
 
       const result = await updateNotificationConfig(
-        {} as never,
+        MOCK_DB,
         SYSTEM_ID,
         EVENT_TYPE,
         { pushEnabled: false },
@@ -249,7 +258,7 @@ describe("notification-config service", () => {
 
       await expect(
         updateNotificationConfig(
-          {} as never,
+          MOCK_DB,
           SYSTEM_ID,
           EVENT_TYPE,
           { enabled: false },
@@ -269,7 +278,7 @@ describe("notification-config service", () => {
         makeConfigRow({ id: "ncfg_other", eventType: "timer_alert" }),
       ]);
 
-      const result = await listNotificationConfigs({} as never, SYSTEM_ID, AUTH);
+      const result = await listNotificationConfigs(MOCK_DB, SYSTEM_ID, AUTH);
 
       expect(result).toHaveLength(2);
       expect(result[0]?.eventType).toBe(EVENT_TYPE);
@@ -278,14 +287,14 @@ describe("notification-config service", () => {
     it("returns empty list when no configs", async () => {
       mockTx.limit.mockResolvedValueOnce([]);
 
-      const result = await listNotificationConfigs({} as never, SYSTEM_ID, AUTH);
+      const result = await listNotificationConfigs(MOCK_DB, SYSTEM_ID, AUTH);
       expect(result).toHaveLength(0);
     });
 
     it("rejects when ownership check fails", async () => {
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
-      await expect(listNotificationConfigs({} as never, SYSTEM_ID, AUTH)).rejects.toThrow(
+      await expect(listNotificationConfigs(MOCK_DB, SYSTEM_ID, AUTH)).rejects.toThrow(
         expect.objectContaining({ status: 404 }),
       );
     });

@@ -78,7 +78,10 @@ export function createAuthenticatedState(
   systemId: SystemId,
 ): SyncConnectionState {
   manager.reserveUnauthSlot();
-  manager.register(connId, mockWs() as never, Date.now());
+  // The mock ws stub only implements the methods the manager exercises;
+  // widen via `unknown` so the cast to WSContext is a single `as` step.
+  const opaqueWs: unknown = mockWs();
+  manager.register(connId, opaqueWs as Parameters<typeof manager.register>[1], Date.now());
   manager.authenticate(connId, auth, systemId, "owner-full");
   const state = manager.get(connId);
   if (!state) {

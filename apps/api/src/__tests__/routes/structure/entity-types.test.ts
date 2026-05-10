@@ -1,4 +1,4 @@
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -12,9 +12,10 @@ import { MOCK_AUTH, createRouteApp, postJSON, putJSON } from "../../helpers/rout
 
 import type { EntityTypeResult } from "../../../services/structure/entity-type/internal.js";
 import type {
-  EncryptedBase64,
   ApiErrorResponse,
+  EncryptedBase64,
   PaginatedResult,
+  SystemId,
   SystemStructureEntityTypeId,
 } from "@pluralscape/types";
 
@@ -70,14 +71,14 @@ const createApp = () => createRouteApp("/systems", systemRoutes);
 
 const MOCK_ENTITY_TYPE: EntityTypeResult = {
   id: ET_ID,
-  systemId: SYS_ID as never,
+  systemId: brandId<SystemId>(SYS_ID),
   sortOrder: 0,
   encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
   archived: false,
   archivedAt: null,
-  createdAt: 1000 as never,
-  updatedAt: 1000 as never,
+  createdAt: toUnixMillis(1000),
+  updatedAt: toUnixMillis(1000),
 };
 
 const EMPTY_PAGE: PaginatedResult<EntityTypeResult> = {

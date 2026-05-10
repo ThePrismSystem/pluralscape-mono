@@ -86,7 +86,14 @@ describe("message-router — error paths and broken-ws resilience", () => {
   beforeEach(() => {
     manager = new ConnectionManager();
     manager.reserveUnauthSlot();
-    state = manager.register("conn-1", makeMockWs(sent) as never, Date.now());
+    // The mock ws stub only implements the methods the manager exercises;
+    // widen via `unknown` so the cast to WSContext is a single `as` step.
+    const opaqueWs: unknown = makeMockWs(sent);
+    state = manager.register(
+      "conn-1",
+      opaqueWs as Parameters<typeof manager.register>[1],
+      Date.now(),
+    );
     ctx = createRouterContext(1000, manager);
     sent.length = 0;
   });

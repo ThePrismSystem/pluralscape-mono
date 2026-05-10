@@ -5,6 +5,7 @@ import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
 import type { DeviceTokenId, DeviceTokenPlatform, SystemId } from "@pluralscape/types";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Mock tx ──────────────────────────────────────────────────────────
 
@@ -41,6 +42,14 @@ function wireChain(): void {
 // ── Mocks ────────────────────────────────────────────────────────────
 
 const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+
+/**
+ * The service routes through a mocked `withTenantTransaction` that ignores
+ * the db argument; tests pass an opaque stub. Widen via `unknown` so the
+ * cast to PostgresJsDatabase is a single `as` step.
+ */
+const MOCK_DB_STUB: unknown = {};
+const MOCK_DB = MOCK_DB_STUB as PostgresJsDatabase;
 
 vi.mock("../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn(),
@@ -149,7 +158,7 @@ describe("device-token service", () => {
     it("registers and returns hashed token result", async () => {
       mockTx.returning.mockResolvedValueOnce([makeTokenRow()]);
 
-      const result = await registerDeviceToken({} as never, SYSTEM_ID, params, AUTH, mockAudit);
+      const result = await registerDeviceToken(MOCK_DB, SYSTEM_ID, params, AUTH, mockAudit);
 
       expect(result.id).toBe(TOKEN_ID);
       expect(result.platform).toBe(PLATFORM);
@@ -164,7 +173,7 @@ describe("device-token service", () => {
       // No row returned means conflict existed but accountId didn't match
       mockTx.returning.mockResolvedValueOnce([]);
 
-      const result = await registerDeviceToken({} as never, SYSTEM_ID, params, AUTH, mockAudit);
+      const result = await registerDeviceToken(MOCK_DB, SYSTEM_ID, params, AUTH, mockAudit);
 
       expect(result.systemId).toBe(SYSTEM_ID);
       expect(result.platform).toBe(PLATFORM);
@@ -177,7 +186,7 @@ describe("device-token service", () => {
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
       await expect(
-        registerDeviceToken({} as never, SYSTEM_ID, params, AUTH, mockAudit),
+        registerDeviceToken(MOCK_DB, SYSTEM_ID, params, AUTH, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ status: 404 }));
     });
   });
@@ -192,7 +201,7 @@ describe("device-token service", () => {
       ]);
 
       const result = await updateDeviceToken(
-        {} as never,
+        MOCK_DB,
         SYSTEM_ID,
         TOKEN_ID,
         { platform: "android", token: "newtoken1234567890newtoken26789012" },
@@ -212,7 +221,7 @@ describe("device-token service", () => {
       mockTx.returning.mockResolvedValueOnce([makeTokenRow({ platform: "android" })]);
 
       const result = await updateDeviceToken(
-        {} as never,
+        MOCK_DB,
         SYSTEM_ID,
         TOKEN_ID,
         { platform: "android" },
@@ -230,7 +239,7 @@ describe("device-token service", () => {
       mockTx.returning.mockResolvedValueOnce([makeTokenRow({ tokenHash: newHash })]);
 
       const result = await updateDeviceToken(
-        {} as never,
+        MOCK_DB,
         SYSTEM_ID,
         TOKEN_ID,
         { token: newToken },
@@ -247,14 +256,7 @@ describe("device-token service", () => {
       mockTx.returning.mockResolvedValueOnce([]);
 
       await expect(
-        updateDeviceToken(
-          {} as never,
-          SYSTEM_ID,
-          TOKEN_ID,
-          { platform: "android" },
-          AUTH,
-          mockAudit,
-        ),
+        updateDeviceToken(MOCK_DB, SYSTEM_ID, TOKEN_ID, { platform: "android" }, AUTH, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
     });
 
@@ -262,14 +264,7 @@ describe("device-token service", () => {
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
       await expect(
-        updateDeviceToken(
-          {} as never,
-          SYSTEM_ID,
-          TOKEN_ID,
-          { platform: "android" },
-          AUTH,
-          mockAudit,
-        ),
+        updateDeviceToken(MOCK_DB, SYSTEM_ID, TOKEN_ID, { platform: "android" }, AUTH, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ status: 404 }));
     });
   });
@@ -280,7 +275,7 @@ describe("device-token service", () => {
     it("deletes token and writes audit", async () => {
       mockTx.returning.mockResolvedValueOnce([{ id: TOKEN_ID }]);
 
-      await deleteDeviceToken({} as never, SYSTEM_ID, TOKEN_ID, AUTH, mockAudit);
+      await deleteDeviceToken(MOCK_DB, SYSTEM_ID, TOKEN_ID, AUTH, mockAudit);
 
       expect(mockAudit).toHaveBeenCalledWith(
         mockTx,
@@ -292,7 +287,7 @@ describe("device-token service", () => {
       mockTx.returning.mockResolvedValueOnce([]);
 
       await expect(
-        deleteDeviceToken({} as never, SYSTEM_ID, TOKEN_ID, AUTH, mockAudit),
+        deleteDeviceToken(MOCK_DB, SYSTEM_ID, TOKEN_ID, AUTH, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
     });
 
@@ -300,7 +295,7 @@ describe("device-token service", () => {
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
       await expect(
-        deleteDeviceToken({} as never, SYSTEM_ID, TOKEN_ID, AUTH, mockAudit),
+        deleteDeviceToken(MOCK_DB, SYSTEM_ID, TOKEN_ID, AUTH, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ status: 404 }));
     });
   });
@@ -311,7 +306,7 @@ describe("device-token service", () => {
     it("revokes token and writes audit", async () => {
       mockTx.returning.mockResolvedValueOnce([{ id: TOKEN_ID }]);
 
-      await revokeDeviceToken({} as never, SYSTEM_ID, TOKEN_ID, AUTH, mockAudit);
+      await revokeDeviceToken(MOCK_DB, SYSTEM_ID, TOKEN_ID, AUTH, mockAudit);
 
       expect(mockAudit).toHaveBeenCalledWith(
         mockTx,
@@ -323,7 +318,7 @@ describe("device-token service", () => {
       mockTx.returning.mockResolvedValueOnce([]);
 
       await expect(
-        revokeDeviceToken({} as never, SYSTEM_ID, TOKEN_ID, AUTH, mockAudit),
+        revokeDeviceToken(MOCK_DB, SYSTEM_ID, TOKEN_ID, AUTH, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
     });
 
@@ -331,7 +326,7 @@ describe("device-token service", () => {
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
       await expect(
-        revokeDeviceToken({} as never, SYSTEM_ID, TOKEN_ID, AUTH, mockAudit),
+        revokeDeviceToken(MOCK_DB, SYSTEM_ID, TOKEN_ID, AUTH, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ status: 404 }));
     });
   });
@@ -342,7 +337,7 @@ describe("device-token service", () => {
     it("returns paginated result with hashed tokens", async () => {
       mockTx.limit.mockResolvedValueOnce([makeTokenRow(), makeTokenRow({ id: "dt_other" })]);
 
-      const result = await listDeviceTokens({} as never, SYSTEM_ID, AUTH);
+      const result = await listDeviceTokens(MOCK_DB, SYSTEM_ID, AUTH);
 
       expect(result.data).toHaveLength(2);
       expect(result.hasMore).toBe(false);
@@ -357,7 +352,7 @@ describe("device-token service", () => {
       );
       mockTx.limit.mockResolvedValueOnce(rows);
 
-      const result = await listDeviceTokens({} as never, SYSTEM_ID, AUTH);
+      const result = await listDeviceTokens(MOCK_DB, SYSTEM_ID, AUTH);
 
       expect(result.data).toHaveLength(25);
       expect(result.hasMore).toBe(true);
@@ -367,7 +362,7 @@ describe("device-token service", () => {
     it("returns empty paginated result when no tokens", async () => {
       mockTx.limit.mockResolvedValueOnce([]);
 
-      const result = await listDeviceTokens({} as never, SYSTEM_ID, AUTH);
+      const result = await listDeviceTokens(MOCK_DB, SYSTEM_ID, AUTH);
       expect(result.data).toHaveLength(0);
       expect(result.hasMore).toBe(false);
     });
@@ -375,7 +370,7 @@ describe("device-token service", () => {
     it("rejects when ownership check fails", async () => {
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
-      await expect(listDeviceTokens({} as never, SYSTEM_ID, AUTH)).rejects.toThrow(
+      await expect(listDeviceTokens(MOCK_DB, SYSTEM_ID, AUTH)).rejects.toThrow(
         expect.objectContaining({ status: 404 }),
       );
     });

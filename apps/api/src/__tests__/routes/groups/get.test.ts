@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -6,9 +7,9 @@ import {
   mockDbFactory,
   mockRateLimitFactory,
 } from "../../helpers/common-route-mocks.js";
-import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
+import { MOCK_SYSTEM_ID, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, EncryptedBase64, GroupId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -43,14 +44,14 @@ describe("GET /systems/:id/groups/:groupId", () => {
 
   it("returns 200 with group", async () => {
     vi.mocked(getGroup).mockResolvedValueOnce({
-      id: "grp_660e8400-e29b-41d4-a716-446655440000" as never,
-      systemId: MOCK_AUTH.systemId as never,
+      id: brandId<GroupId>("grp_660e8400-e29b-41d4-a716-446655440000"),
+      systemId: MOCK_SYSTEM_ID,
       parentGroupId: null,
       sortOrder: 0,
       encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
-      createdAt: 1000 as never,
-      updatedAt: 1000 as never,
+      createdAt: toUnixMillis(1000),
+      updatedAt: toUnixMillis(1000),
       archived: false,
       archivedAt: null,
     });

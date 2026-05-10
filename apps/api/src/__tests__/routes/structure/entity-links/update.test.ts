@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -8,7 +9,12 @@ import {
 } from "../../../helpers/common-route-mocks.js";
 import { createRouteApp, putJSON } from "../../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type {
+  ApiErrorResponse,
+  SystemId,
+  SystemStructureEntityId,
+  SystemStructureEntityLinkId,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -88,12 +94,12 @@ describe("PUT /systems/:systemId/structure/entity-links/:linkId", () => {
 
   it("returns 200 with updated link on success", async () => {
     vi.mocked(updateEntityLink).mockResolvedValueOnce({
-      id: LINK_ID as never,
-      systemId: SYS_ID as never,
-      entityId: "se_aaa" as never,
+      id: brandId<SystemStructureEntityLinkId>(LINK_ID),
+      systemId: brandId<SystemId>(SYS_ID),
+      entityId: brandId<SystemStructureEntityId>("se_aaa"),
       parentEntityId: null,
       sortOrder: 5,
-      createdAt: 1000 as never,
+      createdAt: toUnixMillis(1000),
     });
 
     const app = createApp();

@@ -20,8 +20,20 @@ import type { AccountId, SessionId, SystemId } from "@pluralscape/types";
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-function mockWs(): { close: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi.fn> } {
+type MockWs = { close: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi.fn> };
+type RegisterWs = Parameters<ConnectionManager["register"]>[1];
+
+function mockWs(): MockWs {
   return { close: vi.fn(), send: vi.fn() };
+}
+
+/**
+ * Widen a MockWs through `unknown` so the cast to the manager's WSContext
+ * parameter is a single `as` step.
+ */
+function asRegisterWs(ws: MockWs): RegisterWs {
+  const opaque: unknown = ws;
+  return opaque as RegisterWs;
 }
 
 function makeAuth(accountId: string): AuthContext {
@@ -43,7 +55,7 @@ function registerAndAuthenticate(
   ip?: string,
 ): void {
   manager.reserveUnauthSlot(ip);
-  manager.register(connectionId, mockWs() as never, Date.now(), ip);
+  manager.register(connectionId, asRegisterWs(mockWs()), Date.now(), ip);
   manager.authenticate(
     connectionId,
     makeAuth(accountId),
@@ -163,7 +175,7 @@ describe("ConnectionManager branch coverage", () => {
       const manager = new ConnectionManager();
       const ws = mockWs();
       manager.reserveUnauthSlot();
-      manager.register("conn-shutdown", ws as never, Date.now());
+      manager.register("conn-shutdown", asRegisterWs(ws), Date.now());
       // Do NOT remove the connection during drain — simulate a connection that never closes
 
       // Start shutdown with a short timeout; connections.size stays > 0 throughout

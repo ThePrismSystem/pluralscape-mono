@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -9,7 +10,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp, postJSON } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, SystemId, SystemSnapshotId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -37,8 +38,8 @@ const DUPLICATE_URL = `/systems/${SYS_ID}/duplicate`;
 const VALID_BODY = { snapshotId: "snap_770e8400-e29b-41d4-a716-446655440000" };
 
 const MOCK_RESULT = {
-  id: NEW_SYS_ID as never,
-  sourceSnapshotId: "snap_770e8400-e29b-41d4-a716-446655440000" as never,
+  id: brandId<SystemId>(NEW_SYS_ID),
+  sourceSnapshotId: brandId<SystemSnapshotId>("snap_770e8400-e29b-41d4-a716-446655440000"),
 };
 
 // ── Tests ────────────────────────────────────────────────────────

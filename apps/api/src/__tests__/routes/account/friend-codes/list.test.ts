@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -37,10 +38,10 @@ const { accountRoutes } = await import("../../../../routes/account/index.js");
 const createApp = () => createRouteApp("/account", accountRoutes);
 
 const MOCK_CODE = {
-  id: "frc_550e8400-e29b-41d4-a716-446655440000" as never,
-  accountId: "acct_test" as never,
+  id: brandId<FriendCodeId>("frc_550e8400-e29b-41d4-a716-446655440000"),
+  accountId: brandId<AccountId>("acct_test"),
   code: "ABCD-1234",
-  createdAt: 1000 as never,
+  createdAt: toUnixMillis(1000),
   expiresAt: null,
   archived: false as const,
 };
@@ -106,3 +107,5 @@ describe("GET /account/friend-codes", () => {
     );
   });
 });
+
+import type { AccountId, FriendCodeId } from "@pluralscape/types";

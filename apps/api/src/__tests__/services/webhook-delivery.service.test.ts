@@ -488,7 +488,7 @@ describe("webhook-delivery service", () => {
       mockSchema.safeParse.mockReturnValueOnce({
         success: true,
         data: validData,
-      } as never);
+      } as ReturnType<typeof mockSchema.safeParse>);
 
       const result = parseWebhookDeliveryQuery({
         webhookId: "wh_abc123",
@@ -503,7 +503,7 @@ describe("webhook-delivery service", () => {
       mockSchema.safeParse.mockReturnValueOnce({
         success: true,
         data: {},
-      } as never);
+      } as ReturnType<typeof mockSchema.safeParse>);
 
       const result = parseWebhookDeliveryQuery({});
       expect(result).toEqual({});
@@ -513,7 +513,7 @@ describe("webhook-delivery service", () => {
       mockSchema.safeParse.mockReturnValueOnce({
         success: false,
         error: { issues: [{ message: "Invalid" }] },
-      } as never);
+      } as ReturnType<typeof mockSchema.safeParse>);
 
       expect(() => parseWebhookDeliveryQuery({ status: "invalid_status" })).toThrow(
         "Invalid query parameters",
@@ -524,7 +524,7 @@ describe("webhook-delivery service", () => {
       mockSchema.safeParse.mockReturnValueOnce({
         success: false,
         error: { issues: [{ message: "Invalid" }] },
-      } as never);
+      } as ReturnType<typeof mockSchema.safeParse>);
 
       try {
         parseWebhookDeliveryQuery({ eventType: "bogus" });
@@ -539,7 +539,7 @@ describe("webhook-delivery service", () => {
       mockSchema.safeParse.mockReturnValueOnce({
         success: true,
         data: { status: "failed" },
-      } as never);
+      } as ReturnType<typeof mockSchema.safeParse>);
 
       const result = parseWebhookDeliveryQuery({ status: "failed" });
       expect(result).toEqual({ status: "failed" });
@@ -549,7 +549,7 @@ describe("webhook-delivery service", () => {
       mockSchema.safeParse.mockReturnValueOnce({
         success: true,
         data: {},
-      } as never);
+      } as ReturnType<typeof mockSchema.safeParse>);
 
       parseWebhookDeliveryQuery({
         webhookId: undefined,

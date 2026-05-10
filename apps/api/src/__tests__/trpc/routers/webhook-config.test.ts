@@ -284,7 +284,12 @@ describe("webhookConfig router", () => {
 
   describe("webhookConfig.test", () => {
     it("calls testWebhookConfig and returns result", async () => {
-      vi.mocked(testWebhookConfig).mockResolvedValue({ delivered: true } as never);
+      // Simplified mock result; widen via `unknown` so the assertion is a
+      // single `as` step.
+      const opaqueResult: unknown = { delivered: true };
+      vi.mocked(testWebhookConfig).mockResolvedValue(
+        opaqueResult as Awaited<ReturnType<typeof testWebhookConfig>>,
+      );
       const caller = createCaller();
       await caller.webhookConfig.test({
         systemId: MOCK_SYSTEM_ID,

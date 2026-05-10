@@ -208,10 +208,17 @@ describe("WS entry point lifecycle", () => {
 
   describe("unauthenticated connection cap", () => {
     it("rejects connection when cap is reached", () => {
-      // Fill up the unauthenticated slots via the connection manager directly
+      // Fill up the unauthenticated slots via the connection manager directly.
+      // The MockWs shape only stubs the methods the manager exercises; widen
+      // via `unknown` so the cast to WSContext is a single `as` step.
       for (let i = 0; i < WS_MAX_UNAUTHED_CONNECTIONS; i++) {
         connectionManager.reserveUnauthSlot();
-        connectionManager.register(`cap-${String(i)}`, mockWs() as never, Date.now());
+        const opaqueWs: unknown = mockWs();
+        connectionManager.register(
+          `cap-${String(i)}`,
+          opaqueWs as Parameters<typeof connectionManager.register>[1],
+          Date.now(),
+        );
       }
 
       // The factory checks canAcceptUnauthenticated before reserving

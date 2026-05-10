@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -6,9 +7,9 @@ import {
   mockDbFactory,
   mockRateLimitFactory,
 } from "../../../helpers/common-route-mocks.js";
-import { MOCK_AUTH, createRouteApp } from "../../../helpers/route-test-setup.js";
+import { MOCK_SYSTEM_ID, createRouteApp } from "../../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, GroupId, MemberId } from "@pluralscape/types";
 
 vi.mock("../../../../services/group-membership.service.js", () => ({
   addMember: vi.fn(),
@@ -36,10 +37,10 @@ describe("POST /systems/:id/groups/:groupId/members", () => {
 
   it("returns 201 with new membership", async () => {
     vi.mocked(addMember).mockResolvedValueOnce({
-      groupId: "grp_660e8400-e29b-41d4-a716-446655440000" as never,
-      memberId: "mem_abc" as never,
-      systemId: MOCK_AUTH.systemId as never,
-      createdAt: 1000 as never,
+      groupId: brandId<GroupId>("grp_660e8400-e29b-41d4-a716-446655440000"),
+      memberId: brandId<MemberId>("mem_abc"),
+      systemId: MOCK_SYSTEM_ID,
+      createdAt: toUnixMillis(1000),
     });
 
     const app = createApp();

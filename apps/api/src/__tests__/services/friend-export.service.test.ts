@@ -4,22 +4,32 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
 import type {
+  AccountId,
   BucketId,
   FriendConnectionId,
   FriendExportEntityType,
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Mock data ───────────────────────────────────────────────────────
 
 const SYSTEM_ID = brandId<SystemId>("sys_target");
+
+/**
+ * The service routes through a mocked tenant tx that ignores the db argument;
+ * tests pass an opaque stub. Widen via `unknown` so the cast to
+ * PostgresJsDatabase is a single `as` step.
+ */
+const MOCK_DB_STUB: unknown = {};
+const MOCK_DB = MOCK_DB_STUB as PostgresJsDatabase;
 const CONNECTION_ID = brandId<FriendConnectionId>("fc_test-connection");
 const AUTH = makeTestAuth({ accountId: "acct_test", systemId: "sys_mine" });
 const BUCKET_IDS: readonly BucketId[] = [brandId<BucketId>("bkt_1"), brandId<BucketId>("bkt_2")];
 
 const MOCK_ACCESS = {
-  targetAccountId: "acct_target" as never,
+  targetAccountId: brandId<AccountId>("acct_target"),
   targetSystemId: SYSTEM_ID,
   connectionId: CONNECTION_ID,
   assignedBucketIds: BUCKET_IDS,
@@ -114,7 +124,7 @@ describe("friend-export service", () => {
 
   describe("getFriendExportManifest", () => {
     it("returns manifest with entries, key grants, and etag", async () => {
-      const result = await getFriendExportManifest({} as never, CONNECTION_ID, AUTH);
+      const result = await getFriendExportManifest(MOCK_DB, CONNECTION_ID, AUTH);
 
       expect(result.systemId).toBe(SYSTEM_ID);
       expect(result.entries).toHaveLength(2);
@@ -123,13 +133,13 @@ describe("friend-export service", () => {
     });
 
     it("calls assertFriendAccess with connection and auth", async () => {
-      await getFriendExportManifest({} as never, CONNECTION_ID, AUTH);
+      await getFriendExportManifest(MOCK_DB, CONNECTION_ID, AUTH);
 
       expect(assertFriendAccess).toHaveBeenCalledWith({}, CONNECTION_ID, AUTH);
     });
 
     it("queries manifest count for each entity type", async () => {
-      await getFriendExportManifest({} as never, CONNECTION_ID, AUTH);
+      await getFriendExportManifest(MOCK_DB, CONNECTION_ID, AUTH);
       expect(mockQueryManifestCount).toHaveBeenCalledTimes(2);
     });
 
@@ -138,7 +148,7 @@ describe("friend-export service", () => {
         Object.assign(new Error("Not found"), { status: 404, code: "NOT_FOUND" }),
       );
 
-      await expect(getFriendExportManifest({} as never, CONNECTION_ID, AUTH)).rejects.toThrow(
+      await expect(getFriendExportManifest(MOCK_DB, CONNECTION_ID, AUTH)).rejects.toThrow(
         "Not found",
       );
     });
@@ -156,13 +166,7 @@ describe("friend-export service", () => {
         assignedBucketIds: [],
       });
 
-      const result = await getFriendExportPage(
-        {} as never,
-        CONNECTION_ID,
-        AUTH,
-        ENTITY_TYPE,
-        LIMIT,
-      );
+      const result = await getFriendExportPage(MOCK_DB, CONNECTION_ID, AUTH, ENTITY_TYPE, LIMIT);
 
       expect(result.data).toHaveLength(0);
       expect(result.hasMore).toBe(false);
@@ -173,13 +177,7 @@ describe("friend-export service", () => {
       const rows = [makeExportRow("mem_1", 1000), makeExportRow("mem_2", 1100)];
       mockQueryExportRows.mockResolvedValueOnce(rows);
 
-      const result = await getFriendExportPage(
-        {} as never,
-        CONNECTION_ID,
-        AUTH,
-        ENTITY_TYPE,
-        LIMIT,
-      );
+      const result = await getFriendExportPage(MOCK_DB, CONNECTION_ID, AUTH, ENTITY_TYPE, LIMIT);
 
       expect(result.data).toHaveLength(2);
       expect(result.data[0]?.encryptedData).toBe("dGVzdA==");
@@ -193,13 +191,7 @@ describe("friend-export service", () => {
       // Return full batch from DB (simulates lots of data)
       mockQueryExportRows.mockResolvedValueOnce(rows);
 
-      const result = await getFriendExportPage(
-        {} as never,
-        CONNECTION_ID,
-        AUTH,
-        ENTITY_TYPE,
-        LIMIT,
-      );
+      const result = await getFriendExportPage(MOCK_DB, CONNECTION_ID, AUTH, ENTITY_TYPE, LIMIT);
 
       expect(result.hasMore).toBe(true);
       expect(result.data).toHaveLength(LIMIT);
@@ -223,13 +215,7 @@ describe("friend-export service", () => {
         .mockReturnValueOnce(batch1.slice(0, 5))
         .mockReturnValueOnce(batch2);
 
-      const result = await getFriendExportPage(
-        {} as never,
-        CONNECTION_ID,
-        AUTH,
-        ENTITY_TYPE,
-        LIMIT,
-      );
+      const result = await getFriendExportPage(MOCK_DB, CONNECTION_ID, AUTH, ENTITY_TYPE, LIMIT);
 
       // Should have fetched twice and accumulated up to limit
       expect(mockQueryExportRows).toHaveBeenCalledTimes(2);
@@ -240,13 +226,7 @@ describe("friend-export service", () => {
       const rows = [makeExportRow("mem_1", 1000)];
       mockQueryExportRows.mockResolvedValueOnce(rows);
 
-      const result = await getFriendExportPage(
-        {} as never,
-        CONNECTION_ID,
-        AUTH,
-        ENTITY_TYPE,
-        LIMIT,
-      );
+      const result = await getFriendExportPage(MOCK_DB, CONNECTION_ID, AUTH, ENTITY_TYPE, LIMIT);
 
       expect(result.data).toHaveLength(1);
       expect(result.hasMore).toBe(false);
@@ -257,14 +237,7 @@ describe("friend-export service", () => {
       const { fromCompositeCursor } = await import("../../lib/pagination.js");
       mockQueryExportRows.mockResolvedValueOnce([]);
 
-      await getFriendExportPage(
-        {} as never,
-        CONNECTION_ID,
-        AUTH,
-        ENTITY_TYPE,
-        LIMIT,
-        "some-cursor",
-      );
+      await getFriendExportPage(MOCK_DB, CONNECTION_ID, AUTH, ENTITY_TYPE, LIMIT, "some-cursor");
 
       expect(fromCompositeCursor).toHaveBeenCalledWith("some-cursor", "export");
     });
@@ -275,7 +248,7 @@ describe("friend-export service", () => {
       );
 
       await expect(
-        getFriendExportPage({} as never, CONNECTION_ID, AUTH, ENTITY_TYPE, LIMIT),
+        getFriendExportPage(MOCK_DB, CONNECTION_ID, AUTH, ENTITY_TYPE, LIMIT),
       ).rejects.toThrow("Not found");
     });
   });

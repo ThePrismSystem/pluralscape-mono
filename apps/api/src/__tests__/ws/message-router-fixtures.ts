@@ -16,11 +16,24 @@ import { createRouterContext } from "../../ws/message-router.js";
 import type { AppLogger } from "../../lib/logger.js";
 import type { SyncConnectionState } from "../../ws/connection-state.js";
 import type { RouterContext } from "../../ws/message-router.js";
+import type { SyncRelayService } from "@pluralscape/sync";
 import type { AccountId, SessionId, SystemId } from "@pluralscape/types";
 
 export interface MockWsHandle {
   close: ReturnType<typeof vi.fn>;
   send: ReturnType<typeof vi.fn>;
+}
+
+type RegisterWs = Parameters<ConnectionManager["register"]>[1];
+
+/**
+ * Widen a MockWsHandle through `unknown` so the cast to the manager's
+ * WSContext parameter is a single `as` step. The mock only exposes the
+ * methods the router exercises (close, send).
+ */
+export function asRegisterWs(ws: MockWsHandle): RegisterWs {
+  const opaque: unknown = ws;
+  return opaque as RegisterWs;
 }
 
 /**
@@ -119,8 +132,9 @@ export function makeBrokenRelayContext(
     getLatestSnapshot: vi.fn(overrides.getLatestSnapshot),
     getManifest: vi.fn(overrides.getManifest),
   };
+  const opaqueRelay: unknown = relay;
   return {
-    relay: relay as never,
+    relay: opaqueRelay as SyncRelayService,
     documentOwnership: new Map<string, SystemId>(),
     manager,
     pubsub: null,
@@ -151,7 +165,7 @@ export function addAuthedConnection(
   const sent: string[] = [];
   const ws = makeMockWs(sent);
   manager.reserveUnauthSlot();
-  manager.register(connectionId, ws as never, Date.now());
+  manager.register(connectionId, asRegisterWs(ws), Date.now());
   manager.authenticate(
     connectionId,
     {

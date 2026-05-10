@@ -240,8 +240,11 @@ describe("system router", () => {
 
   describe("system.duplicate", () => {
     it("calls duplicateSystem with correct sourceSystemId and returns result", async () => {
-      const mockResult = { id: MOCK_SYSTEM_ID, sourceSnapshotId: SOURCE_SNAPSHOT_ID };
-      vi.mocked(duplicateSystem).mockResolvedValue(mockResult as never);
+      // The simplified result shape used by this test omits server-internal
+      // fields; widen via `unknown` so the assertion is a single `as` step.
+      const opaqueResult: unknown = { id: MOCK_SYSTEM_ID, sourceSnapshotId: SOURCE_SNAPSHOT_ID };
+      const mockResult = opaqueResult as Awaited<ReturnType<typeof duplicateSystem>>;
+      vi.mocked(duplicateSystem).mockResolvedValue(mockResult);
       const caller = createCaller();
       const result = await caller.system.duplicate({
         systemId: MOCK_SYSTEM_ID,

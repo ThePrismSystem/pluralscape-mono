@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../../lib/api-error.js";
@@ -9,7 +10,7 @@ import {
 } from "../../../helpers/common-route-mocks.js";
 import { createRouteApp, postJSON } from "../../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, BucketId, FieldDefinitionId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -55,8 +56,8 @@ describe("POST /systems/:id/fields/:fieldDefinitionId/bucket-visibility", () => 
 
   it("returns 201 with visibility result", async () => {
     vi.mocked(setFieldBucketVisibility).mockResolvedValueOnce({
-      fieldDefinitionId: FIELD_ID as never,
-      bucketId: BUCKET_ID as never,
+      fieldDefinitionId: brandId<FieldDefinitionId>(FIELD_ID),
+      bucketId: brandId<BucketId>(BUCKET_ID),
     });
 
     const res = await postJSON(createApp(), BASE_URL, VALID_BODY);
@@ -68,8 +69,8 @@ describe("POST /systems/:id/fields/:fieldDefinitionId/bucket-visibility", () => 
 
   it("passes parsed bucketId to service", async () => {
     vi.mocked(setFieldBucketVisibility).mockResolvedValueOnce({
-      fieldDefinitionId: FIELD_ID as never,
-      bucketId: BUCKET_ID as never,
+      fieldDefinitionId: brandId<FieldDefinitionId>(FIELD_ID),
+      bucketId: brandId<BucketId>(BUCKET_ID),
     });
 
     await postJSON(createApp(), BASE_URL, VALID_BODY);

@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -8,7 +9,7 @@ import {
 } from "../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp, postJSON } from "../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, BucketId, BucketKeyRotationId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -51,12 +52,12 @@ const createApp = () => createRouteApp("/systems", systemRoutes);
 const RETRY_URL = `/systems/${SYS_ID}/buckets/${BUCKET_ID}/rotations/${ROTATION_ID}/retry`;
 
 const MOCK_ROTATION = {
-  id: ROTATION_ID as never,
-  bucketId: BUCKET_ID as never,
+  id: brandId<BucketKeyRotationId>(ROTATION_ID),
+  bucketId: brandId<BucketId>(BUCKET_ID),
   fromKeyVersion: 1,
   toKeyVersion: 2,
   state: "migrating" as const,
-  initiatedAt: 1000 as never,
+  initiatedAt: toUnixMillis(1000),
   completedAt: null,
   totalItems: 10,
   completedItems: 7,

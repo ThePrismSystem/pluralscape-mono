@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -8,7 +9,12 @@ import {
 } from "../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp, putJSON } from "../helpers/route-test-setup.js";
 
-import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
+import type {
+  ApiErrorResponse,
+  EncryptedBase64,
+  LifecycleEventId,
+  SystemId,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -56,12 +62,12 @@ const createApp = () => createRouteApp("/systems", systemRoutes);
 const EVT_URL = `/systems/${SYS_ID}/lifecycle-events/${EVT_ID}`;
 
 const MOCK_EVENT = {
-  id: EVT_ID as never,
-  systemId: SYS_ID as never,
+  id: brandId<LifecycleEventId>(EVT_ID),
+  systemId: brandId<SystemId>(SYS_ID),
   eventType: "discovery" as const,
-  occurredAt: 1000 as never,
-  recordedAt: 1000 as never,
-  updatedAt: 2000 as never,
+  occurredAt: toUnixMillis(1000),
+  recordedAt: toUnixMillis(1000),
+  updatedAt: toUnixMillis(2000),
   encryptedData: "dGVzdA==" as EncryptedBase64,
   plaintextMetadata: null,
   version: 2,

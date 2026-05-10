@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -7,9 +8,9 @@ import {
   mockDbFactory,
   mockRateLimitFactory,
 } from "../../helpers/common-route-mocks.js";
-import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
+import { MOCK_SYSTEM_ID, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, EncryptedBase64, GroupId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -57,14 +58,14 @@ describe("POST /systems/:id/groups/:groupId/copy", () => {
 
   it("returns 201 with copied group on success", async () => {
     vi.mocked(copyGroup).mockResolvedValueOnce({
-      id: "grp_copy" as never,
-      systemId: MOCK_AUTH.systemId as never,
+      id: brandId<GroupId>("grp_copy"),
+      systemId: MOCK_SYSTEM_ID,
       parentGroupId: null,
       sortOrder: 1,
       encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
-      createdAt: 1000 as never,
-      updatedAt: 1000 as never,
+      createdAt: toUnixMillis(1000),
+      updatedAt: toUnixMillis(1000),
       archived: false,
       archivedAt: null,
     });

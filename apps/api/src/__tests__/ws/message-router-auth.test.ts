@@ -15,7 +15,13 @@ vi.mock("@pluralscape/sync", async () => {
 import { ConnectionManager } from "../../ws/connection-manager.js";
 import { createRouterContext, routeMessage } from "../../ws/message-router.js";
 
-import { authRequest, lastResponse, makeMockLog, makeMockWs } from "./message-router-fixtures.js";
+import {
+  asRegisterWs,
+  authRequest,
+  lastResponse,
+  makeMockLog,
+  makeMockWs,
+} from "./message-router-fixtures.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { AppLogger } from "../../lib/logger.js";
@@ -79,7 +85,7 @@ describe("message-router — auth, dispatching, prototype pollution, send errors
   beforeEach(() => {
     manager = new ConnectionManager();
     manager.reserveUnauthSlot();
-    state = manager.register("conn-1", makeMockWs(sent) as never, Date.now());
+    state = manager.register("conn-1", asRegisterWs(makeMockWs(sent)), Date.now());
     ctx = createRouterContext(1000, manager);
     sent.length = 0;
   });
@@ -366,7 +372,7 @@ describe("message-router — auth, dispatching, prototype pollution, send errors
       };
       const brokenManager = new ConnectionManager();
       brokenManager.reserveUnauthSlot();
-      const brokenState = brokenManager.register("conn-broken", brokenWs as never, Date.now());
+      const brokenState = brokenManager.register("conn-broken", asRegisterWs(brokenWs), Date.now());
       const brokenCtx = createRouterContext(1000, brokenManager);
 
       // Authenticate first (this send will also fail but we need the state)

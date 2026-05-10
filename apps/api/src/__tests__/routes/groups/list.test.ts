@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { toCursor } from "../../../lib/pagination.js";
@@ -10,7 +11,13 @@ import {
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
 import type { GroupResult } from "../../../services/group/queries.js";
-import type { EncryptedBase64, ApiErrorResponse, PaginatedResult } from "@pluralscape/types";
+import type {
+  ApiErrorResponse,
+  EncryptedBase64,
+  GroupId,
+  PaginatedResult,
+  SystemId,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -90,14 +97,14 @@ describe("GET /systems/:id/groups", () => {
     const page: PaginatedResult<GroupResult> = {
       data: [
         {
-          id: "grp_550e8400-e29b-41d4-a716-446655440000" as never,
-          systemId: "sys_550e8400-e29b-41d4-a716-446655440000" as never,
+          id: brandId<GroupId>("grp_550e8400-e29b-41d4-a716-446655440000"),
+          systemId: brandId<SystemId>("sys_550e8400-e29b-41d4-a716-446655440000"),
           parentGroupId: null,
           sortOrder: 0,
           encryptedData: "dGVzdA==" as EncryptedBase64,
           version: 1,
-          createdAt: 1000 as never,
-          updatedAt: 1000 as never,
+          createdAt: toUnixMillis(1000),
+          updatedAt: toUnixMillis(1000),
           archived: false,
           archivedAt: null,
         },

@@ -23,7 +23,11 @@ function createMockTx(queryResult: Array<{ id: string } | undefined>): PostgresJ
   const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
   const mockSelect = vi.fn().mockReturnValue({ from: mockFrom });
 
-  return { select: mockSelect } as never;
+  // Widen via `unknown` so the assertion is a single `as` step — the
+  // runtime shape only exposes `select`, sufficient for the methods
+  // exercised here.
+  const opaque: unknown = { select: mockSelect };
+  return opaque as PostgresJsDatabase;
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────

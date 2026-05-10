@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MOCK_AUTH, makeCallerFactory, assertProcedureRateLimited } from "../test-helpers.js";
 
 import type {
-  EncryptedBase64,
   AccountId,
+  EncryptedBase64,
   FriendConnectionId,
   UnixMillis,
 } from "@pluralscape/types";
@@ -293,8 +293,10 @@ describe("friend router", () => {
 
   describe("friend.getDashboard", () => {
     it("calls getFriendDashboard with connectionId", async () => {
-      const mockDashboard = { id: CONNECTION_ID, sessions: [] };
-      vi.mocked(getFriendDashboard).mockResolvedValue(mockDashboard as never);
+      const mockDashboard: unknown = { id: CONNECTION_ID, sessions: [] };
+      vi.mocked(getFriendDashboard).mockResolvedValue(
+        mockDashboard as Awaited<ReturnType<typeof getFriendDashboard>>,
+      );
       const caller = createCaller();
       await caller.friend.getDashboard({ connectionId: CONNECTION_ID });
 
@@ -307,7 +309,10 @@ describe("friend router", () => {
 
   describe("friend.getDashboardSync", () => {
     it("calls getFriendDashboardSync with connectionId", async () => {
-      vi.mocked(getFriendDashboardSync).mockResolvedValue({} as never);
+      const empty: unknown = {};
+      vi.mocked(getFriendDashboardSync).mockResolvedValue(
+        empty as Awaited<ReturnType<typeof getFriendDashboardSync>>,
+      );
       const caller = createCaller();
       await caller.friend.getDashboardSync({ connectionId: CONNECTION_ID });
 
@@ -320,7 +325,10 @@ describe("friend router", () => {
 
   describe("friend.exportData", () => {
     it("calls getFriendExportPage with parsed args", async () => {
-      vi.mocked(getFriendExportPage).mockResolvedValue({ data: [], nextCursor: null } as never);
+      const page: unknown = { data: [], nextCursor: null };
+      vi.mocked(getFriendExportPage).mockResolvedValue(
+        page as Awaited<ReturnType<typeof getFriendExportPage>>,
+      );
       const caller = createCaller();
       await caller.friend.exportData({
         connectionId: CONNECTION_ID,
@@ -342,7 +350,10 @@ describe("friend router", () => {
 
   describe("friend.exportManifest", () => {
     it("calls getFriendExportManifest with connectionId", async () => {
-      vi.mocked(getFriendExportManifest).mockResolvedValue({} as never);
+      const manifest: unknown = {};
+      vi.mocked(getFriendExportManifest).mockResolvedValue(
+        manifest as Awaited<ReturnType<typeof getFriendExportManifest>>,
+      );
       const caller = createCaller();
       await caller.friend.exportManifest({ connectionId: CONNECTION_ID });
 
@@ -355,7 +366,10 @@ describe("friend router", () => {
 
   describe("friend.getNotifications", () => {
     it("calls getOrCreateFriendNotificationPreference", async () => {
-      vi.mocked(getOrCreateFriendNotificationPreference).mockResolvedValue({} as never);
+      const pref: unknown = {};
+      vi.mocked(getOrCreateFriendNotificationPreference).mockResolvedValue(
+        pref as Awaited<ReturnType<typeof getOrCreateFriendNotificationPreference>>,
+      );
       const caller = createCaller();
       await caller.friend.getNotifications({ connectionId: CONNECTION_ID });
 
@@ -370,7 +384,10 @@ describe("friend router", () => {
 
   describe("friend.listReceivedKeyGrants", () => {
     it("calls listReceivedKeyGrants with accountId", async () => {
-      vi.mocked(listReceivedKeyGrants).mockResolvedValue([] as never);
+      const grants: unknown = [];
+      vi.mocked(listReceivedKeyGrants).mockResolvedValue(
+        grants as Awaited<ReturnType<typeof listReceivedKeyGrants>>,
+      );
       const caller = createCaller();
       await caller.friend.listReceivedKeyGrants();
 
@@ -383,7 +400,10 @@ describe("friend router", () => {
 
   describe("friend.updateNotifications", () => {
     it("calls updateFriendNotificationPreference with parsed body", async () => {
-      vi.mocked(updateFriendNotificationPreference).mockResolvedValue({} as never);
+      const pref: unknown = {};
+      vi.mocked(updateFriendNotificationPreference).mockResolvedValue(
+        pref as Awaited<ReturnType<typeof updateFriendNotificationPreference>>,
+      );
       const caller = createCaller();
       await caller.friend.updateNotifications({
         connectionId: CONNECTION_ID,

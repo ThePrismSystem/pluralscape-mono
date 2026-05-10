@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -7,7 +8,13 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type {
+  AccountId,
+  ApiErrorResponse,
+  AuditLogEntryId,
+  PaginationCursor,
+  SystemId,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -33,11 +40,11 @@ const createApp = () => createRouteApp("/account", accountRoutes);
 const EMPTY_PAGE = { data: [], nextCursor: null, hasMore: false, totalCount: null };
 
 const MOCK_ENTRY = {
-  id: "al_550e8400-e29b-41d4-a716-446655440000" as never,
-  systemId: "sys_test" as never,
+  id: brandId<AuditLogEntryId>("al_550e8400-e29b-41d4-a716-446655440000"),
+  systemId: brandId<SystemId>("sys_test"),
   eventType: "member.created" as const,
-  createdAt: 1000 as never,
-  actor: { kind: "account" as const, id: "acct_test" as never },
+  createdAt: toUnixMillis(1000),
+  actor: { kind: "account" as const, id: brandId<AccountId>("acct_test") },
   detail: "Created member",
   ipAddress: "127.0.0.1",
   userAgent: "test",
@@ -59,7 +66,7 @@ describe("GET /account/audit-log", () => {
   it("returns 200 with paginated audit log entries", async () => {
     const page = {
       data: [MOCK_ENTRY],
-      nextCursor: "cursor_abc" as never,
+      nextCursor: brandId<PaginationCursor>("cursor_abc"),
       hasMore: true,
       totalCount: null,
     };

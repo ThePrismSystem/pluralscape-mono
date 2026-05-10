@@ -55,6 +55,9 @@ const MOCK_TOKEN = {
   createdAt: 1000,
 };
 
+/** Widen the plain mock fixtures through `unknown` for single-step casts. */
+const MOCK_TOKEN_OPAQUE: unknown = MOCK_TOKEN;
+
 // ── Tests ────────────────────────────────────────────────────────
 
 describe("POST /systems/:systemId/device-tokens", () => {
@@ -67,7 +70,9 @@ describe("POST /systems/:systemId/device-tokens", () => {
   });
 
   it("returns 201 with registered token", async () => {
-    vi.mocked(registerDeviceToken).mockResolvedValueOnce(MOCK_TOKEN as never);
+    vi.mocked(registerDeviceToken).mockResolvedValueOnce(
+      MOCK_TOKEN_OPAQUE as Awaited<ReturnType<typeof registerDeviceToken>>,
+    );
 
     const res = await postJSON(createApp(), BASE_URL, {
       platform: "ios",
@@ -80,7 +85,9 @@ describe("POST /systems/:systemId/device-tokens", () => {
   });
 
   it("passes parsed body to service", async () => {
-    vi.mocked(registerDeviceToken).mockResolvedValueOnce(MOCK_TOKEN as never);
+    vi.mocked(registerDeviceToken).mockResolvedValueOnce(
+      MOCK_TOKEN_OPAQUE as Awaited<ReturnType<typeof registerDeviceToken>>,
+    );
 
     await postJSON(createApp(), BASE_URL, {
       platform: "android",
@@ -124,6 +131,7 @@ describe("POST /systems/:systemId/device-tokens", () => {
 
 describe("GET /systems/:systemId/device-tokens", () => {
   const PAGINATED_EMPTY = { data: [], nextCursor: null, hasMore: false, totalCount: null };
+  const PAGINATED_EMPTY_OPAQUE: unknown = PAGINATED_EMPTY;
 
   beforeEach(() => {
     vi.mocked(listDeviceTokens).mockReset();
@@ -134,12 +142,15 @@ describe("GET /systems/:systemId/device-tokens", () => {
   });
 
   it("returns 200 with token list", async () => {
-    vi.mocked(listDeviceTokens).mockResolvedValueOnce({
+    const page: unknown = {
       data: [MOCK_TOKEN],
       nextCursor: null,
       hasMore: false,
       totalCount: null,
-    } as never);
+    };
+    vi.mocked(listDeviceTokens).mockResolvedValueOnce(
+      page as Awaited<ReturnType<typeof listDeviceTokens>>,
+    );
 
     const res = await createApp().request(BASE_URL);
 
@@ -149,7 +160,9 @@ describe("GET /systems/:systemId/device-tokens", () => {
   });
 
   it("returns 200 with empty list", async () => {
-    vi.mocked(listDeviceTokens).mockResolvedValueOnce(PAGINATED_EMPTY as never);
+    vi.mocked(listDeviceTokens).mockResolvedValueOnce(
+      PAGINATED_EMPTY_OPAQUE as Awaited<ReturnType<typeof listDeviceTokens>>,
+    );
 
     const res = await createApp().request(BASE_URL);
 
@@ -159,7 +172,9 @@ describe("GET /systems/:systemId/device-tokens", () => {
   });
 
   it("passes cursor and limit to service", async () => {
-    vi.mocked(listDeviceTokens).mockResolvedValueOnce(PAGINATED_EMPTY as never);
+    vi.mocked(listDeviceTokens).mockResolvedValueOnce(
+      PAGINATED_EMPTY_OPAQUE as Awaited<ReturnType<typeof listDeviceTokens>>,
+    );
 
     await createApp().request(`${BASE_URL}?limit=10`);
 
@@ -172,7 +187,9 @@ describe("GET /systems/:systemId/device-tokens", () => {
   });
 
   it("passes auth context and systemId to service", async () => {
-    vi.mocked(listDeviceTokens).mockResolvedValueOnce(PAGINATED_EMPTY as never);
+    vi.mocked(listDeviceTokens).mockResolvedValueOnce(
+      PAGINATED_EMPTY_OPAQUE as Awaited<ReturnType<typeof listDeviceTokens>>,
+    );
 
     await createApp().request(BASE_URL);
 
@@ -188,7 +205,9 @@ describe("GET /systems/:systemId/device-tokens", () => {
     const { toCursor } = await import("../../../lib/pagination.js");
     const cursor = toCursor("some-entity-id");
 
-    vi.mocked(listDeviceTokens).mockResolvedValueOnce(PAGINATED_EMPTY as never);
+    vi.mocked(listDeviceTokens).mockResolvedValueOnce(
+      PAGINATED_EMPTY_OPAQUE as Awaited<ReturnType<typeof listDeviceTokens>>,
+    );
 
     await createApp().request(`${BASE_URL}?cursor=${encodeURIComponent(cursor)}`);
 

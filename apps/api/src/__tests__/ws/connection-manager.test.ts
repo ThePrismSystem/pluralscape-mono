@@ -6,8 +6,21 @@ import { ConnectionManager } from "../../ws/connection-manager.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { AccountId, SessionId, SystemId } from "@pluralscape/types";
 
-function mockWs(): { close: ReturnType<typeof vi.fn> } {
+type MockWs = { close: ReturnType<typeof vi.fn> };
+type RegisterWs = Parameters<ConnectionManager["register"]>[1];
+
+function mockWs(): MockWs {
   return { close: vi.fn() };
+}
+
+/**
+ * Widen a MockWs through `unknown` so the cast to the manager's WSContext
+ * parameter is a single `as` step. The mock only exposes the methods the
+ * manager exercises (notably `close` for shutdown paths).
+ */
+function asRegisterWs(ws: MockWs): RegisterWs {
+  const opaque: unknown = ws;
+  return opaque as RegisterWs;
 }
 
 type AuthContextWithSystem = AuthContext & { readonly systemId: SystemId };
@@ -37,7 +50,7 @@ describe("ConnectionManager", () => {
       manager = new ConnectionManager();
       const ws = mockWs();
       manager.reserveUnauthSlot();
-      const state = manager.register("conn-1", ws as never, Date.now());
+      const state = manager.register("conn-1", asRegisterWs(ws), Date.now());
 
       expect(state.connectionId).toBe("conn-1");
       expect(state.phase).toBe("awaiting-auth");
@@ -52,7 +65,7 @@ describe("ConnectionManager", () => {
       const ws = mockWs();
       const auth = mockAuth();
       manager.reserveUnauthSlot();
-      manager.register("conn-1", ws as never, Date.now());
+      manager.register("conn-1", asRegisterWs(ws), Date.now());
       manager.authenticate("conn-1", auth, auth.systemId, "owner-full");
       manager.addSubscription("conn-1", "doc-1");
 
@@ -67,7 +80,7 @@ describe("ConnectionManager", () => {
       manager = new ConnectionManager();
       const ws = mockWs();
       manager.reserveUnauthSlot();
-      const state = manager.register("conn-1", ws as never, Date.now());
+      const state = manager.register("conn-1", asRegisterWs(ws), Date.now());
       const handle = setTimeout(() => {}, 10_000);
       state.authTimeoutHandle = handle;
 
@@ -81,9 +94,9 @@ describe("ConnectionManager", () => {
     it("decrements unauthenticatedCount on remove of unauthed connection", () => {
       manager = new ConnectionManager();
       manager.reserveUnauthSlot();
-      manager.register("conn-1", mockWs() as never, Date.now());
+      manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
       manager.reserveUnauthSlot();
-      manager.register("conn-2", mockWs() as never, Date.now());
+      manager.register("conn-2", asRegisterWs(mockWs()), Date.now());
       expect(manager.unauthenticatedCount).toBe(2);
 
       manager.remove("conn-1");
@@ -94,7 +107,7 @@ describe("ConnectionManager", () => {
       manager = new ConnectionManager();
       const auth = mockAuth();
       manager.reserveUnauthSlot();
-      manager.register("conn-1", mockWs() as never, Date.now());
+      manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
       manager.authenticate("conn-1", auth, auth.systemId, "owner-full");
       expect(manager.unauthenticatedCount).toBe(0);
 
@@ -114,7 +127,7 @@ describe("ConnectionManager", () => {
       const cycles = 100;
       for (let i = 0; i < cycles; i++) {
         manager.reserveUnauthSlot();
-        manager.register(`conn-${String(i)}`, mockWs() as never, Date.now());
+        manager.register(`conn-${String(i)}`, asRegisterWs(mockWs()), Date.now());
       }
       for (let i = 0; i < cycles; i++) {
         manager.remove(`conn-${String(i)}`);
@@ -129,7 +142,7 @@ describe("ConnectionManager", () => {
       manager = new ConnectionManager();
       const auth = mockAuth();
       manager.reserveUnauthSlot();
-      manager.register("conn-1", mockWs() as never, Date.now());
+      manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
       const result = manager.authenticate("conn-1", auth, auth.systemId, "owner-full");
 
       expect(result).toBe(true);
@@ -153,7 +166,7 @@ describe("ConnectionManager", () => {
       manager = new ConnectionManager();
       const auth = mockAuth();
       manager.reserveUnauthSlot();
-      const state = manager.register("conn-1", mockWs() as never, Date.now());
+      const state = manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
       state.authTimeoutHandle = setTimeout(() => {}, 10_000);
 
       manager.authenticate("conn-1", auth, auth.systemId, "owner-full");
@@ -188,7 +201,7 @@ describe("ConnectionManager", () => {
 
     it("register does not increment unauthenticatedCount", () => {
       manager = new ConnectionManager();
-      manager.register("conn-1", mockWs() as never, Date.now());
+      manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
       expect(manager.unauthenticatedCount).toBe(0);
     });
   });
@@ -198,7 +211,7 @@ describe("ConnectionManager", () => {
       manager = new ConnectionManager();
       const auth = mockAuth();
       manager.reserveUnauthSlot();
-      manager.register("conn-1", mockWs() as never, Date.now());
+      manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
       manager.authenticate("conn-1", auth, auth.systemId, "owner-full");
       expect(manager.unauthenticatedCount).toBe(0);
 
@@ -213,7 +226,7 @@ describe("ConnectionManager", () => {
   describe("subscription indexes", () => {
     it("tracks subscriptions in docIndex", () => {
       manager = new ConnectionManager();
-      manager.register("conn-1", mockWs() as never, Date.now());
+      manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
       manager.addSubscription("conn-1", "doc-a");
       manager.addSubscription("conn-1", "doc-b");
 
@@ -223,7 +236,7 @@ describe("ConnectionManager", () => {
 
     it("removeSubscription cleans up docIndex", () => {
       manager = new ConnectionManager();
-      manager.register("conn-1", mockWs() as never, Date.now());
+      manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
       manager.addSubscription("conn-1", "doc-a");
       manager.removeSubscription("conn-1", "doc-a");
 
@@ -232,7 +245,7 @@ describe("ConnectionManager", () => {
 
     it("addSubscription is idempotent", () => {
       manager = new ConnectionManager();
-      manager.register("conn-1", mockWs() as never, Date.now());
+      manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
       manager.addSubscription("conn-1", "doc-a");
       manager.addSubscription("conn-1", "doc-a");
 
@@ -241,7 +254,7 @@ describe("ConnectionManager", () => {
 
     it("removeSubscription on non-subscribed doc is a no-op", () => {
       manager = new ConnectionManager();
-      manager.register("conn-1", mockWs() as never, Date.now());
+      manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
       expect(() => {
         manager.removeSubscription("conn-1", "doc-x");
       }).not.toThrow();
@@ -254,7 +267,7 @@ describe("ConnectionManager", () => {
 
     it("addSubscription returns false at subscription cap", () => {
       manager = new ConnectionManager();
-      manager.register("conn-1", mockWs() as never, Date.now());
+      manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
 
       // Fill to cap (500)
       for (let i = 0; i < 500; i++) {
@@ -268,7 +281,7 @@ describe("ConnectionManager", () => {
 
     it("addSubscription allows re-subscribing to existing doc at cap", () => {
       manager = new ConnectionManager();
-      manager.register("conn-1", mockWs() as never, Date.now());
+      manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
 
       for (let i = 0; i < 500; i++) {
         manager.addSubscription("conn-1", `doc-${String(i)}`);
@@ -280,8 +293,8 @@ describe("ConnectionManager", () => {
 
     it("removeSubscriptionsForDoc clears all connections for a doc", () => {
       manager = new ConnectionManager();
-      manager.register("conn-1", mockWs() as never, Date.now());
-      manager.register("conn-2", mockWs() as never, Date.now());
+      manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
+      manager.register("conn-2", asRegisterWs(mockWs()), Date.now());
       manager.addSubscription("conn-1", "doc-evicted");
       manager.addSubscription("conn-2", "doc-evicted");
       manager.addSubscription("conn-1", "doc-kept");
@@ -306,9 +319,9 @@ describe("ConnectionManager", () => {
 
     it("returns only connections subscribed to a specific doc", () => {
       manager = new ConnectionManager();
-      manager.register("conn-1", mockWs() as never, Date.now());
-      manager.register("conn-2", mockWs() as never, Date.now());
-      manager.register("conn-3", mockWs() as never, Date.now());
+      manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
+      manager.register("conn-2", asRegisterWs(mockWs()), Date.now());
+      manager.register("conn-3", asRegisterWs(mockWs()), Date.now());
 
       manager.addSubscription("conn-1", "doc-a");
       manager.addSubscription("conn-2", "doc-a");
@@ -327,9 +340,9 @@ describe("ConnectionManager", () => {
       manager = new ConnectionManager();
       const auth = mockAuth();
       manager.reserveUnauthSlot();
-      manager.register("conn-1", mockWs() as never, Date.now());
+      manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
       manager.reserveUnauthSlot();
-      manager.register("conn-2", mockWs() as never, Date.now());
+      manager.register("conn-2", asRegisterWs(mockWs()), Date.now());
       manager.authenticate("conn-1", auth, auth.systemId, "owner-full");
       manager.authenticate("conn-2", auth, auth.systemId, "owner-lite");
 
@@ -343,9 +356,9 @@ describe("ConnectionManager", () => {
       manager = new ConnectionManager();
       const auth = mockAuth();
       manager.reserveUnauthSlot();
-      manager.register("conn-1", mockWs() as never, Date.now());
+      manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
       manager.reserveUnauthSlot();
-      manager.register("conn-2", mockWs() as never, Date.now());
+      manager.register("conn-2", asRegisterWs(mockWs()), Date.now());
       manager.authenticate("conn-1", auth, auth.systemId, "owner-full");
       manager.authenticate("conn-2", auth, auth.systemId, "owner-full");
 
@@ -359,9 +372,9 @@ describe("ConnectionManager", () => {
       manager = new ConnectionManager();
       const auth = mockAuth();
       manager.reserveUnauthSlot();
-      manager.register("conn-1", mockWs() as never, Date.now());
+      manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
       manager.reserveUnauthSlot();
-      manager.register("conn-2", mockWs() as never, Date.now());
+      manager.register("conn-2", asRegisterWs(mockWs()), Date.now());
       manager.authenticate("conn-1", auth, auth.systemId, "owner-full");
 
       expect(manager.getAccountConnectionCount(auth.accountId)).toBe(1);
@@ -375,16 +388,16 @@ describe("ConnectionManager", () => {
     it("returns true when under limit", () => {
       manager = new ConnectionManager();
       manager.reserveUnauthSlot();
-      manager.register("conn-1", mockWs() as never, Date.now());
+      manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
       expect(manager.canAcceptUnauthenticated(2)).toBe(true);
     });
 
     it("returns false when at limit", () => {
       manager = new ConnectionManager();
       manager.reserveUnauthSlot();
-      manager.register("conn-1", mockWs() as never, Date.now());
+      manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
       manager.reserveUnauthSlot();
-      manager.register("conn-2", mockWs() as never, Date.now());
+      manager.register("conn-2", asRegisterWs(mockWs()), Date.now());
       expect(manager.canAcceptUnauthenticated(2)).toBe(false);
     });
 
@@ -392,9 +405,9 @@ describe("ConnectionManager", () => {
       manager = new ConnectionManager();
       const auth = mockAuth();
       manager.reserveUnauthSlot();
-      manager.register("conn-1", mockWs() as never, Date.now());
+      manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
       manager.reserveUnauthSlot();
-      manager.register("conn-2", mockWs() as never, Date.now());
+      manager.register("conn-2", asRegisterWs(mockWs()), Date.now());
       expect(manager.canAcceptUnauthenticated(2)).toBe(false);
 
       manager.authenticate("conn-1", auth, auth.systemId, "owner-full");
@@ -409,9 +422,9 @@ describe("ConnectionManager", () => {
       const ws1 = mockWs();
       const ws2 = mockWs();
       manager.reserveUnauthSlot();
-      manager.register("conn-1", ws1 as never, Date.now());
+      manager.register("conn-1", asRegisterWs(ws1), Date.now());
       manager.reserveUnauthSlot();
-      manager.register("conn-2", ws2 as never, Date.now());
+      manager.register("conn-2", asRegisterWs(ws2), Date.now());
       manager.authenticate("conn-1", auth, auth.systemId, "owner-full");
       manager.addSubscription("conn-1", "doc-a");
 
@@ -431,7 +444,7 @@ describe("ConnectionManager", () => {
       ws.close.mockImplementation(() => {
         throw new Error("already closed");
       });
-      manager.register("conn-1", ws as never, Date.now());
+      manager.register("conn-1", asRegisterWs(ws), Date.now());
 
       expect(() => {
         manager.closeAll(1001, "shutdown");
@@ -445,7 +458,7 @@ describe("ConnectionManager", () => {
       ws.close.mockImplementation(() => {
         throw new Error("already closed");
       });
-      manager.register("conn-1", ws as never, Date.now());
+      manager.register("conn-1", asRegisterWs(ws), Date.now());
       const debugFn = vi.fn();
 
       manager.closeAll(1001, "shutdown", { debug: debugFn });
@@ -466,7 +479,7 @@ describe("ConnectionManager", () => {
       // Register and authenticate connections up to the limit
       for (let i = 0; i < maxPerAccount; i++) {
         manager.reserveUnauthSlot();
-        manager.register(`conn-limit-${String(i)}`, mockWs() as never, Date.now());
+        manager.register(`conn-limit-${String(i)}`, asRegisterWs(mockWs()), Date.now());
         manager.authenticate(`conn-limit-${String(i)}`, auth, auth.systemId, "owner-full");
       }
 
@@ -480,7 +493,7 @@ describe("ConnectionManager", () => {
 
       for (let i = 0; i < connectionCount; i++) {
         manager.reserveUnauthSlot();
-        manager.register(`conn-dec-${String(i)}`, mockWs() as never, Date.now());
+        manager.register(`conn-dec-${String(i)}`, asRegisterWs(mockWs()), Date.now());
         manager.authenticate(`conn-dec-${String(i)}`, auth, auth.systemId, "owner-full");
       }
 
@@ -498,14 +511,14 @@ describe("ConnectionManager", () => {
       // Account A: 3 connections
       for (let i = 0; i < 3; i++) {
         manager.reserveUnauthSlot();
-        manager.register(`conn-a-${String(i)}`, mockWs() as never, Date.now());
+        manager.register(`conn-a-${String(i)}`, asRegisterWs(mockWs()), Date.now());
         manager.authenticate(`conn-a-${String(i)}`, authA, authA.systemId, "owner-full");
       }
 
       // Account B: 2 connections
       for (let i = 0; i < 2; i++) {
         manager.reserveUnauthSlot();
-        manager.register(`conn-b-${String(i)}`, mockWs() as never, Date.now());
+        manager.register(`conn-b-${String(i)}`, asRegisterWs(mockWs()), Date.now());
         manager.authenticate(`conn-b-${String(i)}`, authB, authB.systemId, "owner-full");
       }
 

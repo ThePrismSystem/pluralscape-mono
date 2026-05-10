@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -9,7 +10,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp, postJSON } from "../../helpers/route-test-setup.js";
 
-import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, EncryptedBase64, MemberId, SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -59,12 +60,12 @@ describe("POST /systems/:systemId/members/:memberId/duplicate", () => {
 
   it("returns 201 with duplicated member", async () => {
     vi.mocked(duplicateMember).mockResolvedValueOnce({
-      id: MEM_ID as never,
-      systemId: SYS_ID as never,
+      id: brandId<MemberId>(MEM_ID),
+      systemId: brandId<SystemId>(SYS_ID),
       encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
-      createdAt: 1000 as never,
-      updatedAt: 1000 as never,
+      createdAt: toUnixMillis(1000),
+      updatedAt: toUnixMillis(1000),
       archived: false,
       archivedAt: null,
     });
@@ -80,12 +81,12 @@ describe("POST /systems/:systemId/members/:memberId/duplicate", () => {
 
   it("forwards systemId, memberId, body, auth, and audit writer to service", async () => {
     vi.mocked(duplicateMember).mockResolvedValueOnce({
-      id: MEM_ID as never,
-      systemId: SYS_ID as never,
+      id: brandId<MemberId>(MEM_ID),
+      systemId: brandId<SystemId>(SYS_ID),
       encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
-      createdAt: 1000 as never,
-      updatedAt: 1000 as never,
+      createdAt: toUnixMillis(1000),
+      updatedAt: toUnixMillis(1000),
       archived: false,
       archivedAt: null,
     });

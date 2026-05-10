@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -9,7 +10,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, GroupId, MemberId, SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -55,10 +56,10 @@ describe("GET /systems/:systemId/members/:memberId/memberships", () => {
     vi.mocked(listAllMemberMemberships).mockResolvedValueOnce({
       groups: [
         {
-          groupId: "grp_test" as never,
-          memberId: MEM_ID as never,
-          systemId: SYS_ID as never,
-          createdAt: 1000 as never,
+          groupId: brandId<GroupId>("grp_test"),
+          memberId: brandId<MemberId>(MEM_ID),
+          systemId: brandId<SystemId>(SYS_ID),
+          createdAt: toUnixMillis(1000),
         },
       ],
       structureEntities: [],

@@ -4,6 +4,17 @@ import { mockDbFactory, mockRateLimitFactory } from "../../helpers/common-route-
 import { createRouteApp, postJSON } from "../../helpers/route-test-setup.js";
 
 import type { ApiErrorResponse } from "@pluralscape/types";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+
+/**
+ * Widen a chainable vi.fn mock so it can be passed where the resolver
+ * expects a PostgresJsDatabase. The runtime shape duck-types as needed
+ * for the methods this test exercises; the cast is a single `as` step
+ * after going through `unknown`.
+ */
+function asDb(mock: unknown): PostgresJsDatabase {
+  return mock as PostgresJsDatabase;
+}
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -66,7 +77,7 @@ describe("POST /salt", () => {
         where: vi.fn().mockReturnThis(),
         limit: vi.fn().mockResolvedValue([{ kdfSalt: REAL_KDF_SALT }]),
       };
-      vi.mocked(getDb).mockResolvedValue(mockDb as never);
+      vi.mocked(getDb).mockResolvedValue(asDb(mockDb));
     });
 
     it("returns 200 with the real kdfSalt", async () => {
@@ -94,7 +105,7 @@ describe("POST /salt", () => {
         where: vi.fn().mockReturnThis(),
         limit: vi.fn().mockResolvedValue([]),
       };
-      vi.mocked(getDb).mockResolvedValue(mockDb as never);
+      vi.mocked(getDb).mockResolvedValue(asDb(mockDb));
     });
 
     it("returns 200 with a deterministic fake kdfSalt", async () => {
@@ -148,7 +159,7 @@ describe("POST /salt", () => {
         where: vi.fn().mockReturnThis(),
         limit: vi.fn().mockResolvedValue([]),
       };
-      vi.mocked(getDb).mockResolvedValue(mockDb as never);
+      vi.mocked(getDb).mockResolvedValue(asDb(mockDb));
 
       const app = createApp();
       const res = await postJSON(app, "/salt", {});
@@ -165,7 +176,7 @@ describe("POST /salt", () => {
         where: vi.fn().mockReturnThis(),
         limit: vi.fn().mockResolvedValue([]),
       };
-      vi.mocked(getDb).mockResolvedValue(mockDb as never);
+      vi.mocked(getDb).mockResolvedValue(asDb(mockDb));
 
       const app = createApp();
       const res = await postJSON(app, "/salt", { email: "not-an-email" });

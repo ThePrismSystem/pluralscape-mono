@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -6,9 +7,9 @@ import {
   mockDbFactory,
   mockRateLimitFactory,
 } from "../../helpers/common-route-mocks.js";
-import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
+import { MOCK_SYSTEM_ID, MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, CheckInRecordId, TimerId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -59,10 +60,10 @@ const RECORD_ID = "cir_660e8400-e29b-41d4-a716-446655440000";
 const RESTORE_URL = `/systems/${SYS_ID}/check-in-records/${RECORD_ID}/restore`;
 
 const MOCK_RECORD = {
-  id: RECORD_ID as never,
-  systemId: MOCK_AUTH.systemId as never,
-  timerConfigId: "tmr_770e8400-e29b-41d4-a716-446655440000" as never,
-  scheduledAt: 1000 as never,
+  id: brandId<CheckInRecordId>(RECORD_ID),
+  systemId: MOCK_SYSTEM_ID,
+  timerConfigId: brandId<TimerId>("tmr_770e8400-e29b-41d4-a716-446655440000"),
+  scheduledAt: toUnixMillis(1000),
   status: "pending" as const,
   respondedByMemberId: null,
   respondedAt: null,

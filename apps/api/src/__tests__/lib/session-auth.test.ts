@@ -43,6 +43,8 @@ vi.mock("@pluralscape/types", async (importOriginal) => {
 
 import { getIdleTimeout, validateSession } from "../../lib/session-auth.js";
 
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+
 // ── Helpers ──────────────────────────────────────────────────────────
 
 interface MockSession {
@@ -85,7 +87,7 @@ function createMockDb(
     auditLogIpTracking?: boolean;
   }> = [],
   systemRows: Array<{ id: string }> = [],
-) {
+): PostgresJsDatabase {
   let queryCount = 0;
   const db = {
     select: vi.fn().mockReturnThis(),
@@ -101,7 +103,10 @@ function createMockDb(
       return { orderBy: vi.fn().mockResolvedValue(systemRows) };
     }),
   };
-  return db;
+  // Widen via `unknown` so the cast to PostgresJsDatabase is a single `as`
+  // step; the runtime shape duck-types as needed for the methods exercised.
+  const opaque: unknown = db;
+  return opaque as PostgresJsDatabase;
 }
 
 // ── Tests ────────────────────────────────────────────────────────────
@@ -113,7 +118,7 @@ describe("validateSession", () => {
 
   it("returns UNAUTHENTICATED when session does not exist", async () => {
     const db = createMockDb([]);
-    const result = await validateSession(db as never, "sess_nonexistent");
+    const result = await validateSession(db, "sess_nonexistent");
 
     expect(result).toEqual({ ok: false, error: "UNAUTHENTICATED" });
   });
@@ -122,7 +127,7 @@ describe("validateSession", () => {
     const session = makeSession({ revoked: true });
     const db = createMockDb([{ session, accountType: "system" }]);
 
-    const result = await validateSession(db as never, session.id);
+    const result = await validateSession(db, session.id);
 
     expect(result).toEqual({ ok: false, error: "UNAUTHENTICATED" });
   });
@@ -132,7 +137,7 @@ describe("validateSession", () => {
     const db = createMockDb([{ session, accountType: "system" }]);
     mockNow.mockReturnValue(2_000_001);
 
-    const result = await validateSession(db as never, session.id);
+    const result = await validateSession(db, session.id);
 
     expect(result).toEqual({ ok: false, error: "SESSION_EXPIRED" });
   });
@@ -149,7 +154,7 @@ describe("validateSession", () => {
     // Now is lastActive + 7 days + 1ms (just past idle timeout)
     mockNow.mockReturnValue(lastActive + 604_800_000 + 1);
 
-    const result = await validateSession(db as never, session.id);
+    const result = await validateSession(db, session.id);
 
     expect(result).toEqual({ ok: false, error: "SESSION_EXPIRED" });
   });
@@ -166,7 +171,7 @@ describe("validateSession", () => {
     // Now is lastActive + 30 days + 1ms (just past idle timeout)
     mockNow.mockReturnValue(lastActive + 2_592_000_000 + 1);
 
-    const result = await validateSession(db as never, session.id);
+    const result = await validateSession(db, session.id);
 
     expect(result).toEqual({ ok: false, error: "SESSION_EXPIRED" });
   });
@@ -176,7 +181,7 @@ describe("validateSession", () => {
     const db = createMockDb([{ session, accountType: "system" }], [{ id: "sys_001" }]);
     mockNow.mockReturnValue(session.createdAt + 1000);
 
-    const result = await validateSession(db as never, session.id);
+    const result = await validateSession(db, session.id);
 
     expect(result).toEqual({
       ok: true,
@@ -201,7 +206,7 @@ describe("validateSession", () => {
     );
     mockNow.mockReturnValue(session.createdAt + 1000);
 
-    const result = await validateSession(db as never, session.id);
+    const result = await validateSession(db, session.id);
 
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -214,7 +219,7 @@ describe("validateSession", () => {
     const db = createMockDb([{ session, accountType: "system" }], [{ id: "sys_001" }]);
     mockNow.mockReturnValue(session.createdAt + 1000);
 
-    const result = await validateSession(db as never, session.id);
+    const result = await validateSession(db, session.id);
 
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -227,7 +232,7 @@ describe("validateSession", () => {
     const db = createMockDb([{ session, accountType: "viewer" }], []);
     mockNow.mockReturnValue(session.createdAt + 1000);
 
-    const result = await validateSession(db as never, session.id);
+    const result = await validateSession(db, session.id);
 
     expect(result).toEqual({
       ok: true,
@@ -249,7 +254,7 @@ describe("validateSession", () => {
     const db = createMockDb([{ session, accountType: "system" }], []);
     mockNow.mockReturnValue(session.createdAt + 1000);
 
-    const result = await validateSession(db as never, session.id);
+    const result = await validateSession(db, session.id);
 
     expect(result).toEqual({
       ok: true,
@@ -268,7 +273,7 @@ describe("validateSession", () => {
     const db = createMockDb([{ session, accountType: "system" }], [{ id: "sys_002" }]);
     mockNow.mockReturnValue(999_999_999_999);
 
-    const result = await validateSession(db as never, session.id);
+    const result = await validateSession(db, session.id);
 
     expect(result.ok).toBe(true);
   });
@@ -278,7 +283,7 @@ describe("validateSession", () => {
     const db = createMockDb([{ session, accountType: "viewer" }], []);
     mockNow.mockReturnValue(session.createdAt + 1000);
 
-    const result = await validateSession(db as never, session.id);
+    const result = await validateSession(db, session.id);
 
     expect(result.ok).toBe(true);
   });
@@ -288,7 +293,7 @@ describe("validateSession", () => {
     const db = createMockDb([{ session, accountType: "viewer" }], []);
     mockNow.mockReturnValue(5_000_000);
 
-    const result = await validateSession(db as never, session.id);
+    const result = await validateSession(db, session.id);
 
     expect(result.ok).toBe(true);
   });
@@ -303,7 +308,7 @@ describe("validateSession", () => {
     const db = createMockDb([{ session, accountType: "viewer" }], []);
     mockNow.mockReturnValue(createdAt + 200_000);
 
-    const result = await validateSession(db as never, session.id);
+    const result = await validateSession(db, session.id);
 
     expect(result.ok).toBe(true);
   });
@@ -321,7 +326,7 @@ describe("validateSession", () => {
     // lastActive was at createdAt + 100_000; now is 604_800_001ms later (just past 7-day idle timeout)
     mockNow.mockReturnValue(createdAt + 100_000 + 604_800_001);
 
-    const result = await validateSession(db as never, session.id);
+    const result = await validateSession(db, session.id);
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -337,7 +342,7 @@ describe("validateSession", () => {
     );
     mockNow.mockReturnValue(session.createdAt + 1000);
 
-    const result = await validateSession(db as never, session.id);
+    const result = await validateSession(db, session.id);
 
     if (result.ok) {
       expect(result.auth.ownedSystemIds).toEqual(new Set(["sys_001", "sys_002"]));

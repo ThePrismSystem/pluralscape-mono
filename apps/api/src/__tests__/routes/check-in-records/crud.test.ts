@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -6,9 +7,9 @@ import {
   mockDbFactory,
   mockRateLimitFactory,
 } from "../../helpers/common-route-mocks.js";
-import { MOCK_AUTH, createRouteApp, postJSON } from "../../helpers/route-test-setup.js";
+import { MOCK_SYSTEM_ID, createRouteApp, postJSON } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, CheckInRecordId, MemberId, TimerId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -62,10 +63,10 @@ const BASE_URL = "/systems/sys_550e8400-e29b-41d4-a716-446655440000/check-in-rec
 const RECORD_URL = `${BASE_URL}/cir_660e8400-e29b-41d4-a716-446655440000`;
 
 const MOCK_RECORD = {
-  id: "cir_660e8400-e29b-41d4-a716-446655440000" as never,
-  systemId: MOCK_AUTH.systemId as never,
-  timerConfigId: "tmr_770e8400-e29b-41d4-a716-446655440000" as never,
-  scheduledAt: 1000 as never,
+  id: brandId<CheckInRecordId>("cir_660e8400-e29b-41d4-a716-446655440000"),
+  systemId: MOCK_SYSTEM_ID,
+  timerConfigId: brandId<TimerId>("tmr_770e8400-e29b-41d4-a716-446655440000"),
+  scheduledAt: toUnixMillis(1000),
   status: "pending" as const,
   respondedByMemberId: null,
   respondedAt: null,
@@ -175,8 +176,8 @@ describe("POST /systems/:id/check-in-records/:recordId/respond", () => {
     vi.mocked(respondCheckInRecord).mockResolvedValueOnce({
       ...MOCK_RECORD,
       status: "responded" as const,
-      respondedByMemberId: "mem_880e8400-e29b-41d4-a716-446655440000" as never,
-      respondedAt: 2000 as never,
+      respondedByMemberId: brandId<MemberId>("mem_880e8400-e29b-41d4-a716-446655440000"),
+      respondedAt: toUnixMillis(2000),
     });
 
     const app = createApp();

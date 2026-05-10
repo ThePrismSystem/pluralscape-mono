@@ -1,14 +1,9 @@
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  MOCK_SYSTEM_ID,
-  makeCallerFactory,
-  type SystemId,
-  assertProcedureRateLimited,
-} from "../test-helpers.js";
+import { MOCK_SYSTEM_ID, makeCallerFactory, assertProcedureRateLimited } from "../test-helpers.js";
 
-import type { FrontingAnalytics, CoFrontingAnalytics } from "@pluralscape/types";
+import type { CoFrontingAnalytics, FrontingAnalytics, SystemId } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -36,8 +31,8 @@ const MOCK_FRONTING_ANALYTICS: FrontingAnalytics = {
   systemId: MOCK_SYSTEM_ID,
   dateRange: {
     preset: "last-30-days",
-    start: 1_697_000_000_000 as never,
-    end: 1_700_000_000_000 as never,
+    start: toUnixMillis(1_697_000_000_000),
+    end: toUnixMillis(1_700_000_000_000),
   },
   subjectBreakdowns: [],
   truncated: false,
@@ -47,8 +42,8 @@ const MOCK_COFRONTING_ANALYTICS: CoFrontingAnalytics = {
   systemId: MOCK_SYSTEM_ID,
   dateRange: {
     preset: "last-30-days",
-    start: 1_697_000_000_000 as never,
-    end: 1_700_000_000_000 as never,
+    start: toUnixMillis(1_697_000_000_000),
+    end: toUnixMillis(1_700_000_000_000),
   },
   coFrontingPercentage: 0,
   pairs: [],

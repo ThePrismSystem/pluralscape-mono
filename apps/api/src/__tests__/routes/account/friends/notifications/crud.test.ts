@@ -75,6 +75,12 @@ const MOCK_PREFERENCE = {
   updatedAt: 1000,
 };
 
+/**
+ * Widen the plain mock preference fixture through `unknown` so the cast to
+ * the service's branded result type is a single `as` step.
+ */
+const MOCK_PREFERENCE_OPAQUE: unknown = MOCK_PREFERENCE;
+
 // ── Tests ────────────────────────────────────────────────────────
 
 describe("GET /account/friends/:connectionId/notifications", () => {
@@ -88,7 +94,7 @@ describe("GET /account/friends/:connectionId/notifications", () => {
 
   it("returns 200 with preference", async () => {
     vi.mocked(getOrCreateFriendNotificationPreference).mockResolvedValueOnce(
-      MOCK_PREFERENCE as never,
+      MOCK_PREFERENCE_OPAQUE as Awaited<ReturnType<typeof getOrCreateFriendNotificationPreference>>,
     );
 
     const res = await createApp().request(BASE_URL);
@@ -100,7 +106,7 @@ describe("GET /account/friends/:connectionId/notifications", () => {
 
   it("passes connectionId and auth to service", async () => {
     vi.mocked(getOrCreateFriendNotificationPreference).mockResolvedValueOnce(
-      MOCK_PREFERENCE as never,
+      MOCK_PREFERENCE_OPAQUE as Awaited<ReturnType<typeof getOrCreateFriendNotificationPreference>>,
     );
 
     await createApp().request(BASE_URL);
@@ -130,10 +136,10 @@ describe("PATCH /account/friends/:connectionId/notifications", () => {
   });
 
   it("returns 200 with updated preference", async () => {
-    vi.mocked(updateFriendNotificationPreference).mockResolvedValueOnce({
-      ...MOCK_PREFERENCE,
-      enabledEventTypes: [],
-    } as never);
+    const updated: unknown = { ...MOCK_PREFERENCE, enabledEventTypes: [] };
+    vi.mocked(updateFriendNotificationPreference).mockResolvedValueOnce(
+      updated as Awaited<ReturnType<typeof updateFriendNotificationPreference>>,
+    );
 
     const res = await patchJSON(createApp(), BASE_URL, {
       enabledEventTypes: [],
@@ -145,7 +151,9 @@ describe("PATCH /account/friends/:connectionId/notifications", () => {
   });
 
   it("passes params and auth to service", async () => {
-    vi.mocked(updateFriendNotificationPreference).mockResolvedValueOnce(MOCK_PREFERENCE as never);
+    vi.mocked(updateFriendNotificationPreference).mockResolvedValueOnce(
+      MOCK_PREFERENCE_OPAQUE as Awaited<ReturnType<typeof updateFriendNotificationPreference>>,
+    );
 
     await patchJSON(createApp(), BASE_URL, {
       enabledEventTypes: ["friend-switch-alert"],

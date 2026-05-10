@@ -73,7 +73,9 @@ describe("analytics.service (PGlite integration)", () => {
       archived: false,
       archivedAt: null,
     };
-    await db.insert(frontingSessions).values({ ...defaults, ...overrides } as never);
+    await db
+      .insert(frontingSessions)
+      .values({ ...defaults, ...overrides } as typeof frontingSessions.$inferInsert);
   }
 
   /** Build a custom DateRangeFilter for the given start/end timestamps. */
@@ -263,7 +265,9 @@ describe("analytics.service (PGlite integration)", () => {
             archivedAt: null,
           });
         }
-        await db.insert(frontingSessions).values(batchRows as never);
+        await db
+          .insert(frontingSessions)
+          .values(batchRows as (typeof frontingSessions.$inferInsert)[]);
       }
 
       const dateRange = customRange(baseTime - totalSessions * 1000 - 5000, baseTime);
@@ -350,7 +354,7 @@ describe("analytics.service (PGlite integration)", () => {
         version: 1,
         archived: false,
         archivedAt: null,
-      } as never);
+      } as typeof customFronts.$inferInsert);
 
       // Member session: -3h to -1h
       await insertSession({

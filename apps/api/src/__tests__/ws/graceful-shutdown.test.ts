@@ -12,13 +12,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ConnectionManager } from "../../ws/connection-manager.js";
 import { WS_CLOSE_GOING_AWAY } from "../../ws/ws.constants.js";
+import { asRegisterWs, mockWs } from "../helpers/ws-test-helpers.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { AccountId, SessionId, SystemId } from "@pluralscape/types";
-
-function mockWs(): { close: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi.fn> } {
-  return { close: vi.fn(), send: vi.fn() };
-}
 
 type AuthContextWithSystem = AuthContext & { readonly systemId: SystemId };
 
@@ -49,7 +46,7 @@ describe("graceful shutdown", () => {
     manager = new ConnectionManager();
     const ws1 = mockWs();
     manager.reserveUnauthSlot();
-    manager.register("conn-1", ws1 as never, Date.now());
+    manager.register("conn-1", asRegisterWs(ws1), Date.now());
 
     const shutdownPromise = manager.gracefulShutdown(1_000);
 
@@ -67,10 +64,10 @@ describe("graceful shutdown", () => {
     const ws2 = mockWs();
     const auth = mockAuth();
     manager.reserveUnauthSlot();
-    manager.register("conn-1", ws1 as never, Date.now());
+    manager.register("conn-1", asRegisterWs(ws1), Date.now());
     manager.authenticate("conn-1", auth, auth.systemId, "owner-full");
     manager.reserveUnauthSlot();
-    manager.register("conn-2", ws2 as never, Date.now());
+    manager.register("conn-2", asRegisterWs(ws2), Date.now());
 
     await manager.gracefulShutdown(1_000);
 
@@ -83,7 +80,7 @@ describe("graceful shutdown", () => {
     const ws1 = mockWs();
     const auth = mockAuth();
     manager.reserveUnauthSlot();
-    manager.register("conn-1", ws1 as never, Date.now());
+    manager.register("conn-1", asRegisterWs(ws1), Date.now());
     manager.authenticate("conn-1", auth, auth.systemId, "owner-full");
     manager.addSubscription("conn-1", "doc-a");
 
@@ -102,7 +99,7 @@ describe("graceful shutdown", () => {
       throw new Error("already closed");
     });
     manager.reserveUnauthSlot();
-    manager.register("conn-1", ws as never, Date.now());
+    manager.register("conn-1", asRegisterWs(ws), Date.now());
 
     await expect(manager.gracefulShutdown(1_000)).resolves.toBeUndefined();
     expect(manager.activeCount).toBe(0);
@@ -119,7 +116,7 @@ describe("graceful shutdown", () => {
     manager = new ConnectionManager();
     const ws = mockWs();
     manager.reserveUnauthSlot();
-    manager.register("conn-1", ws as never, Date.now());
+    manager.register("conn-1", asRegisterWs(ws), Date.now());
 
     const shutdownPromise = manager.gracefulShutdown(500);
 

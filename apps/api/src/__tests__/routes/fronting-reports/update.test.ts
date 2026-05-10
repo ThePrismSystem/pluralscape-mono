@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -6,9 +7,9 @@ import {
   mockDbFactory,
   mockRateLimitFactory,
 } from "../../helpers/common-route-mocks.js";
-import { MOCK_AUTH, createRouteApp, putJSON } from "../../helpers/route-test-setup.js";
+import { MOCK_SYSTEM_ID, createRouteApp, putJSON } from "../../helpers/route-test-setup.js";
 
-import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, EncryptedBase64, FrontingReportId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -36,16 +37,16 @@ const UPDATE_URL = `/systems/${SYS_ID}/fronting-reports/${REPORT_ID}`;
 const MOCK_UPDATE_BODY = { encryptedData: "dXBkYXRlZA==" as EncryptedBase64, version: 2 };
 
 const MOCK_UPDATE_RESULT = {
-  id: "fr_660e8400-e29b-41d4-a716-446655440000" as never,
-  systemId: MOCK_AUTH.systemId as never,
+  id: brandId<FrontingReportId>("fr_660e8400-e29b-41d4-a716-446655440000"),
+  systemId: MOCK_SYSTEM_ID,
   encryptedData: "dXBkYXRlZA==" as EncryptedBase64,
   format: "html" as const,
-  generatedAt: 5000 as never,
+  generatedAt: toUnixMillis(5000),
   version: 2,
   archived: false,
   archivedAt: null,
-  createdAt: 1000 as never,
-  updatedAt: 3000 as never,
+  createdAt: toUnixMillis(1000),
+  updatedAt: toUnixMillis(3000),
 };
 
 // ── Tests ────────────────────────────────────────────────────────

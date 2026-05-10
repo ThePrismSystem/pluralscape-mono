@@ -127,11 +127,19 @@ describe("import-job create/get/list/update (PGlite integration)", () => {
     });
 
     it("rejects invalid payload", async () => {
+      // Test specifically exercises the runtime VALIDATION_ERROR path with a
+      // body shape that is missing required fields. Widen via `unknown` so the
+      // assertion is a single `as` step.
+      const invalidBody: unknown = {
+        source: "notion",
+        selectedCategories: {},
+        avatarMode: "api",
+      };
       await assertApiError(
         createImportJob(
           asDb(db),
           systemId,
-          { source: "notion", selectedCategories: {}, avatarMode: "api" } as never,
+          invalidBody as Parameters<typeof createImportJob>[2],
           auth,
           noopAudit,
         ),

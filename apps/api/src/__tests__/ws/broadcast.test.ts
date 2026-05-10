@@ -10,8 +10,20 @@ import type { AppLogger } from "../../lib/logger.js";
 import type { DocumentUpdate } from "@pluralscape/sync";
 import type { AccountId, SessionId, SyncDocumentId, SystemId } from "@pluralscape/types";
 
-function mockWs(): { close: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi.fn> } {
+type MockWs = { close: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi.fn> };
+type RegisterWs = Parameters<ConnectionManager["register"]>[1];
+
+function mockWs(): MockWs {
   return { close: vi.fn(), send: vi.fn() };
+}
+
+/**
+ * Widen a MockWs through `unknown` so the cast to the manager's WSContext
+ * parameter is a single `as` step.
+ */
+function asRegisterWs(ws: MockWs): RegisterWs {
+  const opaque: unknown = ws;
+  return opaque as RegisterWs;
 }
 
 function mockLog(): AppLogger {
@@ -61,9 +73,9 @@ describe("broadcastDocumentUpdate", () => {
     const ws1 = mockWs();
     const ws2 = mockWs();
     const ws3 = mockWs();
-    manager.register("conn-1", ws1 as never, Date.now());
-    manager.register("conn-2", ws2 as never, Date.now());
-    manager.register("conn-3", ws3 as never, Date.now());
+    manager.register("conn-1", asRegisterWs(ws1), Date.now());
+    manager.register("conn-2", asRegisterWs(ws2), Date.now());
+    manager.register("conn-3", asRegisterWs(ws3), Date.now());
     manager.authenticate("conn-1", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     manager.authenticate("conn-2", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     manager.authenticate("conn-3", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
@@ -86,8 +98,8 @@ describe("broadcastDocumentUpdate", () => {
   it("skips connections that are not authenticated", () => {
     const ws1 = mockWs();
     const ws2 = mockWs();
-    manager.register("conn-1", ws1 as never, Date.now());
-    manager.register("conn-2", ws2 as never, Date.now());
+    manager.register("conn-1", asRegisterWs(ws1), Date.now());
+    manager.register("conn-2", asRegisterWs(ws2), Date.now());
     manager.authenticate("conn-1", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     // conn-2 stays unauthenticated
     manager.addSubscription("conn-1", "doc-1");
@@ -106,15 +118,15 @@ describe("broadcastDocumentUpdate", () => {
       throw new Error("broken pipe");
     });
     const ws2 = mockWs();
-    manager.register("conn-1", ws1 as never, Date.now());
-    manager.register("conn-2", ws2 as never, Date.now());
+    manager.register("conn-1", asRegisterWs(ws1), Date.now());
+    manager.register("conn-2", asRegisterWs(ws2), Date.now());
     manager.authenticate("conn-1", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     manager.authenticate("conn-2", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     manager.addSubscription("conn-1", "doc-1");
     manager.addSubscription("conn-2", "doc-1");
 
     // conn-submitter is a separate connection
-    manager.register("conn-sub", mockWs() as never, Date.now());
+    manager.register("conn-sub", asRegisterWs(mockWs()), Date.now());
     manager.authenticate("conn-sub", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     manager.addSubscription("conn-sub", "doc-1");
 
@@ -130,12 +142,12 @@ describe("broadcastDocumentUpdate", () => {
       throw new Error("broken pipe");
     });
     manager.reserveUnauthSlot();
-    manager.register("conn-dead", ws1 as never, Date.now());
+    manager.register("conn-dead", asRegisterWs(ws1), Date.now());
     manager.authenticate("conn-dead", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     manager.addSubscription("conn-dead", "doc-1");
 
     manager.reserveUnauthSlot();
-    manager.register("conn-sub", mockWs() as never, Date.now());
+    manager.register("conn-sub", asRegisterWs(mockWs()), Date.now());
     manager.authenticate("conn-sub", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     manager.addSubscription("conn-sub", "doc-1");
 
@@ -149,8 +161,8 @@ describe("broadcastDocumentUpdate", () => {
   it("returns BroadcastResult with delivered/failed/total counts", () => {
     const ws1 = mockWs();
     const ws2 = mockWs();
-    manager.register("conn-1", ws1 as never, Date.now());
-    manager.register("conn-2", ws2 as never, Date.now());
+    manager.register("conn-1", asRegisterWs(ws1), Date.now());
+    manager.register("conn-2", asRegisterWs(ws2), Date.now());
     manager.authenticate("conn-1", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     manager.authenticate("conn-2", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     manager.addSubscription("conn-1", "doc-1");
@@ -165,7 +177,7 @@ describe("broadcastDocumentUpdate", () => {
 
   it("returns early on serialization failure", () => {
     const ws1 = mockWs();
-    manager.register("conn-1", ws1 as never, Date.now());
+    manager.register("conn-1", asRegisterWs(ws1), Date.now());
     manager.authenticate("conn-1", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     manager.addSubscription("conn-1", "doc-1");
 
@@ -185,8 +197,8 @@ describe("broadcastDocumentUpdate", () => {
   it("sends only to subscribers of the specific document", () => {
     const ws1 = mockWs();
     const ws2 = mockWs();
-    manager.register("conn-1", ws1 as never, Date.now());
-    manager.register("conn-2", ws2 as never, Date.now());
+    manager.register("conn-1", asRegisterWs(ws1), Date.now());
+    manager.register("conn-2", asRegisterWs(ws2), Date.now());
     manager.authenticate("conn-1", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     manager.authenticate("conn-2", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     manager.addSubscription("conn-1", "doc-1");

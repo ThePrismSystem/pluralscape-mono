@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -12,7 +13,7 @@ import { requestIdMiddleware } from "../../middleware/request-id.js";
 import { MemoryIdempotencyStore } from "../../middleware/stores/memory-idempotency-store.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { AccountId, ApiErrorResponse, SessionId } from "@pluralscape/types";
 
 vi.mock("../../lib/logger.js", () => {
   const instance = {
@@ -47,10 +48,10 @@ describe("idempotency middleware", () => {
     app.use("*", (c, next) => {
       c.set("auth", {
         authMethod: "session" as const,
-        accountId: "acct-1" as never,
+        accountId: brandId<AccountId>("acct-1"),
         systemId: null,
-        sessionId: "sess-1" as never,
-        accountType: "system" as never,
+        sessionId: brandId<SessionId>("sess-1"),
+        accountType: "system" as const,
         ownedSystemIds: new Set(),
         auditLogIpTracking: false,
       });
@@ -119,10 +120,10 @@ describe("idempotency middleware", () => {
     errApp.use("*", (c, next) => {
       c.set("auth", {
         authMethod: "session" as const,
-        accountId: "acct-1" as never,
+        accountId: brandId<AccountId>("acct-1"),
         systemId: null,
-        sessionId: "sess-1" as never,
-        accountType: "system" as never,
+        sessionId: brandId<SessionId>("sess-1"),
+        accountType: "system" as const,
         ownedSystemIds: new Set(),
         auditLogIpTracking: false,
       });
@@ -249,10 +250,10 @@ describe("idempotency middleware", () => {
     app.use("*", (c, next) => {
       c.set("auth", {
         authMethod: "session" as const,
-        accountId: "acct-auth-test" as never,
+        accountId: brandId<AccountId>("acct-auth-test"),
         systemId: null,
-        sessionId: "sess-auth" as never,
-        accountType: "system" as never,
+        sessionId: brandId<SessionId>("sess-auth"),
+        accountType: "system" as const,
         ownedSystemIds: new Set(),
         auditLogIpTracking: false,
       });

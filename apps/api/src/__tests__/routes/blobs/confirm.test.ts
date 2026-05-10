@@ -6,7 +6,7 @@ import {
   mockDbFactory,
   mockRateLimitFactory,
 } from "../../helpers/common-route-mocks.js";
-import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
+import { MOCK_SYSTEM_ID, createRouteApp } from "../../helpers/route-test-setup.js";
 
 import type { BlobResult } from "../../../services/blob/internal.js";
 import type { ApiErrorResponse } from "@pluralscape/types";
@@ -43,7 +43,7 @@ const BASE_URL = `/systems/sys_550e8400-e29b-41d4-a716-446655440000/blobs/${BLOB
 
 const MOCK_BLOB_RESULT = {
   id: BLOB_ID,
-  systemId: MOCK_AUTH.systemId,
+  systemId: MOCK_SYSTEM_ID,
   purpose: "avatar",
   mimeType: "image/png",
   sizeBytes: 1024,

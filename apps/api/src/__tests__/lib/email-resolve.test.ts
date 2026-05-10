@@ -3,6 +3,8 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { resolveAccountEmail } from "../../lib/email-resolve.js";
 
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+
 const mockEnv = vi.hoisted(() => ({
   EMAIL_ENCRYPTION_KEY: undefined as string | undefined,
 }));
@@ -11,6 +13,16 @@ vi.mock("../../env.js", () => ({ env: mockEnv }));
 
 /** Valid 64-char hex key (32 bytes of 0xaa). */
 const VALID_KEY_HEX = "aa".repeat(32);
+
+/**
+ * Widen a chainable vi.fn mock so it can be passed where the resolver
+ * expects a PostgresJsDatabase. The runtime shape duck-types as needed
+ * for the methods this test exercises; the cast is a single `as` step
+ * after going through `unknown`.
+ */
+function asDb(mock: unknown): PostgresJsDatabase {
+  return mock as PostgresJsDatabase;
+}
 
 beforeAll(async () => {
   await initSodium();
@@ -29,7 +41,7 @@ describe("resolveAccountEmail", () => {
       limit: vi.fn().mockResolvedValue([]),
     };
 
-    const result = await resolveAccountEmail(mockDb as never, "acc_nonexistent");
+    const result = await resolveAccountEmail(asDb(mockDb), "acc_nonexistent");
     expect(result).toBeNull();
   });
 
@@ -41,7 +53,7 @@ describe("resolveAccountEmail", () => {
       limit: vi.fn().mockResolvedValue([{ encryptedEmail: null }]),
     };
 
-    const result = await resolveAccountEmail(mockDb as never, "acc_legacy");
+    const result = await resolveAccountEmail(asDb(mockDb), "acc_legacy");
     expect(result).toBeNull();
   });
 
@@ -59,7 +71,7 @@ describe("resolveAccountEmail", () => {
       limit: vi.fn().mockResolvedValue([{ encryptedEmail: encrypted }]),
     };
 
-    const result = await resolveAccountEmail(mockDb as never, "acc_123");
+    const result = await resolveAccountEmail(asDb(mockDb), "acc_123");
     expect(result).toBe("alice@example.com");
   });
 });

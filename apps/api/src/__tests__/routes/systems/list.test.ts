@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { toCursor } from "../../../lib/pagination.js";
@@ -10,7 +11,7 @@ import {
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
 import type { SystemProfileResult } from "../../../services/system/internal.js";
-import type { PaginatedResult } from "@pluralscape/types";
+import type { PaginatedResult, PaginationCursor, SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -71,14 +72,14 @@ describe("GET /systems", () => {
     const page: PaginatedResult<SystemProfileResult> = {
       data: [
         {
-          id: "sys_550e8400-e29b-41d4-a716-446655440000" as never,
+          id: brandId<SystemId>("sys_550e8400-e29b-41d4-a716-446655440000"),
           encryptedData: null,
           version: 1,
-          createdAt: 1000 as never,
-          updatedAt: 1000 as never,
+          createdAt: toUnixMillis(1000),
+          updatedAt: toUnixMillis(1000),
         },
       ],
-      nextCursor: "sys_550e8400-e29b-41d4-a716-446655440000" as never,
+      nextCursor: brandId<PaginationCursor>("sys_550e8400-e29b-41d4-a716-446655440000"),
       hasMore: true,
       totalCount: null,
     };

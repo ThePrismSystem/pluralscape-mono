@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -6,9 +7,9 @@ import {
   mockDbFactory,
   mockRateLimitFactory,
 } from "../../helpers/common-route-mocks.js";
-import { MOCK_AUTH, createRouteApp, postJSON } from "../../helpers/route-test-setup.js";
+import { MOCK_SYSTEM_ID, createRouteApp, postJSON } from "../../helpers/route-test-setup.js";
 
-import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, EncryptedBase64, FrontingReportId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -41,16 +42,16 @@ const VALID_BODY = {
 };
 
 const MOCK_RESULT = {
-  id: REPORT_ID as never,
-  systemId: MOCK_AUTH.systemId as never,
+  id: brandId<FrontingReportId>(REPORT_ID),
+  systemId: MOCK_SYSTEM_ID,
   encryptedData: "dGVzdA==" as EncryptedBase64,
   format: "html" as const,
-  generatedAt: 5000 as never,
+  generatedAt: toUnixMillis(5000),
   version: 1,
   archived: false,
   archivedAt: null,
-  createdAt: 1000 as never,
-  updatedAt: 1000 as never,
+  createdAt: toUnixMillis(1000),
+  updatedAt: toUnixMillis(1000),
 };
 
 // ── Tests ────────────────────────────────────────────────────────

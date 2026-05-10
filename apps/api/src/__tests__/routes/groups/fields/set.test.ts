@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -9,7 +10,14 @@ import {
 } from "../../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp, postJSON } from "../../../helpers/route-test-setup.js";
 
-import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
+import type {
+  ApiErrorResponse,
+  EncryptedBase64,
+  FieldDefinitionId,
+  FieldValueId,
+  GroupId,
+  SystemId,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -55,16 +63,16 @@ const createApp = () => createRouteApp("/systems", systemRoutes);
 const VALID_BODY = { encryptedData: "dGVzdA==" as EncryptedBase64 };
 
 const FIELD_VALUE_RESULT = {
-  id: "fv_550e8400-e29b-41d4-a716-446655440000" as never,
-  fieldDefinitionId: FLD_DEF_ID as never,
+  id: brandId<FieldValueId>("fv_550e8400-e29b-41d4-a716-446655440000"),
+  fieldDefinitionId: brandId<FieldDefinitionId>(FLD_DEF_ID),
   memberId: null,
   structureEntityId: null,
-  groupId: GRP_ID as never,
-  systemId: SYS_ID as never,
+  groupId: brandId<GroupId>(GRP_ID),
+  systemId: brandId<SystemId>(SYS_ID),
   encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
-  createdAt: 1000 as never,
-  updatedAt: 1000 as never,
+  createdAt: toUnixMillis(1000),
+  updatedAt: toUnixMillis(1000),
 };
 
 const FIELD_PATH = `/systems/${SYS_ID}/groups/${GRP_ID}/fields/${FLD_DEF_ID}`;

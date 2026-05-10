@@ -42,7 +42,10 @@ describe("setSyncPubSub lifecycle", () => {
       publish: vi.fn(),
     };
 
-    setSyncPubSub(mockPubSub as never);
+    // Widen via `unknown` so the cast to ValkeyPubSub is a single `as` step —
+    // the test only inspects identity, not behaviour.
+    const opaque: unknown = mockPubSub;
+    setSyncPubSub(opaque as Parameters<typeof setSyncPubSub>[0]);
 
     expect(getSyncPubSub()).toBe(mockPubSub);
   });

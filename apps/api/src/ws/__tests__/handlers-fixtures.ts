@@ -155,7 +155,10 @@ export function makeConnectionState(connectionId: string): ConnectionStateHandle
   const manager = new ConnectionManager();
   const ws = { close: vi.fn(), send: vi.fn() };
   manager.reserveUnauthSlot();
-  manager.register(connectionId, ws as never, Date.now());
+  // The mock ws stub only implements the methods the manager exercises;
+  // widen via `unknown` so the cast to WSContext is a single `as` step.
+  const opaqueWs: unknown = ws;
+  manager.register(connectionId, opaqueWs as Parameters<typeof manager.register>[1], Date.now());
   manager.authenticate(
     connectionId,
     {

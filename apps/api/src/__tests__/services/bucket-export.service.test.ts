@@ -5,12 +5,21 @@ import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
 import type { BucketContentEntityType, BucketId, SystemId, UnixMillis } from "@pluralscape/types";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Mock data ───────────────────────────────────────────────────────
 
 const SYSTEM_ID = brandId<SystemId>("sys_test-system");
 const BUCKET_ID = brandId<BucketId>("bkt_test-bucket");
 const AUTH = makeTestAuth({ systemId: SYSTEM_ID });
+
+/**
+ * The service routes through a mocked tenant tx that ignores the db argument;
+ * tests pass an opaque stub. Widen via `unknown` so the cast to
+ * PostgresJsDatabase is a single `as` step.
+ */
+const MOCK_DB_STUB: unknown = {};
+const MOCK_DB = MOCK_DB_STUB as PostgresJsDatabase;
 
 const MOCK_MANIFEST_COUNT = { count: 5, maxUpdatedAt: 2000 as UnixMillis | null };
 const MOCK_EXPORT_ROW = {
@@ -97,7 +106,7 @@ describe("bucket-export service", () => {
 
   describe("getBucketExportManifest", () => {
     it("returns manifest with entries and etag", async () => {
-      const result = await getBucketExportManifest({} as never, SYSTEM_ID, BUCKET_ID, AUTH);
+      const result = await getBucketExportManifest(MOCK_DB, SYSTEM_ID, BUCKET_ID, AUTH);
 
       expect(result.systemId).toBe(SYSTEM_ID);
       expect(result.bucketId).toBe(BUCKET_ID);
@@ -106,7 +115,7 @@ describe("bucket-export service", () => {
     });
 
     it("calls assertBucketExists", async () => {
-      await getBucketExportManifest({} as never, SYSTEM_ID, BUCKET_ID, AUTH);
+      await getBucketExportManifest(MOCK_DB, SYSTEM_ID, BUCKET_ID, AUTH);
 
       expect(assertBucketExists).toHaveBeenCalledWith({}, SYSTEM_ID, BUCKET_ID);
     });
@@ -114,13 +123,13 @@ describe("bucket-export service", () => {
     it("rejects when ownership check fails", async () => {
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
-      await expect(
-        getBucketExportManifest({} as never, SYSTEM_ID, BUCKET_ID, AUTH),
-      ).rejects.toThrow(expect.objectContaining({ status: 404 }));
+      await expect(getBucketExportManifest(MOCK_DB, SYSTEM_ID, BUCKET_ID, AUTH)).rejects.toThrow(
+        expect.objectContaining({ status: 404 }),
+      );
     });
 
     it("queries manifest count for each entity type", async () => {
-      await getBucketExportManifest({} as never, SYSTEM_ID, BUCKET_ID, AUTH);
+      await getBucketExportManifest(MOCK_DB, SYSTEM_ID, BUCKET_ID, AUTH);
 
       // 2 entity types in our mock registry
       expect(mockQueryManifestCount).toHaveBeenCalledTimes(2);
@@ -137,7 +146,7 @@ describe("bucket-export service", () => {
       mockQueryBucketExportRows.mockResolvedValueOnce([]);
 
       const result = await getBucketExportPage(
-        {} as never,
+        MOCK_DB,
         SYSTEM_ID,
         BUCKET_ID,
         AUTH,
@@ -154,7 +163,7 @@ describe("bucket-export service", () => {
       mockQueryBucketExportRows.mockResolvedValueOnce([MOCK_EXPORT_ROW]);
 
       const result = await getBucketExportPage(
-        {} as never,
+        MOCK_DB,
         SYSTEM_ID,
         BUCKET_ID,
         AUTH,
@@ -175,7 +184,7 @@ describe("bucket-export service", () => {
       mockQueryBucketExportRows.mockResolvedValueOnce(rows);
 
       const result = await getBucketExportPage(
-        {} as never,
+        MOCK_DB,
         SYSTEM_ID,
         BUCKET_ID,
         AUTH,
@@ -193,7 +202,7 @@ describe("bucket-export service", () => {
       mockQueryBucketExportRows.mockResolvedValueOnce([]);
 
       await getBucketExportPage(
-        {} as never,
+        MOCK_DB,
         SYSTEM_ID,
         BUCKET_ID,
         AUTH,
@@ -206,7 +215,7 @@ describe("bucket-export service", () => {
     });
 
     it("calls assertBucketExists before querying", async () => {
-      await getBucketExportPage({} as never, SYSTEM_ID, BUCKET_ID, AUTH, ENTITY_TYPE, LIMIT);
+      await getBucketExportPage(MOCK_DB, SYSTEM_ID, BUCKET_ID, AUTH, ENTITY_TYPE, LIMIT);
 
       expect(assertBucketExists).toHaveBeenCalledWith({}, SYSTEM_ID, BUCKET_ID);
     });
@@ -215,7 +224,7 @@ describe("bucket-export service", () => {
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
       await expect(
-        getBucketExportPage({} as never, SYSTEM_ID, BUCKET_ID, AUTH, ENTITY_TYPE, LIMIT),
+        getBucketExportPage(MOCK_DB, SYSTEM_ID, BUCKET_ID, AUTH, ENTITY_TYPE, LIMIT),
       ).rejects.toThrow(expect.objectContaining({ status: 404 }));
     });
   });
