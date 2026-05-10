@@ -37,17 +37,17 @@ Every component, pattern, token, mode and accessibility claim in this kit carrie
 
 ## 2. Accessibility — what the system actually claims
 
-**WCAG 2.2 AA is the target baseline.** That is the only conformance claim this kit makes. Stronger phrasings ("fully meets," "every criterion verified," "zero failures," "every component is accessible") are not used because the kit ships HTML previews — not a built application against which an audit can run.
+**WCAG 2.2 AA is the target baseline.** That is the only conformance claim the design system makes. Stronger phrasings ("fully meets," "every criterion verified," "zero failures," "every component is accessible") are not used because the production Pluralscape app is not yet built. The package ships RN atoms and HTML previews; an end-to-end audit needs a running app, screens, and the full navigation surface.
 
 What canonical components must include:
 
 - An **accessible name** for every interactive element.
 - A **visible focus state** that meets 1.4.11 (3:1 against adjacent colors) and 2.4.13 (≥2px perimeter, encloses the element).
-- **Sufficient text contrast** (4.5:1 normal text, 3:1 large + non-text).
-- A **clear touch target** (≥24×24 visual with ≥10px spacing per 2.5.8 AA; ≥44×44 hit area for primary actions per 2.5.5 AAA).
-- **Color is never the only signal** — pair with icon, label, shape, or position.
+- **Sufficient text contrast** (4.5:1 normal text, 3:1 large and non-text).
+- A **clear touch target** — ≥24×24 visual with ≥10px spacing per 2.5.8 AA, ≥44×44 hit area for primary actions per 2.5.5 AAA.
+- **Color is never the only signal** — pair it with an icon, label, shape, or position.
 
-Known accessibility risks (as of last audit, Apr 2026) are documented in `preview/accessibility.html` under "Known risks" and should be reviewed before any production adoption of this kit. The CI gates in `packages/design-system/docs/A11Y_GATES.md` are the mechanism by which "designed in" becomes "verified" — they are exploratory until a production app wires them up.
+Known accessibility risks (as of last audit, Apr 2026) are documented in `preview/accessibility.html` under "Known risks" and must be reviewed before any production adoption. The planned CI gates in `packages/design-system/docs/A11Y_GATES.md` are the mechanism by which "designed in" becomes "verified" — they are exploratory until a production app wires them up.
 
 ### Phrasing rules
 
