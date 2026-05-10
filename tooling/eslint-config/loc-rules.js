@@ -58,6 +58,10 @@ export const locRules = [
     rules: { "max-lines": ["error", { max: 250 }] },
   },
   { files: ["apps/api-e2e/src/**/*.ts"], rules: { "max-lines": ["error", { max: 400 }] } },
+  {
+    files: ["packages/design-system/src/components/**/*.{ts,tsx}"],
+    rules: { "max-lines": ["error", { max: 150 }] },
+  },
 
   // Constants override (stricter than any area cap)
   { files: ["**/*.constants.ts"], rules: { "max-lines": ["error", { max: 300 }] } },

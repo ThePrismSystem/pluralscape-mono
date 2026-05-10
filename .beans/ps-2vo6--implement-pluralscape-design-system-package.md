@@ -5,7 +5,7 @@ status: in-progress
 type: feature
 priority: normal
 created_at: 2026-05-10T08:22:37Z
-updated_at: 2026-05-10T09:45:54Z
+updated_at: 2026-05-10T09:47:14Z
 ---
 
 Stand up packages/design-system per spec docs/superpowers/specs/2026-05-10-design-system-package-design.md.
@@ -47,7 +47,7 @@ Sub-tasks (26 from plan):
 ## Phase 6: Public API barrel & ESLint
 
 - [x] T16 src/index.ts barrel
-- [ ] T17 ESLint max-lines:150 block + loc-ceilings.md update
+- [x] T17 ESLint max-lines:150 block + loc-ceilings.md update
 
 ## Phase 7: Workspace catalog + mobile integration
 
