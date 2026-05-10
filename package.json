@@ -72,36 +72,6 @@
       "prettier --write"
     ]
   },
-  "pnpm": {
-    "overrides": {
-      "@trpc/server": "11.17.0",
-      "better-sqlite3": "npm:better-sqlite3-multiple-ciphers@^12.6.2",
-      "ioredis": "5.10.1",
-      "esbuild": ">=0.25.0",
-      "fast-xml-parser": ">=5.7.0",
-      "@aws-sdk/xml-builder>fast-xml-parser": "5.5.12",
-      "postcss": ">=8.5.10",
-      "flatted": ">=3.4.2",
-      "brace-expansion": ">=5.0.5",
-      "picomatch": ">=4.0.4",
-      "yaml": ">=2.8.3",
-      "node-forge": ">=1.4.0",
-      "handlebars": ">=4.7.9",
-      "vite": "8.0.11",
-      "@tanstack/query-core": "5.100.9",
-      "follow-redirects": ">=1.16.0",
-      "dompurify": ">=3.4.0",
-      "protobufjs": ">=7.5.5",
-      "axios": ">=1.15.0",
-      "@xmldom/xmldom": ">=0.8.13",
-      "uuid": ">=14.0.0"
-    },
-    "auditConfig": {
-      "ignoreCves": [
-        "GHSA-gh4j-gqv2-49f6"
-      ]
-    }
-  },
   "prettier": "@pluralscape/prettier-config",
   "packageManager": "pnpm@11.0.9"
 }
