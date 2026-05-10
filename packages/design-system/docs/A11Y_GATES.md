@@ -15,10 +15,10 @@ The gates split into five categories. Each row gets its own test or lint rule; g
 
 ### A.1 Lint gates
 
-| Gate                    | Tool                                                                                                                                                                                 | Where                   | Status  | Failing means |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------- | ------- | ------------- |
-| **Web a11y lint**       | [`eslint-plugin-jsx-a11y`](https://github.com/jsx-eslint/eslint-plugin-jsx-a11y) `recommended` ruleset, no rule allowed below `error`                                                | `apps/web/.eslintrc`    | planned | block PR      |
-| **RN a11y lint**        | [`eslint-plugin-react-native-a11y`](https://github.com/FormidableLabs/eslint-plugin-react-native-a11y) `all` ruleset                                                                 | `apps/mobile/.eslintrc` | planned | block PR      |
+| Gate                    | Tool                                                                                                                                                                              | Where                   | Status  | Failing means |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | ------- | ------------- |
+| **Web a11y lint**       | [`eslint-plugin-jsx-a11y`](https://github.com/jsx-eslint/eslint-plugin-jsx-a11y) `recommended` ruleset, no rule allowed below `error`                                             | `apps/web/.eslintrc`    | planned | block PR      |
+| **RN a11y lint**        | [`eslint-plugin-react-native-a11y`](https://github.com/FormidableLabs/eslint-plugin-react-native-a11y) `all` ruleset                                                              | `apps/mobile/.eslintrc` | planned | block PR      |
 | **Inline-literal lint** | New custom rule under the `pluralscape/*` namespace covering interactive props (`accessibilityLabel`, `aria-label`) — values must come from `i18n` keys, never hard-coded strings | `tooling/eslint-config` | planned | block PR      |
 
 ### A.2 Token and contrast gates

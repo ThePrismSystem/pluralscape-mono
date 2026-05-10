@@ -24,12 +24,12 @@ tokens/
 
 `colors.json`, `typography.json`, `spacing.json`, `motion.json`, `elevation.json`, and `gradients.json` each define a default and a set of overrides under `modes.*`. The active modes are:
 
-| Mode             | Selector                       | Purpose                                                            |
-| ---------------- | ------------------------------ | ------------------------------------------------------------------ |
-| Default          | (none)                         | Inner Horizons aesthetic                                           |
-| `static`         | `[data-mode="static"]`         | Flat fills, no glow, motion clamped to 0                           |
-| `reduced-motion` | `[data-mode="reduced-motion"]` | Visuals untouched, every duration ≤50ms (vestibular accommodation) |
-| `high-contrast`  | `[data-mode="high-contrast"]`  | Brighter text, stronger borders, no surface tint                   |
+| Mode             | Selector                       | Purpose                                                                   |
+| ---------------- | ------------------------------ | ------------------------------------------------------------------------- |
+| Default          | (none)                         | Inner Horizons aesthetic                                                  |
+| `static`         | `[data-mode="static"]`         | Flat fills, no glow, motion clamped to 0                                  |
+| `reduced-motion` | `[data-mode="reduced-motion"]` | Visuals untouched, every duration ≤50ms (vestibular accommodation)        |
+| `high-contrast`  | `[data-mode="high-contrast"]`  | Brighter text, stronger borders, no surface tint                          |
 | `littles`        | `[data-mode="littles"]`        | Littles Safe Mode — softer accent, desaturated danger, ≥56×56 hit targets |
 
 Each override **merges** onto the default. Anything not listed inherits.
