@@ -117,21 +117,39 @@ export default defineConfig({
       },
       {
         resolve: {
-          alias: {
+          alias: [
             // react-native ships Flow-typed source vitest can't parse;
             // alias to a happy-dom-friendly stub mapping RN primitives to
             // semantic DOM elements (Pressable → button, Text → span, etc.).
-            "react-native": path.resolve(
-              "packages/design-system/src/__tests__/__mocks__/react-native.tsx",
-            ),
+            {
+              find: /^react-native$/,
+              replacement: path.resolve(
+                "packages/design-system/src/__tests__/__mocks__/react-native.tsx",
+              ),
+            },
             // react-native-svg's main entry imports RN-native modules that
             // can't load under happy-dom. Stub it so atom tests can render
             // lucide-react-native icons (which call NativeSvg.Svg / Path / etc.)
             // as plain DOM SVG elements.
-            "react-native-svg": path.resolve(
-              "packages/design-system/src/__tests__/__mocks__/react-native-svg.ts",
-            ),
-          },
+            {
+              find: /^react-native-svg$/,
+              replacement: path.resolve(
+                "packages/design-system/src/__tests__/__mocks__/react-native-svg.ts",
+              ),
+            },
+            // lucide-react-native@1.14.0's published ESM main re-exports
+            // `LucideProvider` from a context.mjs that doesn't define it
+            // (a build artifact bug — Metro/RN's lazy resolver tolerates it,
+            // strict ESM does not). The /icons subpath is clean; alias the
+            // bare specifier to a re-export of /icons. Production code uses
+            // the canonical `from "lucide-react-native"` pattern unchanged.
+            {
+              find: /^lucide-react-native$/,
+              replacement: path.resolve(
+                "packages/design-system/src/__tests__/__mocks__/lucide-react-native.ts",
+              ),
+            },
+          ],
         },
         test: {
           name: "design-system",
