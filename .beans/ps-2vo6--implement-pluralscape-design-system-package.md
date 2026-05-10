@@ -53,7 +53,7 @@ Sub-tasks (26 from plan):
 
 - [x] T18 Add lucide-react-native + react-native-svg to catalog (advanced earlier — pre-commit unblocker)
 - [x] T19 Wire apps/mobile (ThemeProvider, fonts, logo re-export)
-- [ ] T20 Build smoke screen
+- [x] T20 Build smoke screen
 - [ ] T21 Manual smoke verification on iOS/Android/web
 
 ## Phase 8: Skill, root CLAUDE.md, ui-design cleanup
@@ -81,6 +81,20 @@ T19 wires `apps/mobile` to consume `@pluralscape/design-system`:
 - Extend `apps/mobile/app/__tests__/_layout.test.tsx` with mocks for `@pluralscape/design-system` (ThemeProvider as Fragment) and `../../src/lib/fonts.js` (useDesignSystemFonts → `[true]`), mirroring the existing `expo-secure-store`/`expo-router`/etc. mock pattern.
 
 Verification:
+
 - `pnpm --filter @pluralscape/mobile typecheck` exit 0.
 - `pnpm --filter @pluralscape/mobile lint` exit 0.
 - `pnpm vitest run --project mobile` 142 files / 1366 tests pass (up from 141/1357 baseline because the layout suite was previously failing at suite-level due to the new design-system import).
+
+T20 builds the design-system smoke screen:
+
+- Create `apps/mobile/src/screens/design-system-smoke.tsx` exercising every atom (Avatar, Badge, Button, Icon, IconButton, Input, PluralscapeLogo, Switch) plus a Mode section that switches between all 5 theme modes (`default`, `static`, `reduced-motion`, `high-contrast`, `littles`).
+- Wraps content in a local `ThemeProvider` with internal `useState<ThemeMode>` so mode switching works inside the smoke screen even though the root layout wires `onModeChange={noop}` (mode persistence deferred to M10 per T19).
+- All numeric layout values extracted to a top-level `LAYOUT` constants object; explicit `ReactElement` return types on all exports; alphabetized import groups with blank-line separation (mirrors T9/T13).
+- Expose via `apps/mobile/app/(app)/design-system-smoke.tsx` route file that imports the screen from `src/screens/design-system-smoke.js`. Path: `/design-system-smoke` (under the authenticated `(app)` group; devs must be logged in to navigate). T21 will manually verify on iOS/Android/web.
+
+Verification:
+
+- `pnpm --filter @pluralscape/mobile typecheck` exit 0.
+- `pnpm --filter @pluralscape/mobile lint` exit 0.
+- `pnpm vitest run --project mobile` 142 files / 1366 tests pass (no test count change — smoke screen has no automated tests; T21 covers manual verification).
