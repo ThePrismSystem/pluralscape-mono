@@ -5,7 +5,7 @@ status: in-progress
 type: feature
 priority: normal
 created_at: 2026-05-10T08:22:37Z
-updated_at: 2026-05-10T10:07:50Z
+updated_at: 2026-05-10T10:24:55Z
 ---
 
 Stand up packages/design-system per spec docs/superpowers/specs/2026-05-10-design-system-package-design.md.
@@ -64,7 +64,7 @@ Sub-tasks (26 from plan):
 
 ## Phase 9: Final verification & wrap-up
 
-- [ ] T25 Run full /verify suite
+- [x] T25 Run full /verify suite
 - [ ] T26 Push branch and open PR
 
 Branch: feat/implement-design-system
