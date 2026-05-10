@@ -38,7 +38,7 @@ Sub-tasks (26 from plan):
 - [x] T8 Icon (lucide-react-native wrapper)
 - [x] T9 Button
 - [x] T10 IconButton
-- [ ] T11 Badge
+- [x] T11 Badge
 - [ ] T12 Avatar
 - [ ] T13 Input
 - [ ] T14 Switch
