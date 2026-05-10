@@ -116,6 +116,23 @@ export default defineConfig({
         },
       },
       {
+        resolve: {
+          alias: {
+            // react-native ships Flow-typed source vitest can't parse;
+            // alias to a happy-dom-friendly stub mapping RN primitives to
+            // semantic DOM elements (Pressable → button, Text → span, etc.).
+            "react-native": path.resolve(
+              "packages/design-system/src/__tests__/__mocks__/react-native.tsx",
+            ),
+            // react-native-svg's main entry imports RN-native modules that
+            // can't load under happy-dom. Stub it so atom tests can render
+            // lucide-react-native icons (which call NativeSvg.Svg / Path / etc.)
+            // as plain DOM SVG elements.
+            "react-native-svg": path.resolve(
+              "packages/design-system/src/__tests__/__mocks__/react-native-svg.ts",
+            ),
+          },
+        },
         test: {
           name: "design-system",
           root: "packages/design-system",

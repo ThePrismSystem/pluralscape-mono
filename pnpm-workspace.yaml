@@ -6,7 +6,7 @@ packages:
 # Build-script allowlist (replaces pnpm v10's onlyBuiltDependencies).
 # Mirrors the prior allowlist; other packages' install scripts stay disabled.
 allowBuilds:
-  '@bundled-es-modules/glob': false
+  "@bundled-es-modules/glob": false
   "@journeyapps/wa-sqlite": false
   better-sqlite3-multiple-ciphers: true
   core-js: false
@@ -36,7 +36,7 @@ catalog:
   eslint: ^10.3.0
   happy-dom: ^20.9.0
   jszip: ^3.10.1
-  lucide-react-native: ^1.14.0
+  lucide-react-native: ^0.577.0
   postgres: ^3.4.9
   react-dom: ^19.2.6
   react-native-svg: ^15.15.4
