@@ -41,7 +41,7 @@ Sub-tasks (26 from plan):
 - [x] T11 Badge
 - [x] T12 Avatar
 - [x] T13 Input
-- [ ] T14 Switch
+- [x] T14 Switch
 - [ ] T15 PluralscapeLogo
 
 ## Phase 6: Public API barrel & ESLint
