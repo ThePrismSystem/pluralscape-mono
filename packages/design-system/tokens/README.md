@@ -30,7 +30,7 @@ tokens/
 | `static`         | `[data-mode="static"]`         | Flat fills, no glow, motion clamped to 0                           |
 | `reduced-motion` | `[data-mode="reduced-motion"]` | Visuals untouched, every duration ≤50ms (vestibular accommodation) |
 | `high-contrast`  | `[data-mode="high-contrast"]`  | Brighter text, stronger borders, no surface tint                   |
-| `littles`        | `[data-mode="littles"]`        | Littles Safe Mode — softer accent, no Crimson, ≥56×56 hit targets  |
+| `littles`        | `[data-mode="littles"]`        | Littles Safe Mode — softer accent, desaturated danger, ≥56×56 hit targets |
 
 Each override **merges** onto the default. Anything not listed inherits.
 
