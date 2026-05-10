@@ -10,7 +10,7 @@ import {
 } from "../../../helpers/common-route-mocks.js";
 import { createRouteApp, postJSON } from "../../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse, MemberId } from "@pluralscape/types";
+import type { ApiErrorResponse, BucketId, MemberId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -59,7 +59,7 @@ describe("POST /systems/:id/buckets/:bucketId/tags", () => {
     vi.mocked(tagContent).mockResolvedValueOnce({
       entityType: "member",
       entityId: VALID_BODY.entityId,
-      bucketId: BUCKET_ID as never,
+      bucketId: brandId<BucketId>(BUCKET_ID),
     });
 
     const res = await postJSON(createApp(), BASE_URL, VALID_BODY);
@@ -73,7 +73,7 @@ describe("POST /systems/:id/buckets/:bucketId/tags", () => {
     vi.mocked(tagContent).mockResolvedValueOnce({
       entityType: "member",
       entityId: VALID_BODY.entityId,
-      bucketId: BUCKET_ID as never,
+      bucketId: brandId<BucketId>(BUCKET_ID),
     });
 
     await postJSON(createApp(), BASE_URL, VALID_BODY);

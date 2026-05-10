@@ -24,7 +24,7 @@ import { redeemFriendCode } from "../../services/account/friend-codes/redeem.js"
 import { assertApiError, asDb, noopAudit, spyAudit } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, FriendCodeId, SystemId } from "@pluralscape/types";
+import type { AccountId, FriendCodeId, SessionId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { friendCodes, friendConnections } = schema;
@@ -48,7 +48,7 @@ describe("friend-code.service (PGlite integration)", () => {
       authMethod: "session" as const,
       accountId,
       systemId,
-      sessionId: `sess_${crypto.randomUUID()}` as never,
+      sessionId: brandId<SessionId>(`sess_${crypto.randomUUID()}`),
       accountType: "system",
       ownedSystemIds: new Set([systemId]),
       auditLogIpTracking: false,

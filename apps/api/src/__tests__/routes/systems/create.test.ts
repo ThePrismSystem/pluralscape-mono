@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -8,7 +9,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -46,11 +47,11 @@ describe("POST /systems", () => {
 
   it("returns 201 with new system on success", async () => {
     vi.mocked(createSystem).mockResolvedValueOnce({
-      id: "sys_new" as never,
+      id: brandId<SystemId>("sys_new"),
       encryptedData: null,
       version: 1,
-      createdAt: 1000 as never,
-      updatedAt: 1000 as never,
+      createdAt: toUnixMillis(1000),
+      updatedAt: toUnixMillis(1000),
     });
 
     const app = createApp();
@@ -67,11 +68,11 @@ describe("POST /systems", () => {
 
   it("forwards auth context and audit writer to service", async () => {
     vi.mocked(createSystem).mockResolvedValueOnce({
-      id: "sys_new" as never,
+      id: brandId<SystemId>("sys_new"),
       encryptedData: null,
       version: 1,
-      createdAt: 1000 as never,
-      updatedAt: 1000 as never,
+      createdAt: toUnixMillis(1000),
+      updatedAt: toUnixMillis(1000),
     });
 
     const app = createApp();

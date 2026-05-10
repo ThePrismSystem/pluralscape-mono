@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -8,7 +9,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, BlobId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -43,9 +44,9 @@ const BASE_URL =
   "/systems/sys_550e8400-e29b-41d4-a716-446655440000/blobs/blob_660e8400-e29b-41d4-a716-446655440000/download-url";
 
 const MOCK_DOWNLOAD_RESULT = {
-  blobId: BLOB_ID as never,
+  blobId: brandId<BlobId>(BLOB_ID),
   downloadUrl: "https://storage.example.com/presigned-download",
-  expiresAt: 1700000000000 as never,
+  expiresAt: toUnixMillis(1700000000000),
 };
 
 // ── Tests ────────────────────────────────────────────────────────

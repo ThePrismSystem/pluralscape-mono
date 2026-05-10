@@ -1,8 +1,9 @@
 import { brandId } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
-import type { AuthContext, SessionAuthContext } from "../../lib/auth-context.js";
+import type { AuthContext, AuthEnv, SessionAuthContext } from "../../lib/auth-context.js";
 import type { AccountId, SessionId, SystemId } from "@pluralscape/types";
+import type { Context } from "hono";
 
 vi.mock("../../lib/db.js", () => ({
   getDb: vi.fn().mockResolvedValue({ __mock: "db" }),
@@ -29,48 +30,54 @@ const MOCK_AUTH: SessionAuthContext = {
   auditLogIpTracking: false,
 };
 
-function mockHonoContext(auth?: AuthContext): Record<string, unknown> {
-  return {
+/**
+ * Build a minimal Hono Context-shaped mock for `createTRPCContext`. Only
+ * exposes `get('auth')` and `req.raw`, which are the slots the function
+ * actually consumes. Widen via `unknown` so the cast is a single `as` step.
+ */
+function mockHonoContext(auth?: AuthContext): Context<AuthEnv> {
+  const opaque: unknown = {
     get: vi.fn((key: string) => (key === "auth" ? auth : undefined)),
     req: { raw: new Request("http://localhost/v1/trpc/test") },
   };
+  return opaque as Context<AuthEnv>;
 }
 
 describe("createTRPCContext", () => {
   it("sets auth from Hono context when present", async () => {
     const c = mockHonoContext(MOCK_AUTH);
-    const ctx = await createTRPCContext(c as never);
+    const ctx = await createTRPCContext(c);
     expect(ctx.auth).toBe(MOCK_AUTH);
   });
 
   it("sets auth to null when Hono context has no auth", async () => {
     const c = mockHonoContext(undefined);
-    const ctx = await createTRPCContext(c as never);
+    const ctx = await createTRPCContext(c);
     expect(ctx.auth).toBeNull();
   });
 
   it("provides a db handle from getDb()", async () => {
     const c = mockHonoContext();
-    const ctx = await createTRPCContext(c as never);
+    const ctx = await createTRPCContext(c);
     expect(ctx.db).toEqual({ __mock: "db" });
   });
 
   it("provides request metadata", async () => {
     const c = mockHonoContext();
-    const ctx = await createTRPCContext(c as never);
+    const ctx = await createTRPCContext(c);
     expect(ctx.requestMeta).toEqual({ ipAddress: "1.2.3.4", userAgent: "test-agent" });
   });
 
   it("createAudit() with no args passes request auth to createAuditWriter", async () => {
     const c = mockHonoContext(MOCK_AUTH);
-    const ctx = await createTRPCContext(c as never);
+    const ctx = await createTRPCContext(c);
     ctx.createAudit();
     expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(c, MOCK_AUTH);
   });
 
   it("createAudit(null) passes null, not request auth", async () => {
     const c = mockHonoContext(MOCK_AUTH);
-    const ctx = await createTRPCContext(c as never);
+    const ctx = await createTRPCContext(c);
     ctx.createAudit(null);
     expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(c, null);
   });
@@ -78,7 +85,7 @@ describe("createTRPCContext", () => {
   it("createAudit(otherAuth) passes the override auth", async () => {
     const otherAuth = { ...MOCK_AUTH, accountId: "acct_other" as AuthContext["accountId"] };
     const c = mockHonoContext(MOCK_AUTH);
-    const ctx = await createTRPCContext(c as never);
+    const ctx = await createTRPCContext(c);
     ctx.createAudit(otherAuth);
     expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(c, otherAuth);
   });

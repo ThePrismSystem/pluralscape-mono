@@ -215,7 +215,11 @@ describe("useCreateMessage", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateMessage());
 
-    await act(() => result.current.mutateAsync({ channelId: CHANNEL_ID } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        channelId: CHANNEL_ID,
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.message.list.invalidate).toHaveBeenCalledWith({
@@ -231,7 +235,10 @@ describe("useUpdateMessage", () => {
     const { result } = renderHookWithProviders(() => useUpdateMessage());
 
     await act(() =>
-      result.current.mutateAsync({ channelId: CHANNEL_ID, messageId: "msg-1" } as never),
+      result.current.mutateAsync({
+        channelId: CHANNEL_ID,
+        messageId: brandId<MessageId>("msg-1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
     );
 
     await waitFor(() => {
@@ -253,7 +260,10 @@ describe("useArchiveMessage", () => {
     const { result } = renderHookWithProviders(() => useArchiveMessage());
 
     await act(() =>
-      result.current.mutateAsync({ channelId: CHANNEL_ID, messageId: "msg-2" } as never),
+      result.current.mutateAsync({
+        channelId: CHANNEL_ID,
+        messageId: brandId<MessageId>("msg-2"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
     );
 
     await waitFor(() => {
@@ -275,7 +285,10 @@ describe("useRestoreMessage", () => {
     const { result } = renderHookWithProviders(() => useRestoreMessage());
 
     await act(() =>
-      result.current.mutateAsync({ channelId: CHANNEL_ID, messageId: "msg-3" } as never),
+      result.current.mutateAsync({
+        channelId: CHANNEL_ID,
+        messageId: brandId<MessageId>("msg-3"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
     );
 
     await waitFor(() => {
@@ -297,7 +310,10 @@ describe("useDeleteMessage", () => {
     const { result } = renderHookWithProviders(() => useDeleteMessage());
 
     await act(() =>
-      result.current.mutateAsync({ channelId: CHANNEL_ID, messageId: "msg-4" } as never),
+      result.current.mutateAsync({
+        channelId: CHANNEL_ID,
+        messageId: brandId<MessageId>("msg-4"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
     );
 
     await waitFor(() => {

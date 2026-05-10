@@ -17,7 +17,19 @@ import {
 } from "../../services/webhook-delivery-worker.js";
 import { mockDb } from "../helpers/mock-db.js";
 
+import type { FetchFn } from "../../lib/webhook-fetch.js";
 import type { WebhookDeliveryId } from "@pluralscape/types";
+
+/**
+ * Widen a vi.fn mock so it can be passed where the worker expects a
+ * `FetchFn`. The runtime shape resolves to a `Response`, sufficient
+ * for the methods exercised by the tests; the cast is a single `as`
+ * step after going through `unknown`.
+ */
+function asFetchFn(mock: ReturnType<typeof vi.fn>): FetchFn {
+  const opaque: unknown = mock;
+  return opaque as FetchFn;
+}
 
 vi.mock("../../lib/logger.js", () => ({
   logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() },
@@ -205,7 +217,7 @@ describe("processWebhookDelivery (unit)", () => {
     const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
 
     // Bun's fetch includes a static `preconnect` method that vi.fn() can't satisfy
-    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), mockFetch as never);
+    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), asFetchFn(mockFetch));
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
 
@@ -222,7 +234,7 @@ describe("processWebhookDelivery (unit)", () => {
 
     const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
 
-    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), mockFetch as never);
+    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), asFetchFn(mockFetch));
 
     const call = mockFetch.mock.calls[0] ?? [];
     const options = call[1] as RequestInit;
@@ -239,7 +251,7 @@ describe("processWebhookDelivery (unit)", () => {
 
     const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
 
-    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), mockFetch as never);
+    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), asFetchFn(mockFetch));
 
     expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "success" }));
   });
@@ -250,7 +262,7 @@ describe("processWebhookDelivery (unit)", () => {
 
     const mockFetch = vi.fn().mockResolvedValue(new Response("Error", { status: 500 }));
 
-    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), mockFetch as never);
+    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), asFetchFn(mockFetch));
 
     const setCall = chain.set.mock.calls[0] ?? [];
     const setArg = setCall[0] as Record<string, unknown>;
@@ -267,7 +279,7 @@ describe("processWebhookDelivery (unit)", () => {
 
     const mockFetch = vi.fn().mockResolvedValue(new Response("Error", { status: 500 }));
 
-    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), mockFetch as never);
+    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), asFetchFn(mockFetch));
 
     expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
   });
@@ -278,7 +290,7 @@ describe("processWebhookDelivery (unit)", () => {
 
     const mockFetch = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
 
-    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), mockFetch as never);
+    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), asFetchFn(mockFetch));
 
     const setCall = chain.set.mock.calls[0] ?? [];
     const setArg = setCall[0] as Record<string, unknown>;
@@ -292,7 +304,7 @@ describe("processWebhookDelivery (unit)", () => {
     const abortErr = new DOMException("The operation was aborted", "AbortError");
     const mockFetch = vi.fn().mockRejectedValue(abortErr);
 
-    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), mockFetch as never);
+    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), asFetchFn(mockFetch));
 
     const setCall = chain.set.mock.calls[0] ?? [];
     const setArg = setCall[0] as Record<string, unknown>;
@@ -306,7 +318,7 @@ describe("processWebhookDelivery (unit)", () => {
     const mockFetch = vi.fn().mockRejectedValue(new Error("unexpected"));
 
     await expect(
-      processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), mockFetch as never),
+      processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), asFetchFn(mockFetch)),
     ).rejects.toThrow("unexpected");
   });
 
@@ -348,7 +360,7 @@ describe("processWebhookDelivery (unit)", () => {
     chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW }]);
 
     const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
-    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), mockFetch as never);
+    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), asFetchFn(mockFetch));
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];

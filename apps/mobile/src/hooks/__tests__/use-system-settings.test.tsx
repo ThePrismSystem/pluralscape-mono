@@ -362,7 +362,9 @@ describe("useUpdateSettings", () => {
   it("invalidates settings.get on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdateSettings());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.systemSettings.settings.get.invalidate).toHaveBeenCalledWith({
@@ -376,7 +378,9 @@ describe("useUpdateNomenclature", () => {
   it("invalidates nomenclature.get on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdateNomenclature());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.systemSettings.nomenclature.get.invalidate).toHaveBeenCalledWith({
@@ -390,7 +394,9 @@ describe("useSetPin", () => {
   it("returns a mutation with no onSuccess invalidation", async () => {
     const { result } = renderHookWithProviders(() => useSetPin());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     // Pin mutations have no onSuccess cache invalidation
     expect(mockUtils.systemSettings.settings.get.invalidate).not.toHaveBeenCalled();
@@ -402,7 +408,9 @@ describe("useRemovePin", () => {
   it("returns a mutation with no onSuccess invalidation", async () => {
     const { result } = renderHookWithProviders(() => useRemovePin());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     expect(mockUtils.systemSettings.settings.get.invalidate).not.toHaveBeenCalled();
     expect(mockUtils.systemSettings.nomenclature.get.invalidate).not.toHaveBeenCalled();
@@ -413,7 +421,9 @@ describe("useVerifyPin", () => {
   it("returns a mutation with no onSuccess invalidation", async () => {
     const { result } = renderHookWithProviders(() => useVerifyPin());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     expect(mockUtils.systemSettings.settings.get.invalidate).not.toHaveBeenCalled();
     expect(mockUtils.systemSettings.nomenclature.get.invalidate).not.toHaveBeenCalled();

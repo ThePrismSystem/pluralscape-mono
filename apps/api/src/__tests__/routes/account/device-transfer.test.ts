@@ -1,4 +1,4 @@
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -65,7 +65,7 @@ describe("POST /account/device-transfer (initiate)", () => {
   it("returns 201 on successful initiation", async () => {
     vi.mocked(initiateTransfer).mockResolvedValueOnce({
       transferId: brandId<DeviceTransferRequestId>("dtr_test-id"),
-      expiresAt: 1_300_000 as never,
+      expiresAt: toUnixMillis(1_300_000),
     });
 
     const app = createApp();

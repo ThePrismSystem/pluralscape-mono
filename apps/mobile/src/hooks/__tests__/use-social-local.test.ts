@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { brandId } from "@pluralscape/types";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook } from "@testing-library/react";
 import React from "react";
@@ -140,9 +141,13 @@ import { usePrivacyBucket, usePrivacyBucketsList } from "../use-privacy-buckets.
 import { useLocalDb, useQuerySource } from "../use-query-source.js";
 
 import type { LocalDatabase } from "../../data/local-database.js";
+import type { BucketId, FriendConnectionId } from "@pluralscape/types";
 
 const mockUseQuerySource = vi.mocked(useQuerySource);
 const mockUseLocalDb = vi.mocked(useLocalDb);
+
+const FC_1 = brandId<FriendConnectionId>("fc-1");
+const BKT_1 = brandId<BucketId>("bkt-1");
 
 interface DbFixture {
   readonly db: LocalDatabase;
@@ -200,7 +205,7 @@ describe("useFriendConnection — local mode", () => {
     mockUseQuerySource.mockReturnValue("local");
     mockUseLocalDb.mockReturnValue(db);
 
-    const { result } = renderHook(() => useFriendConnection("fc-1" as never), {
+    const { result } = renderHook(() => useFriendConnection(FC_1), {
       wrapper: makeWrapper(),
     });
 
@@ -225,7 +230,7 @@ describe("useFriendConnection — local mode", () => {
     mockUseQuerySource.mockReturnValue("local");
     mockUseLocalDb.mockReturnValue(db);
 
-    renderHook(() => useFriendConnection("fc-1" as never), { wrapper: makeWrapper() });
+    renderHook(() => useFriendConnection(FC_1), { wrapper: makeWrapper() });
 
     expect(queryOneMock).toHaveBeenCalledWith(
       expect.stringContaining("account_id"),
@@ -238,7 +243,7 @@ describe("useFriendConnection — local mode", () => {
     mockUseQuerySource.mockReturnValue("remote");
     mockUseLocalDb.mockReturnValue(db);
 
-    renderHook(() => useFriendConnection("fc-1" as never), { wrapper: makeWrapper() });
+    renderHook(() => useFriendConnection(FC_1), { wrapper: makeWrapper() });
 
     expect(queryOneMock).not.toHaveBeenCalled();
   });
@@ -247,7 +252,7 @@ describe("useFriendConnection — local mode", () => {
     mockUseQuerySource.mockReturnValue("remote");
     mockUseLocalDb.mockReturnValue(null);
 
-    const { result } = renderHook(() => useFriendConnection("fc-1" as never), {
+    const { result } = renderHook(() => useFriendConnection(FC_1), {
       wrapper: makeWrapper(),
     });
 
@@ -347,7 +352,7 @@ describe("usePrivacyBucket — local mode", () => {
     mockUseQuerySource.mockReturnValue("local");
     mockUseLocalDb.mockReturnValue(db);
 
-    const { result } = renderHook(() => usePrivacyBucket("bkt-1" as never), {
+    const { result } = renderHook(() => usePrivacyBucket(BKT_1), {
       wrapper: makeWrapper(),
     });
 
@@ -359,7 +364,7 @@ describe("usePrivacyBucket — local mode", () => {
     mockUseQuerySource.mockReturnValue("remote");
     mockUseLocalDb.mockReturnValue(db);
 
-    renderHook(() => usePrivacyBucket("bkt-1" as never), { wrapper: makeWrapper() });
+    renderHook(() => usePrivacyBucket(BKT_1), { wrapper: makeWrapper() });
 
     expect(queryOneMock).not.toHaveBeenCalled();
   });

@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -8,7 +9,7 @@ import {
 } from "../../../helpers/common-route-mocks.js";
 import { MOCK_ACCOUNT_ONLY_AUTH, createRouteApp } from "../../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, FriendConnectionId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -45,8 +46,8 @@ const createApp = () => createRouteApp("/account", accountRoutes);
 
 const MOCK_REDEEM_RESULT = {
   connectionIds: [
-    "fc_550e8400-e29b-41d4-a716-446655440000" as never,
-    "fc_660e8400-e29b-41d4-a716-446655440000" as never,
+    brandId<FriendConnectionId>("fc_550e8400-e29b-41d4-a716-446655440000"),
+    brandId<FriendConnectionId>("fc_660e8400-e29b-41d4-a716-446655440000"),
   ] as const,
 };
 

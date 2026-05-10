@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type {
   GroupId,
@@ -49,12 +50,15 @@ export type SystemSnapshotServerMetadata = Omit<SystemSnapshot, "trigger"> & {
   readonly encryptedData: EncryptedBlob;
 };
 
+export type SystemSnapshotResult = EncryptedWire<SystemSnapshotServerMetadata>;
+
 /**
- * JSON-wire representation of SystemSnapshot. Derived from the domain
- * `SystemSnapshot` type via `Serialize<T>`; branded IDs become plain
- * strings, `UnixMillis` becomes `number`.
+ * JSON-wire representation of SystemSnapshot. Derived from the result
+ * envelope so the wire shape carries the base64-encoded `encryptedData`
+ * column emitted by the server (matches `SnapshotResponse` in the
+ * OpenAPI spec).
  */
-export type SystemSnapshotWire = Serialize<SystemSnapshot>;
+export type SystemSnapshotWire = Serialize<SystemSnapshotResult>;
 
 // ── Snapshot content (decrypted shape) ────────────────────────────
 

@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -11,7 +12,7 @@ import {
 } from "../notification-pubsub.js";
 
 import type { NotificationPubSub } from "../notification-pubsub.js";
-import type { EntityChangeEvent } from "@pluralscape/types";
+import type { BoardMessageId, ChannelId, EntityChangeEvent } from "@pluralscape/types";
 
 // ---------------------------------------------------------------------------
 // In-memory pub/sub mock
@@ -87,8 +88,8 @@ function makeMessageEvent(partial?: Partial<EntityChangeEvent>): EntityChangeEve
   return {
     entity: "message",
     type: "created",
-    messageId: "msg_001" as never,
-    channelId: "ch_001" as never,
+    messageId: brandId<BoardMessageId>("msg_001"),
+    channelId: brandId<ChannelId>("ch_001"),
     ...partial,
   } as EntityChangeEvent;
 }

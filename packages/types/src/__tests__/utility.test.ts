@@ -211,8 +211,7 @@ describe("Archived", () => {
     }
 
     // @ts-expect-error type without archived: false cannot be used with Archived
-    const _check: Archived<NoArchived> = {} as never;
-    void _check;
+    type _Forbidden = Archived<NoArchived>;
   });
 });
 

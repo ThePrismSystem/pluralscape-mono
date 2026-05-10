@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -8,7 +9,7 @@ import {
 } from "../../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { AccountId, ApiErrorResponse, BucketId, FriendConnectionId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -47,9 +48,9 @@ const VALID_BODY = {
 };
 
 const MOCK_ASSIGNMENT = {
-  friendConnectionId: CONNECTION_ID as never,
-  bucketId: BUCKET_ID as never,
-  friendAccountId: "acct_friend" as never,
+  friendConnectionId: brandId<FriendConnectionId>(CONNECTION_ID),
+  bucketId: brandId<BucketId>(BUCKET_ID),
+  friendAccountId: brandId<AccountId>("acct_friend"),
 };
 
 // ── Tests ────────────────────────────────────────────────────────

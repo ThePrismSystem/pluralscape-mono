@@ -28,7 +28,7 @@ describe("createApiClient", () => {
       },
     });
 
-    await expect(client.GET("/api/v1/health" as never)).rejects.toThrow("intercepted");
+    await expect(client.GET("/account")).rejects.toThrow("intercepted");
 
     expect(capturedHeaders?.get("Authorization")).toBe("Bearer ps_sess_token42");
   });
@@ -48,7 +48,7 @@ describe("createApiClient", () => {
       },
     });
 
-    await expect(client.GET("/api/v1/health" as never)).rejects.toThrow("intercepted");
+    await expect(client.GET("/account")).rejects.toThrow("intercepted");
 
     expect(capturedHeaders?.get("Authorization")).toBe("Bearer ps_sess_async99");
   });
@@ -68,7 +68,7 @@ describe("createApiClient", () => {
       },
     });
 
-    await expect(client.GET("/api/v1/health" as never)).rejects.toThrow("intercepted");
+    await expect(client.GET("/account")).rejects.toThrow("intercepted");
 
     expect(capturedHeaders?.get("Authorization")).toBeNull();
   });

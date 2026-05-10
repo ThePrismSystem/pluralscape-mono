@@ -4,6 +4,15 @@ import { clearHeartbeat, handlePong, startHeartbeat } from "../../ws/heartbeat.j
 import { WS_HEARTBEAT_INTERVAL_MS, WS_PONG_TIMEOUT_MS } from "../../ws/ws.constants.js";
 import { createMockLogger, mockWs } from "../helpers/ws-test-helpers.js";
 
+/**
+ * The mock ws stub only implements the methods the heartbeat exercises;
+ * widen via `unknown` so the cast to WSContext is a single `as` step.
+ */
+function asHeartbeatWs(ws: ReturnType<typeof mockWs>): Parameters<typeof startHeartbeat>[1] {
+  const opaque: unknown = ws;
+  return opaque as Parameters<typeof startHeartbeat>[1];
+}
+
 describe("heartbeat", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -19,7 +28,7 @@ describe("heartbeat", () => {
       const { logger } = createMockLogger();
       const connectionId = "conn-hb-1";
 
-      startHeartbeat(connectionId, ws as never, logger);
+      startHeartbeat(connectionId, asHeartbeatWs(ws), logger);
 
       // No ping sent immediately
       expect(ws.send).not.toHaveBeenCalled();
@@ -39,7 +48,7 @@ describe("heartbeat", () => {
       const { logger } = createMockLogger();
       const connectionId = "conn-hb-2";
 
-      startHeartbeat(connectionId, ws as never, logger);
+      startHeartbeat(connectionId, asHeartbeatWs(ws), logger);
 
       // Simulate pong response after first ping
       vi.advanceTimersByTime(WS_HEARTBEAT_INTERVAL_MS);
@@ -61,7 +70,7 @@ describe("heartbeat", () => {
       const { logger, methods } = createMockLogger();
       const connectionId = "conn-hb-timeout";
 
-      startHeartbeat(connectionId, ws as never, logger);
+      startHeartbeat(connectionId, asHeartbeatWs(ws), logger);
 
       // Trigger ping
       vi.advanceTimersByTime(WS_HEARTBEAT_INTERVAL_MS);
@@ -82,7 +91,7 @@ describe("heartbeat", () => {
       const { logger } = createMockLogger();
       const connectionId = "conn-hb-pong";
 
-      startHeartbeat(connectionId, ws as never, logger);
+      startHeartbeat(connectionId, asHeartbeatWs(ws), logger);
 
       // Trigger ping
       vi.advanceTimersByTime(WS_HEARTBEAT_INTERVAL_MS);
@@ -109,7 +118,7 @@ describe("heartbeat", () => {
       const { logger } = createMockLogger();
       const onDead = vi.fn();
 
-      startHeartbeat("conn-dead-ping", ws as never, logger, onDead);
+      startHeartbeat("conn-dead-ping", asHeartbeatWs(ws), logger, onDead);
 
       // Trigger ping — send will throw
       vi.advanceTimersByTime(WS_HEARTBEAT_INTERVAL_MS);
@@ -125,7 +134,7 @@ describe("heartbeat", () => {
       const { logger } = createMockLogger();
       const onDead = vi.fn();
 
-      startHeartbeat("conn-dead-interval", ws as never, logger, onDead);
+      startHeartbeat("conn-dead-interval", asHeartbeatWs(ws), logger, onDead);
 
       // Trigger ping — send will throw, heartbeat should be cleared
       vi.advanceTimersByTime(WS_HEARTBEAT_INTERVAL_MS);
@@ -144,7 +153,7 @@ describe("heartbeat", () => {
       const { logger } = createMockLogger();
       const onDead = vi.fn();
 
-      startHeartbeat("conn-dead-timeout", ws as never, logger, onDead);
+      startHeartbeat("conn-dead-timeout", asHeartbeatWs(ws), logger, onDead);
 
       // Trigger ping
       vi.advanceTimersByTime(WS_HEARTBEAT_INTERVAL_MS);
@@ -164,7 +173,7 @@ describe("heartbeat", () => {
       const { logger } = createMockLogger();
       const onDead = vi.fn();
 
-      startHeartbeat("conn-dead-close-throws", ws as never, logger, onDead);
+      startHeartbeat("conn-dead-close-throws", asHeartbeatWs(ws), logger, onDead);
 
       // Trigger ping
       vi.advanceTimersByTime(WS_HEARTBEAT_INTERVAL_MS);
@@ -183,7 +192,7 @@ describe("heartbeat", () => {
       const { logger } = createMockLogger();
       const connectionId = "conn-hb-clear";
 
-      startHeartbeat(connectionId, ws as never, logger);
+      startHeartbeat(connectionId, asHeartbeatWs(ws), logger);
 
       // Trigger ping to start pong timeout
       vi.advanceTimersByTime(WS_HEARTBEAT_INTERVAL_MS);
@@ -211,7 +220,7 @@ describe("heartbeat", () => {
       const { logger } = createMockLogger();
       const connectionId = "conn-hb-double-clear";
 
-      startHeartbeat(connectionId, ws as never, logger);
+      startHeartbeat(connectionId, asHeartbeatWs(ws), logger);
       clearHeartbeat(connectionId);
       expect(() => {
         clearHeartbeat(connectionId);
@@ -225,7 +234,7 @@ describe("heartbeat", () => {
       const { logger } = createMockLogger();
       const connectionId = "conn-hb-pong-clear";
 
-      startHeartbeat(connectionId, ws as never, logger);
+      startHeartbeat(connectionId, asHeartbeatWs(ws), logger);
 
       // Trigger ping
       vi.advanceTimersByTime(WS_HEARTBEAT_INTERVAL_MS);
@@ -255,7 +264,7 @@ describe("heartbeat", () => {
       const { logger, methods } = createMockLogger();
       const connectionId = "conn-hb-send-fail";
 
-      startHeartbeat(connectionId, ws as never, logger);
+      startHeartbeat(connectionId, asHeartbeatWs(ws), logger);
 
       // Trigger ping — send will throw
       vi.advanceTimersByTime(WS_HEARTBEAT_INTERVAL_MS);

@@ -37,7 +37,9 @@ describe("useInitiateDeviceTransfer", () => {
   it("mutation can be called and succeeds", async () => {
     const { result } = renderHookWithProviders(() => useInitiateDeviceTransfer());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     expect(result.current.isError).toBe(false);
   });
@@ -47,7 +49,9 @@ describe("useApproveDeviceTransfer", () => {
   it("mutation can be called and succeeds", async () => {
     const { result } = renderHookWithProviders(() => useApproveDeviceTransfer());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     expect(result.current.isError).toBe(false);
   });
@@ -57,7 +61,9 @@ describe("useCompleteDeviceTransfer", () => {
   it("mutation can be called and succeeds", async () => {
     const { result } = renderHookWithProviders(() => useCompleteDeviceTransfer());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     expect(result.current.isError).toBe(false);
   });

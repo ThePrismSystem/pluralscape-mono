@@ -8,7 +8,7 @@ import {
 } from "../../../helpers/common-route-mocks.js";
 import { createRouteApp } from "../../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse, MemberId } from "@pluralscape/types";
+import type { ApiErrorResponse, BucketId, MemberId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -57,7 +57,7 @@ describe("GET /systems/:id/buckets/:bucketId/tags", () => {
       {
         entityType: "member",
         entityId: brandId<MemberId>("mem_test"),
-        bucketId: BUCKET_ID as never,
+        bucketId: brandId<BucketId>(BUCKET_ID),
       },
     ]);
 

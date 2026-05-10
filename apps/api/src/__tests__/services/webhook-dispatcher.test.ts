@@ -2,6 +2,17 @@ import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MemberId, SystemId } from "@pluralscape/types";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+
+/**
+ * Widen the local mockDb chain through `unknown` so the cast to
+ * `PostgresJsDatabase` is a single `as` step. The chained mocks below
+ * intercept select/from/where/insert directly; the real DB type is
+ * required only to satisfy `dispatchWebhookEvent`'s signature.
+ */
+function asDb(value: unknown): PostgresJsDatabase {
+  return value as PostgresJsDatabase;
+}
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -92,7 +103,7 @@ describe("dispatchWebhookEvent", () => {
   it("returns empty array when no configs match", async () => {
     mockWhere.mockResolvedValueOnce([]);
 
-    const result = await dispatchWebhookEvent(mockDb as never, systemId, eventType, payload);
+    const result = await dispatchWebhookEvent(asDb(mockDb), systemId, eventType, payload);
 
     expect(result).toEqual([]);
     expect(mockDb.insert).not.toHaveBeenCalled();
@@ -105,7 +116,7 @@ describe("dispatchWebhookEvent", () => {
     ]);
     mockInsertValues.mockResolvedValueOnce(undefined);
 
-    const result = await dispatchWebhookEvent(mockDb as never, systemId, eventType, payload);
+    const result = await dispatchWebhookEvent(asDb(mockDb), systemId, eventType, payload);
 
     // Only config-1 matches member.created
     expect(result).toHaveLength(1);
@@ -119,7 +130,7 @@ describe("dispatchWebhookEvent", () => {
     ]);
     mockInsertValues.mockResolvedValueOnce(undefined);
 
-    const result = await dispatchWebhookEvent(mockDb as never, systemId, eventType, payload);
+    const result = await dispatchWebhookEvent(asDb(mockDb), systemId, eventType, payload);
 
     expect(result).toHaveLength(2);
   });
@@ -128,7 +139,7 @@ describe("dispatchWebhookEvent", () => {
     mockWhere.mockResolvedValueOnce([{ id: "wh_config-1", eventTypes: ["member.created"] }]);
     mockInsertValues.mockResolvedValueOnce(undefined);
 
-    await dispatchWebhookEvent(mockDb as never, systemId, eventType, payload);
+    await dispatchWebhookEvent(asDb(mockDb), systemId, eventType, payload);
 
     const insertedValues = mockInsertValues.mock.calls[0]?.[0] as Record<string, unknown>[];
     expect(insertedValues[0]).toHaveProperty("encryptedData");
@@ -142,9 +153,9 @@ describe("dispatchWebhookEvent", () => {
     });
     mockWhere.mockResolvedValueOnce([{ id: "wh_config-1", eventTypes: ["member.created"] }]);
 
-    await expect(
-      dispatchWebhookEvent(mockDb as never, systemId, eventType, payload),
-    ).rejects.toThrow("WEBHOOK_PAYLOAD_ENCRYPTION_KEY is required");
+    await expect(dispatchWebhookEvent(asDb(mockDb), systemId, eventType, payload)).rejects.toThrow(
+      "WEBHOOK_PAYLOAD_ENCRYPTION_KEY is required",
+    );
   });
 
   it("encrypts payload with the configured encryption key", async () => {
@@ -153,7 +164,7 @@ describe("dispatchWebhookEvent", () => {
     mockWhere.mockResolvedValueOnce([{ id: "wh_config-1", eventTypes: ["member.created"] }]);
     mockInsertValues.mockResolvedValueOnce(undefined);
 
-    await dispatchWebhookEvent(mockDb as never, systemId, eventType, payload);
+    await dispatchWebhookEvent(asDb(mockDb), systemId, eventType, payload);
 
     const insertedValues = mockInsertValues.mock.calls[0]?.[0] as Record<string, unknown>[];
     expect(insertedValues[0]).toHaveProperty("encryptedData");
@@ -167,7 +178,7 @@ describe("dispatchWebhookEvent", () => {
     mockWhere.mockResolvedValueOnce([{ id: "wh_config-1", eventTypes: ["member.created"] }]);
     mockInsertValues.mockResolvedValueOnce(undefined);
 
-    await dispatchWebhookEvent(mockDb as never, systemId, eventType, payload);
+    await dispatchWebhookEvent(asDb(mockDb), systemId, eventType, payload);
 
     expect(mockMemzero).toHaveBeenCalledWith(fakeKey);
   });

@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -6,9 +7,9 @@ import {
   mockDbFactory,
   mockRateLimitFactory,
 } from "../../helpers/common-route-mocks.js";
-import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
+import { MOCK_SYSTEM_ID, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, BucketId, EncryptedBase64 } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -34,14 +35,14 @@ const createApp = () => createRouteApp("/systems", systemRoutes);
 const GET_URL = `/systems/${SYS_ID}/buckets/${BUCKET_ID}`;
 
 const MOCK_RESULT = {
-  id: BUCKET_ID as never,
-  systemId: MOCK_AUTH.systemId as never,
+  id: brandId<BucketId>(BUCKET_ID),
+  systemId: MOCK_SYSTEM_ID,
   encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
   archived: false,
   archivedAt: null,
-  createdAt: 1000 as never,
-  updatedAt: 1000 as never,
+  createdAt: toUnixMillis(1000),
+  updatedAt: toUnixMillis(1000),
 };
 
 // ── Tests ────────────────────────────────────────────────────────

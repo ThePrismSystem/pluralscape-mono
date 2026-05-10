@@ -180,7 +180,11 @@ describe("useCreateMemberPhoto", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateMemberPhoto());
 
-    await act(() => result.current.mutateAsync({ memberId: TEST_MEMBER_ID } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        memberId: TEST_MEMBER_ID,
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.memberPhoto.list.invalidate).toHaveBeenCalledWith({
@@ -196,7 +200,10 @@ describe("useArchiveMemberPhoto", () => {
     const { result } = renderHookWithProviders(() => useArchiveMemberPhoto());
 
     await act(() =>
-      result.current.mutateAsync({ memberId: TEST_MEMBER_ID, photoId: "mp_1" } as never),
+      result.current.mutateAsync({
+        memberId: TEST_MEMBER_ID,
+        photoId: brandId<MemberPhotoId>("mp_1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
     );
 
     await waitFor(() => {
@@ -218,7 +225,10 @@ describe("useRestoreMemberPhoto", () => {
     const { result } = renderHookWithProviders(() => useRestoreMemberPhoto());
 
     await act(() =>
-      result.current.mutateAsync({ memberId: TEST_MEMBER_ID, photoId: "mp_2" } as never),
+      result.current.mutateAsync({
+        memberId: TEST_MEMBER_ID,
+        photoId: brandId<MemberPhotoId>("mp_2"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
     );
 
     await waitFor(() => {
@@ -240,7 +250,10 @@ describe("useDeleteMemberPhoto", () => {
     const { result } = renderHookWithProviders(() => useDeleteMemberPhoto());
 
     await act(() =>
-      result.current.mutateAsync({ memberId: TEST_MEMBER_ID, photoId: "mp_3" } as never),
+      result.current.mutateAsync({
+        memberId: TEST_MEMBER_ID,
+        photoId: brandId<MemberPhotoId>("mp_3"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
     );
 
     await waitFor(() => {
@@ -261,7 +274,11 @@ describe("useReorderMemberPhotos", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useReorderMemberPhotos());
 
-    await act(() => result.current.mutateAsync({ memberId: TEST_MEMBER_ID } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        memberId: TEST_MEMBER_ID,
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.memberPhoto.list.invalidate).toHaveBeenCalledWith({

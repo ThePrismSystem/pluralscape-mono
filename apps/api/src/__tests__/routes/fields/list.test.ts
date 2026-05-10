@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { toCursor } from "../../../lib/pagination.js";
@@ -11,7 +12,14 @@ import {
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
 import type { FieldDefinitionResult } from "../../../services/field-definition/internal.js";
-import type { EncryptedBase64, ApiErrorResponse, PaginatedResult } from "@pluralscape/types";
+import type {
+  ApiErrorResponse,
+  EncryptedBase64,
+  FieldDefinitionId,
+  PaginatedResult,
+  PaginationCursor,
+  SystemId,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -75,20 +83,20 @@ describe("GET /systems/:systemId/fields", () => {
     const page: PaginatedResult<FieldDefinitionResult> = {
       data: [
         {
-          id: FLD_ID as never,
-          systemId: SYS_ID as never,
+          id: brandId<FieldDefinitionId>(FLD_ID),
+          systemId: brandId<SystemId>(SYS_ID),
           fieldType: "text",
           required: false,
           sortOrder: 0,
           encryptedData: "dGVzdA==" as EncryptedBase64,
           version: 1,
-          createdAt: 1000 as never,
-          updatedAt: 1000 as never,
+          createdAt: toUnixMillis(1000),
+          updatedAt: toUnixMillis(1000),
           archived: false,
           archivedAt: null,
         },
       ],
-      nextCursor: FLD_ID as never,
+      nextCursor: brandId<PaginationCursor>(FLD_ID),
       hasMore: true,
       totalCount: null,
     };
@@ -178,15 +186,15 @@ describe("GET /systems/:systemId/fields", () => {
     const page: PaginatedResult<FieldDefinitionResult> = {
       data: [
         {
-          id: FLD_ID as never,
-          systemId: SYS_ID as never,
+          id: brandId<FieldDefinitionId>(FLD_ID),
+          systemId: brandId<SystemId>(SYS_ID),
           fieldType: "text",
           required: false,
           sortOrder: 0,
           encryptedData: "dGVzdA==" as EncryptedBase64,
           version: 1,
-          createdAt: 1000 as never,
-          updatedAt: 1000 as never,
+          createdAt: toUnixMillis(1000),
+          updatedAt: toUnixMillis(1000),
           archived: false,
           archivedAt: null,
         },

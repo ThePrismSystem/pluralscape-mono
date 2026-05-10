@@ -190,7 +190,9 @@ describe("useCreateSnapshot", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateSnapshot());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.snapshot.list.invalidate).toHaveBeenCalledWith({
@@ -204,7 +206,11 @@ describe("useDeleteSnapshot", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useDeleteSnapshot());
 
-    await act(() => result.current.mutateAsync({ snapshotId: "snap_1" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        snapshotId: brandId<SystemSnapshotId>("snap_1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.snapshot.get.invalidate).toHaveBeenCalledWith({

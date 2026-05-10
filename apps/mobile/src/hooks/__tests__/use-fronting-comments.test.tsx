@@ -195,7 +195,11 @@ describe("useCreateComment", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateComment());
 
-    await act(() => result.current.mutateAsync({ sessionId: SESSION_ID } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        sessionId: SESSION_ID,
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.frontingComment.list.invalidate).toHaveBeenCalledWith({
@@ -214,7 +218,7 @@ describe("useUpdateComment", () => {
       result.current.mutateAsync({
         commentId: brandId<FrontingCommentId>("fc-1"),
         sessionId: SESSION_ID,
-      } as never),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
     );
 
     await waitFor(() => {
@@ -239,7 +243,7 @@ describe("useDeleteComment", () => {
       result.current.mutateAsync({
         commentId: brandId<FrontingCommentId>("fc-2"),
         sessionId: SESSION_ID,
-      } as never),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
     );
 
     await waitFor(() => {

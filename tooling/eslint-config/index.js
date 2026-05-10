@@ -1,3 +1,6 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import eslintCommentsPlugin from "@eslint-community/eslint-plugin-eslint-comments/configs";
 import eslintConfigPrettier from "eslint-config-prettier";
 import importPlugin from "eslint-plugin-import-x";
@@ -5,16 +8,39 @@ import unicornPlugin from "eslint-plugin-unicorn";
 import tseslint from "typescript-eslint";
 
 import { locRules } from "./loc-rules.js";
+import noAsNeverInFixtures from "./rules/no-as-never-in-fixtures.js";
+import noBearerPrefixOnSpAuth from "./rules/no-bearer-prefix-on-sp-auth.js";
+import noDeepTypesImports from "./rules/no-deep-types-imports.js";
+import noDoubleCast from "./rules/no-double-cast.js";
+import noHandRolledDomainTypes, {
+  loadManifestEntities,
+} from "./rules/no-hand-rolled-domain-types.js";
 import noHandRolledRequestTypes from "./rules/no-hand-rolled-request-types.js";
+import noLocalEncryptedFields from "./rules/no-local-encrypted-fields.js";
 import noParamsUnknown from "./rules/no-params-unknown.js";
+import noPrOrBeanRefsInCode from "./rules/no-pr-or-bean-refs-in-code.js";
+import noServicesBarrel from "./rules/no-services-barrel.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const MANIFEST_PATH = path.resolve(__dirname, "../../packages/types/src/__sot-manifest__.ts");
+const MANIFEST_ENTITIES = loadManifestEntities(MANIFEST_PATH);
 
 export default tseslint.config(
   {
     plugins: {
       pluralscape: {
         rules: {
+          "no-as-never-in-fixtures": noAsNeverInFixtures,
+          "no-bearer-prefix-on-sp-auth": noBearerPrefixOnSpAuth,
+          "no-deep-types-imports": noDeepTypesImports,
+          "no-double-cast": noDoubleCast,
+          "no-hand-rolled-domain-types": noHandRolledDomainTypes,
           "no-hand-rolled-request-types": noHandRolledRequestTypes,
+          "no-local-encrypted-fields": noLocalEncryptedFields,
           "no-params-unknown": noParamsUnknown,
+          "no-pr-or-bean-refs-in-code": noPrOrBeanRefsInCode,
+          "no-services-barrel": noServicesBarrel,
         },
       },
     },
@@ -155,6 +181,49 @@ export default tseslint.config(
 
       // Curly braces required
       curly: "error",
+    },
+  },
+  {
+    files: ["apps/api/src/services/**"],
+    rules: {
+      "pluralscape/no-services-barrel": "error",
+    },
+  },
+  {
+    files: ["packages/import-sp/src/**"],
+    rules: {
+      "pluralscape/no-bearer-prefix-on-sp-auth": "error",
+    },
+  },
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+    rules: {
+      "pluralscape/no-deep-types-imports": "error",
+      "pluralscape/no-double-cast": "error",
+    },
+  },
+  {
+    files: ["apps/**/*.{ts,tsx}", "packages/!(types)/**/*.{ts,tsx}"],
+    rules: {
+      "pluralscape/no-hand-rolled-domain-types": ["error", { manifestEntities: MANIFEST_ENTITIES }],
+    },
+  },
+  {
+    files: ["packages/data/src/transforms/**", "packages/sync/src/**"],
+    rules: {
+      "pluralscape/no-local-encrypted-fields": "error",
+    },
+  },
+  {
+    files: ["apps/**/*.{ts,tsx}", "packages/**/*.{ts,tsx}"],
+    rules: {
+      "pluralscape/no-pr-or-bean-refs-in-code": "error",
+    },
+  },
+  {
+    files: ["**/*.test.ts", "**/*.test.tsx", "**/__tests__/**/*.ts", "**/__tests__/**/*.tsx"],
+    rules: {
+      "pluralscape/no-as-never-in-fixtures": "error",
     },
   },
   {

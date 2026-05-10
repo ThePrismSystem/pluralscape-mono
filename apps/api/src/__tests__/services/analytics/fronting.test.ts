@@ -287,7 +287,7 @@ describe("computeFrontingBreakdown — clamped totals and truncation", () => {
    * behaviour of the shared mockDb chain.
    */
   function stubRawSessionCount(chain: ReturnType<typeof mockDb>["chain"], n: number): void {
-    chain.where.mockReturnValueOnce(Promise.resolve([{ n }]) as never);
+    chain.where.mockReturnValueOnce(Promise.resolve([{ n }]));
   }
 
   it("surfaces open-session clamping via the DB's clamped duration", async () => {
@@ -342,7 +342,7 @@ describe("computeFrontingBreakdown — clamped totals and truncation", () => {
     const { db, chain } = mockDb();
     // `truncated` is now driven by the pre-aggregate COUNT query
     // (tx.select().from().where()), not the aggregate-row count.
-    chain.where.mockReturnValueOnce(Promise.resolve([{ n: 10_000 }]) as never);
+    chain.where.mockReturnValueOnce(Promise.resolve([{ n: 10_000 }]));
     const rows = Array.from({ length: 10_000 }, (_, i) =>
       makeAggRow({ subjectId: `mem_${String(i)}` }),
     );

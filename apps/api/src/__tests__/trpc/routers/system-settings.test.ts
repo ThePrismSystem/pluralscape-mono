@@ -82,7 +82,9 @@ describe("system-settings router", () => {
 
   describe("systemSettings.settings.get", () => {
     it("calls getSystemSettings with correct systemId and returns result", async () => {
-      vi.mocked(getSystemSettings).mockResolvedValue(MOCK_SETTINGS_RESULT as never);
+      vi.mocked(getSystemSettings).mockResolvedValue(
+        MOCK_SETTINGS_RESULT as Awaited<ReturnType<typeof getSystemSettings>>,
+      );
       const caller = createCaller();
       const result = await caller.systemSettings.settings.get({ systemId: MOCK_SYSTEM_ID });
 
@@ -113,7 +115,9 @@ describe("system-settings router", () => {
 
   describe("systemSettings.settings.update", () => {
     it("calls updateSystemSettings with correct systemId and returns result", async () => {
-      vi.mocked(updateSystemSettings).mockResolvedValue(MOCK_SETTINGS_RESULT as never);
+      vi.mocked(updateSystemSettings).mockResolvedValue(
+        MOCK_SETTINGS_RESULT as Awaited<ReturnType<typeof updateSystemSettings>>,
+      );
       const caller = createCaller();
       const result = await caller.systemSettings.settings.update({
         systemId: MOCK_SYSTEM_ID,
@@ -334,7 +338,9 @@ describe("system-settings router", () => {
 
   describe("systemSettings.setup.complete", () => {
     it("calls setupComplete with correct systemId and returns result", async () => {
-      vi.mocked(setupComplete).mockResolvedValue(MOCK_SETTINGS_RESULT as never);
+      vi.mocked(setupComplete).mockResolvedValue(
+        MOCK_SETTINGS_RESULT as Awaited<ReturnType<typeof setupComplete>>,
+      );
       const caller = createCaller();
       const result = await caller.systemSettings.setup.complete({
         systemId: MOCK_SYSTEM_ID,
@@ -365,7 +371,9 @@ describe("system-settings router", () => {
 
   it("applies rate limiting to queries", async () => {
     const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
-    vi.mocked(getSystemSettings).mockResolvedValue(MOCK_SETTINGS_RESULT as never);
+    vi.mocked(getSystemSettings).mockResolvedValue(
+      MOCK_SETTINGS_RESULT as Awaited<ReturnType<typeof getSystemSettings>>,
+    );
     const caller = createCaller();
     await assertProcedureRateLimited(
       vi.mocked(checkRateLimit),

@@ -22,6 +22,7 @@ import {
   mockSnapshot,
 } from "../helpers/ws-handlers-fixtures.js";
 
+import type { Signature } from "@pluralscape/crypto";
 import type { SubmitChangeRequest, SubmitSnapshotRequest } from "@pluralscape/sync";
 
 beforeAll(async () => {
@@ -312,6 +313,10 @@ describe("handleSubmitChange envelope signature verification (Sec-M2)", () => {
     const relay = new EncryptedRelay();
     const docId = asSyncDocId(crypto.randomUUID());
 
+    // Test specifically exercises the runtime length-validation path with a
+    // signature that is too short. Widen via `unknown` so the brand cast is a
+    // single `as` step.
+    const shortSig: unknown = new Uint8Array(10);
     const message: SubmitChangeRequest = {
       type: "SubmitChangeRequest",
       correlationId: crypto.randomUUID(),
@@ -320,7 +325,7 @@ describe("handleSubmitChange envelope signature verification (Sec-M2)", () => {
         ciphertext: new Uint8Array([0xde, 0xad]),
         nonce: nonce(1),
         // 10-byte signature instead of required 64 bytes
-        signature: new Uint8Array(10) as never,
+        signature: shortSig as Signature,
         authorPublicKey: pubkey(0x05),
         documentId: docId,
       },

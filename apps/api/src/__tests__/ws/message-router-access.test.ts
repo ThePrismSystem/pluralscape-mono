@@ -14,6 +14,7 @@ import { ConnectionManager } from "../../ws/connection-manager.js";
 import { createRouterContext, routeMessage } from "../../ws/message-router.js";
 
 import {
+  asRegisterWs,
   authRequest,
   lastResponse,
   makeChangePayload,
@@ -82,7 +83,7 @@ describe("message-router — rate limiting and access control basics", () => {
   beforeEach(() => {
     manager = new ConnectionManager();
     manager.reserveUnauthSlot();
-    state = manager.register("conn-1", makeMockWs(sent) as never, Date.now());
+    state = manager.register("conn-1", asRegisterWs(makeMockWs(sent)), Date.now());
     ctx = createRouterContext(1000, manager);
     sent.length = 0;
   });
@@ -122,7 +123,7 @@ describe("message-router — rate limiting and access control basics", () => {
       const ws = makeMockWs(localSent);
       const strikeManager = new ConnectionManager();
       strikeManager.reserveUnauthSlot();
-      const strikeStateInit = strikeManager.register("conn-strike", ws as never, Date.now());
+      const strikeStateInit = strikeManager.register("conn-strike", asRegisterWs(ws), Date.now());
       const strikeCtx = createRouterContext(1000, strikeManager);
       // Authenticate first
       await routeMessage(authRequest(), strikeStateInit, log, strikeCtx);

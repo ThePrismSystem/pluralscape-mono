@@ -52,7 +52,10 @@ describe("GET /systems/:systemId/analytics/co-fronting", () => {
   });
 
   it("returns 200 with breakdown", async () => {
-    vi.mocked(computeCoFrontingBreakdown).mockResolvedValueOnce({ pairs: [] } as never);
+    const empty: unknown = { pairs: [] };
+    vi.mocked(computeCoFrontingBreakdown).mockResolvedValueOnce(
+      empty as Awaited<ReturnType<typeof computeCoFrontingBreakdown>>,
+    );
 
     const res = await createApp().request(BASE_URL);
 
@@ -62,7 +65,10 @@ describe("GET /systems/:systemId/analytics/co-fronting", () => {
   });
 
   it("passes date range query to service", async () => {
-    vi.mocked(computeCoFrontingBreakdown).mockResolvedValueOnce({ pairs: [] } as never);
+    const empty: unknown = { pairs: [] };
+    vi.mocked(computeCoFrontingBreakdown).mockResolvedValueOnce(
+      empty as Awaited<ReturnType<typeof computeCoFrontingBreakdown>>,
+    );
 
     await createApp().request(`${BASE_URL}?fromDate=1000&toDate=2000`);
 

@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -8,7 +9,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, BlobId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -40,9 +41,9 @@ const createApp = () => createRouteApp("/systems", systemRoutes);
 const BASE_URL = "/systems/sys_550e8400-e29b-41d4-a716-446655440000/blobs/upload-url";
 
 const MOCK_UPLOAD_RESULT = {
-  blobId: "blob_660e8400-e29b-41d4-a716-446655440000" as never,
+  blobId: brandId<BlobId>("blob_660e8400-e29b-41d4-a716-446655440000"),
   uploadUrl: "https://storage.example.com/presigned-upload",
-  expiresAt: 1700000000000 as never,
+  expiresAt: toUnixMillis(1700000000000),
 };
 
 const VALID_BODY = {

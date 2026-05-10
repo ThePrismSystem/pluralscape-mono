@@ -9,6 +9,7 @@ import { makeRawAcknowledgement } from "../../__tests__/factories/index.js";
 
 import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
 
+import type { RouterInput } from "@pluralscape/api-client/trpc";
 import type { AcknowledgementId } from "@pluralscape/types";
 
 beforeAll(async () => {
@@ -213,7 +214,7 @@ describe("useCreateAcknowledgement", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateAcknowledgement());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() => result.current.mutateAsync({} as RouterInput["acknowledgement"]["create"]));
 
     await waitFor(() => {
       expect(mockUtils.acknowledgement.list.invalidate).toHaveBeenCalledWith({
@@ -227,7 +228,11 @@ describe("useConfirmAcknowledgement", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useConfirmAcknowledgement());
 
-    await act(() => result.current.mutateAsync({ ackId: "ack-1" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        ackId: brandId<AcknowledgementId>("ack-1"),
+      } as RouterInput["acknowledgement"]["confirm"]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.acknowledgement.get.invalidate).toHaveBeenCalledWith({
@@ -245,7 +250,11 @@ describe("useArchiveAcknowledgement", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useArchiveAcknowledgement());
 
-    await act(() => result.current.mutateAsync({ ackId: "ack-2" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        ackId: brandId<AcknowledgementId>("ack-2"),
+      } as RouterInput["acknowledgement"]["archive"]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.acknowledgement.get.invalidate).toHaveBeenCalledWith({
@@ -263,7 +272,11 @@ describe("useRestoreAcknowledgement", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useRestoreAcknowledgement());
 
-    await act(() => result.current.mutateAsync({ ackId: "ack-3" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        ackId: brandId<AcknowledgementId>("ack-3"),
+      } as RouterInput["acknowledgement"]["restore"]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.acknowledgement.get.invalidate).toHaveBeenCalledWith({
@@ -281,7 +294,11 @@ describe("useDeleteAcknowledgement", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useDeleteAcknowledgement());
 
-    await act(() => result.current.mutateAsync({ ackId: "ack-4" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        ackId: brandId<AcknowledgementId>("ack-4"),
+      } as RouterInput["acknowledgement"]["delete"]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.acknowledgement.get.invalidate).toHaveBeenCalledWith({

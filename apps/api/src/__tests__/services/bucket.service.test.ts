@@ -6,6 +6,7 @@ import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
 import type { EncryptedBase64, BucketId, SystemId } from "@pluralscape/types";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
@@ -98,6 +99,14 @@ function wireChain(): void {
 }
 
 const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+
+/**
+ * The service routes through a mocked `withTenantTransaction` that ignores
+ * the db argument; tests pass an opaque stub. Widen via `unknown` so the
+ * cast to PostgresJsDatabase is a single `as` step.
+ */
+const MOCK_DB_STUB: unknown = {};
+const MOCK_DB = MOCK_DB_STUB as PostgresJsDatabase;
 
 vi.mock("../../lib/rls-context.js", () => ({
   withTenantTransaction: vi.fn(
@@ -203,18 +212,21 @@ describe("bucket service", () => {
   // ── assertBucketExists ────────────────────────────────────────────
 
   describe("assertBucketExists", () => {
+    // The mockTx duck-types as a tenant tx for the methods exercised; widen
+    // via `unknown` so the cast to PostgresJsDatabase is a single `as` step.
+    const mockTxOpaque: unknown = mockTx;
+    const mockTxAsDb = mockTxOpaque as PostgresJsDatabase;
+
     it("resolves when bucket exists", async () => {
       mockTx.limit.mockResolvedValueOnce([{ id: BUCKET_ID }]);
 
-      await expect(
-        assertBucketExists(mockTx as never, SYSTEM_ID, BUCKET_ID),
-      ).resolves.toBeUndefined();
+      await expect(assertBucketExists(mockTxAsDb, SYSTEM_ID, BUCKET_ID)).resolves.toBeUndefined();
     });
 
     it("throws NOT_FOUND when bucket is missing", async () => {
       mockTx.limit.mockResolvedValueOnce([]);
 
-      await expect(assertBucketExists(mockTx as never, SYSTEM_ID, BUCKET_ID)).rejects.toThrow(
+      await expect(assertBucketExists(mockTxAsDb, SYSTEM_ID, BUCKET_ID)).rejects.toThrow(
         expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
       );
     });
@@ -231,7 +243,7 @@ describe("bucket service", () => {
       thenableQueue.push([], [{ count: 0 }]);
       mockTx.returning.mockResolvedValueOnce([makeBucketRow()]);
 
-      const result = await createBucket({} as never, SYSTEM_ID, validPayload, AUTH, mockAudit);
+      const result = await createBucket(MOCK_DB, SYSTEM_ID, validPayload, AUTH, mockAudit);
 
       expect(result.id).toBe(BUCKET_ID);
       expect(mockAudit).toHaveBeenCalledWith(
@@ -243,26 +255,26 @@ describe("bucket service", () => {
     it("throws QUOTA_EXCEEDED when at max buckets", async () => {
       thenableQueue.push([], [{ count: 50 }]);
 
-      await expect(
-        createBucket({} as never, SYSTEM_ID, validPayload, AUTH, mockAudit),
-      ).rejects.toThrow(expect.objectContaining({ status: 400, code: "QUOTA_EXCEEDED" }));
+      await expect(createBucket(MOCK_DB, SYSTEM_ID, validPayload, AUTH, mockAudit)).rejects.toThrow(
+        expect.objectContaining({ status: 400, code: "QUOTA_EXCEEDED" }),
+      );
     });
 
     it("throws if INSERT returns no rows", async () => {
       thenableQueue.push([], [{ count: 0 }]);
       mockTx.returning.mockResolvedValueOnce([]);
 
-      await expect(
-        createBucket({} as never, SYSTEM_ID, validPayload, AUTH, mockAudit),
-      ).rejects.toThrow("Failed to create bucket");
+      await expect(createBucket(MOCK_DB, SYSTEM_ID, validPayload, AUTH, mockAudit)).rejects.toThrow(
+        "Failed to create bucket",
+      );
     });
 
     it("rejects when ownership check fails", async () => {
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
-      await expect(
-        createBucket({} as never, SYSTEM_ID, validPayload, AUTH, mockAudit),
-      ).rejects.toThrow(expect.objectContaining({ status: 404 }));
+      await expect(createBucket(MOCK_DB, SYSTEM_ID, validPayload, AUTH, mockAudit)).rejects.toThrow(
+        expect.objectContaining({ status: 404 }),
+      );
     });
   });
 
@@ -272,14 +284,14 @@ describe("bucket service", () => {
     it("returns bucket when found", async () => {
       mockTx.limit.mockResolvedValueOnce([makeBucketRow()]);
 
-      const result = await getBucket({} as never, SYSTEM_ID, BUCKET_ID, AUTH);
+      const result = await getBucket(MOCK_DB, SYSTEM_ID, BUCKET_ID, AUTH);
       expect(result.id).toBe(BUCKET_ID);
     });
 
     it("throws NOT_FOUND when bucket is missing", async () => {
       mockTx.limit.mockResolvedValueOnce([]);
 
-      await expect(getBucket({} as never, SYSTEM_ID, BUCKET_ID, AUTH)).rejects.toThrow(
+      await expect(getBucket(MOCK_DB, SYSTEM_ID, BUCKET_ID, AUTH)).rejects.toThrow(
         expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
       );
     });
@@ -287,7 +299,7 @@ describe("bucket service", () => {
     it("rejects when ownership check fails", async () => {
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
-      await expect(getBucket({} as never, SYSTEM_ID, BUCKET_ID, AUTH)).rejects.toThrow(
+      await expect(getBucket(MOCK_DB, SYSTEM_ID, BUCKET_ID, AUTH)).rejects.toThrow(
         expect.objectContaining({ status: 404 }),
       );
     });
@@ -299,7 +311,7 @@ describe("bucket service", () => {
     it("returns paginated result", async () => {
       mockTx.limit.mockResolvedValueOnce([makeBucketRow()]);
 
-      const result = await listBuckets({} as never, SYSTEM_ID, AUTH);
+      const result = await listBuckets(MOCK_DB, SYSTEM_ID, AUTH);
       expect(result.data).toHaveLength(1);
       expect(result.hasMore).toBe(false);
     });
@@ -307,21 +319,21 @@ describe("bucket service", () => {
     it("returns empty list when no buckets", async () => {
       mockTx.limit.mockResolvedValueOnce([]);
 
-      const result = await listBuckets({} as never, SYSTEM_ID, AUTH);
+      const result = await listBuckets(MOCK_DB, SYSTEM_ID, AUTH);
       expect(result.data).toHaveLength(0);
     });
 
     it("clamps limit to MAX_PAGE_LIMIT", async () => {
       mockTx.limit.mockResolvedValueOnce([]);
 
-      await listBuckets({} as never, SYSTEM_ID, AUTH, { limit: 9999 });
+      await listBuckets(MOCK_DB, SYSTEM_ID, AUTH, { limit: 9999 });
       expect(mockTx.limit).toHaveBeenCalledWith(MAX_PAGE_LIMIT + 1);
     });
 
     it("rejects when ownership check fails", async () => {
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
-      await expect(listBuckets({} as never, SYSTEM_ID, AUTH)).rejects.toThrow(
+      await expect(listBuckets(MOCK_DB, SYSTEM_ID, AUTH)).rejects.toThrow(
         expect.objectContaining({ status: 404 }),
       );
     });
@@ -336,7 +348,7 @@ describe("bucket service", () => {
       mockTx.returning.mockResolvedValueOnce([makeBucketRow({ version: 2, updatedAt: 2000 })]);
 
       const result = await updateBucket(
-        {} as never,
+        MOCK_DB,
         SYSTEM_ID,
         BUCKET_ID,
         validPayload,
@@ -356,7 +368,7 @@ describe("bucket service", () => {
       mockTx.limit.mockResolvedValueOnce([{ id: BUCKET_ID }]);
 
       await expect(
-        updateBucket({} as never, SYSTEM_ID, BUCKET_ID, validPayload, AUTH, mockAudit),
+        updateBucket(MOCK_DB, SYSTEM_ID, BUCKET_ID, validPayload, AUTH, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ status: 409, code: "CONFLICT" }));
     });
 
@@ -365,7 +377,7 @@ describe("bucket service", () => {
       mockTx.limit.mockResolvedValueOnce([]);
 
       await expect(
-        updateBucket({} as never, SYSTEM_ID, BUCKET_ID, validPayload, AUTH, mockAudit),
+        updateBucket(MOCK_DB, SYSTEM_ID, BUCKET_ID, validPayload, AUTH, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
     });
   });
@@ -374,7 +386,7 @@ describe("bucket service", () => {
 
   describe("deleteBucket", () => {
     it("delegates to deleteEntity", async () => {
-      await deleteBucket({} as never, SYSTEM_ID, BUCKET_ID, AUTH, mockAudit);
+      await deleteBucket(MOCK_DB, SYSTEM_ID, BUCKET_ID, AUTH, mockAudit);
 
       expect(deleteEntity).toHaveBeenCalledWith(
         {},
@@ -391,7 +403,7 @@ describe("bucket service", () => {
 
   describe("archiveBucket", () => {
     it("delegates to archiveEntity", async () => {
-      await archiveBucket({} as never, SYSTEM_ID, BUCKET_ID, AUTH, mockAudit);
+      await archiveBucket(MOCK_DB, SYSTEM_ID, BUCKET_ID, AUTH, mockAudit);
 
       expect(archiveEntity).toHaveBeenCalledWith(
         {},
@@ -411,7 +423,7 @@ describe("bucket service", () => {
 
   describe("restoreBucket", () => {
     it("delegates to restoreEntity", async () => {
-      await restoreBucket({} as never, SYSTEM_ID, BUCKET_ID, AUTH, mockAudit);
+      await restoreBucket(MOCK_DB, SYSTEM_ID, BUCKET_ID, AUTH, mockAudit);
 
       expect(restoreEntity).toHaveBeenCalledWith(
         {},

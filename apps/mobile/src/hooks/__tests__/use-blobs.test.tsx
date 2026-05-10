@@ -124,7 +124,11 @@ describe("useDeleteBlob", () => {
   it("invalidates get (with blobId) and list on success", async () => {
     const { result } = renderHookWithProviders(() => useDeleteBlob());
 
-    await act(() => result.current.mutateAsync({ blobId: "blob_del" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        blobId: brandId<BlobId>("blob_del"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.blob.get.invalidate).toHaveBeenCalledWith({

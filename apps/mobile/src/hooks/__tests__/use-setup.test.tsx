@@ -108,7 +108,9 @@ describe("useSetupNomenclatureStep", () => {
   it("invalidates settings and status on success", async () => {
     const { result } = renderHookWithProviders(() => useSetupNomenclatureStep());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.systemSettings.settings.get.invalidate).toHaveBeenCalledWith({
@@ -125,7 +127,9 @@ describe("useSetupProfileStep", () => {
   it("invalidates settings and status on success", async () => {
     const { result } = renderHookWithProviders(() => useSetupProfileStep());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.systemSettings.settings.get.invalidate).toHaveBeenCalledWith({
@@ -142,7 +146,9 @@ describe("useSetupComplete", () => {
   it("invalidates settings and status on success", async () => {
     const { result } = renderHookWithProviders(() => useSetupComplete());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.systemSettings.settings.get.invalidate).toHaveBeenCalledWith({

@@ -8,8 +8,7 @@ import { decodeAndDecryptT1, encryptInput } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
-  FieldDefinition,
-  FieldDefinitionEncryptedFields,
+  FieldDefinitionEncryptedInput,
   FieldDefinitionId,
   FieldDefinitionLabel,
   FieldDefinitionWire,
@@ -23,23 +22,6 @@ import type {
   SystemStructureEntityId,
   UnixMillis,
 } from "@pluralscape/types";
-
-// ── Encrypted payload types ───────────────────────────────────────────
-
-/**
- * The plaintext fields encrypted inside a field definition blob. Derived
- * from the `FieldDefinition` domain type by picking the encrypted-field
- * keys — single source of truth lives in `@pluralscape/types`.
- */
-export type FieldDefinitionEncryptedInput = Pick<FieldDefinition, FieldDefinitionEncryptedFields>;
-
-/**
- * The plaintext payload encrypted inside a field value blob — the
- * discriminated `FieldValueUnion` travels whole (both `fieldType` and
- * `value`), distinct from the `FieldValueEncryptedFields = "value"`
- * union which only captures the outer key on the domain type.
- */
-export type FieldValueEncryptedInput = FieldValueUnion;
 
 // ── Decrypted output types ────────────────────────────────────────────
 
@@ -185,11 +167,16 @@ export function decryptFieldValueList(
 /**
  * Encrypt a field value union for set / update payloads.
  *
+ * Takes the discriminated `FieldValueUnion` directly — the encrypted
+ * blob carries the whole `{fieldType, value}` shape (Class C-style
+ * divergent payload per ADR-023; the `FieldValueEncryptedFields = "value"`
+ * keys-union only powers `FieldValueServerMetadata` derivation).
+ *
  * Returns `{ encryptedData: string }` — pass the spread of this into the
  * `SetFieldValueBodySchema` or `UpdateFieldValueBodySchema`.
  */
 export function encryptFieldValueInput(
-  data: FieldValueEncryptedInput,
+  data: FieldValueUnion,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
   return encryptInput(data, masterKey);

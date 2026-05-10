@@ -97,13 +97,22 @@ vi.mock("../../lib/db.js", () => ({
 
 const sent: string[] = [];
 
-function mockWs(): { close: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi.fn> } {
+type MockWs = { close: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi.fn> };
+type RegisterWs = Parameters<ConnectionManager["register"]>[1];
+
+function mockWs(): MockWs {
   return {
     close: vi.fn(),
     send: vi.fn((data: string) => {
       sent.push(data);
     }),
   };
+}
+
+/** Widen MockWs through `unknown` so the cast is a single `as` step. */
+function asRegisterWs(ws: MockWs): RegisterWs {
+  const opaque: unknown = ws;
+  return opaque as RegisterWs;
 }
 
 function mockLog(): AppLogger {
@@ -144,7 +153,7 @@ function makeAuthenticatedState(
   manager: ConnectionManager,
 ): SyncConnectionState {
   manager.reserveUnauthSlot();
-  manager.register(connectionId, ws as never, Date.now());
+  manager.register(connectionId, asRegisterWs(ws), Date.now());
   manager.authenticate(
     connectionId,
     {
@@ -265,7 +274,7 @@ describe("message-router branch coverage", () => {
       const log = mockLog();
       const manager = new ConnectionManager();
       manager.reserveUnauthSlot();
-      const state = manager.register("conn-close-throw", ws as never, Date.now());
+      const state = manager.register("conn-close-throw", asRegisterWs(ws), Date.now());
       const ctx = createRouterContext(1000, manager);
 
       // Sending a non-AuthenticateRequest in awaiting-auth phase calls sendErrorAndClose
@@ -294,7 +303,7 @@ describe("message-router branch coverage", () => {
       const log = mockLog();
       const manager = new ConnectionManager();
       manager.reserveUnauthSlot();
-      const state = manager.register("conn-auth-fail", ws as never, Date.now());
+      const state = manager.register("conn-auth-fail", asRegisterWs(ws), Date.now());
       const ctx = createRouterContext(1000, manager);
 
       // Make validateSession return a failure so handleAuthenticate returns ok:false

@@ -29,8 +29,11 @@ import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPCustomField, SPCustomFieldType } from "../sources/sp-types.js";
-import type { FieldDefinitionEncryptedInput } from "@pluralscape/data";
-import type { FieldDefinitionLabel, FieldType } from "@pluralscape/types";
+import type {
+  FieldDefinitionEncryptedInput,
+  FieldDefinitionLabel,
+  FieldType,
+} from "@pluralscape/types";
 import type { CreateFieldDefinitionBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 

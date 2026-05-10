@@ -213,7 +213,7 @@ export function useCheckInHistory(
     },
   );
 
-  // The remote query returns the raw wire type (CheckInRecordRaw) which is
+  // The remote query returns the raw wire type (CheckInRecordWire) which is
   // structurally compatible with CheckInRecord at runtime. A select transform
   // will be added when check-in record encryption is implemented.
   return (source === "local" ? localQuery : remoteQuery) as DataListQuery<

@@ -1,8 +1,11 @@
 // @vitest-environment happy-dom
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
+
+import type { BucketId } from "@pluralscape/types";
 
 type CapturedOpts = Record<string, unknown>;
 let lastListOpts: CapturedOpts = {};
@@ -84,7 +87,7 @@ beforeEach(() => {
 
 describe("usePrivacyBucket", () => {
   it("passes systemId and bucketId to query", () => {
-    renderHookWithProviders(() => usePrivacyBucket("bkt_test" as never));
+    renderHookWithProviders(() => usePrivacyBucket(brandId<BucketId>("bkt_test")));
     expect(lastGetInput["systemId"]).toBe(TEST_SYSTEM_ID);
     expect(lastGetInput["bucketId"]).toBe("bkt_test");
   });
@@ -106,7 +109,9 @@ describe("useCreatePrivacyBucket", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreatePrivacyBucket());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.bucket.list.invalidate).toHaveBeenCalledWith({
@@ -120,7 +125,11 @@ describe("useUpdatePrivacyBucket", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdatePrivacyBucket());
 
-    await act(() => result.current.mutateAsync({ bucketId: "bkt_test" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        bucketId: brandId<BucketId>("bkt_test"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.bucket.get.invalidate).toHaveBeenCalledWith({
@@ -138,7 +147,11 @@ describe("useArchivePrivacyBucket", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useArchivePrivacyBucket());
 
-    await act(() => result.current.mutateAsync({ bucketId: "bkt_test" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        bucketId: brandId<BucketId>("bkt_test"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.bucket.get.invalidate).toHaveBeenCalledWith({
@@ -156,7 +169,11 @@ describe("useRestorePrivacyBucket", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useRestorePrivacyBucket());
 
-    await act(() => result.current.mutateAsync({ bucketId: "bkt_test" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        bucketId: brandId<BucketId>("bkt_test"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.bucket.get.invalidate).toHaveBeenCalledWith({

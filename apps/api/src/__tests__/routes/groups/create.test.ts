@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -7,9 +8,9 @@ import {
   mockDbFactory,
   mockRateLimitFactory,
 } from "../../helpers/common-route-mocks.js";
-import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
+import { MOCK_SYSTEM_ID, MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, EncryptedBase64, GroupId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -57,14 +58,14 @@ describe("POST /systems/:id/groups", () => {
 
   it("returns 201 with new group on success", async () => {
     vi.mocked(createGroup).mockResolvedValueOnce({
-      id: "grp_new" as never,
-      systemId: MOCK_AUTH.systemId as never,
+      id: brandId<GroupId>("grp_new"),
+      systemId: MOCK_SYSTEM_ID,
       parentGroupId: null,
       sortOrder: 0,
       encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
-      createdAt: 1000 as never,
-      updatedAt: 1000 as never,
+      createdAt: toUnixMillis(1000),
+      updatedAt: toUnixMillis(1000),
       archived: false,
       archivedAt: null,
     });
@@ -83,14 +84,14 @@ describe("POST /systems/:id/groups", () => {
 
   it("forwards auth and audit writer to service", async () => {
     vi.mocked(createGroup).mockResolvedValueOnce({
-      id: "grp_new" as never,
-      systemId: MOCK_AUTH.systemId as never,
+      id: brandId<GroupId>("grp_new"),
+      systemId: MOCK_SYSTEM_ID,
       parentGroupId: null,
       sortOrder: 0,
       encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
-      createdAt: 1000 as never,
-      updatedAt: 1000 as never,
+      createdAt: toUnixMillis(1000),
+      updatedAt: toUnixMillis(1000),
       archived: false,
       archivedAt: null,
     });

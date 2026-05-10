@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
 import type { EncryptedBase64, ApiKeyId, SystemId } from "@pluralscape/types";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Mock tx chain ─────────────────────────────────────────────────
 
@@ -41,6 +42,14 @@ function wireChain(): void {
 
 const SYSTEM_ID = brandId<SystemId>("sys_test-system");
 const API_KEY_ID = brandId<ApiKeyId>("ak_test-key");
+
+/**
+ * The service routes through a mocked `withTenantTransaction` that ignores
+ * the db argument; tests pass an opaque stub. Widen via `unknown` so the
+ * cast to PostgresJsDatabase is a single `as` step.
+ */
+const MOCK_DB_STUB: unknown = {};
+const MOCK_DB = MOCK_DB_STUB as PostgresJsDatabase;
 
 vi.mock("../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn(),
@@ -144,7 +153,7 @@ describe("createApiKey", () => {
     mockTx.returning.mockResolvedValueOnce([row]);
 
     const result = await createApiKey(
-      {} as never,
+      MOCK_DB,
       SYSTEM_ID,
       {
         keyType: "metadata",
@@ -169,7 +178,7 @@ describe("createApiKey", () => {
     mockTx.returning.mockResolvedValueOnce([row]);
 
     const result = await createApiKey(
-      {} as never,
+      MOCK_DB,
       SYSTEM_ID,
       {
         keyType: "metadata",
@@ -188,7 +197,7 @@ describe("createApiKey", () => {
     mockTx.returning.mockResolvedValueOnce([row]);
 
     const result = await createApiKey(
-      {} as never,
+      MOCK_DB,
       SYSTEM_ID,
       {
         keyType: "metadata",
@@ -208,7 +217,7 @@ describe("createApiKey", () => {
     mockTx.returning.mockResolvedValueOnce([row]);
 
     const result = await createApiKey(
-      {} as never,
+      MOCK_DB,
       SYSTEM_ID,
       {
         keyType: "metadata",
@@ -227,7 +236,7 @@ describe("createApiKey", () => {
     mockTx.returning.mockResolvedValueOnce([row]);
 
     const result = await createApiKey(
-      {} as never,
+      MOCK_DB,
       SYSTEM_ID,
       {
         keyType: "metadata",
@@ -247,7 +256,7 @@ describe("createApiKey", () => {
     mockTx.returning.mockResolvedValueOnce([row]);
 
     const result = await createApiKey(
-      {} as never,
+      MOCK_DB,
       SYSTEM_ID,
       {
         keyType: "crypto",
@@ -270,7 +279,7 @@ describe("createApiKey", () => {
     mockTx.returning.mockResolvedValueOnce([row]);
 
     await createApiKey(
-      {} as never,
+      MOCK_DB,
       SYSTEM_ID,
       {
         keyType: "metadata",
@@ -290,7 +299,7 @@ describe("createApiKey", () => {
 
     await expect(
       createApiKey(
-        {} as never,
+        MOCK_DB,
         SYSTEM_ID,
         {
           keyType: "metadata",
@@ -315,7 +324,7 @@ describe("listApiKeys", () => {
     const row = makeApiKeyRow();
     mockTx.limit.mockResolvedValueOnce([row]);
 
-    const result = await listApiKeys({} as never, SYSTEM_ID, AUTH);
+    const result = await listApiKeys(MOCK_DB, SYSTEM_ID, AUTH);
 
     expect(result.data).toHaveLength(1);
     expect(result.data[0]?.id).toBe(API_KEY_ID);
@@ -325,7 +334,7 @@ describe("listApiKeys", () => {
   it("applies cursor filter when provided", async () => {
     mockTx.limit.mockResolvedValueOnce([]);
 
-    await listApiKeys({} as never, SYSTEM_ID, AUTH, { cursor: "ak_cursor-id" });
+    await listApiKeys(MOCK_DB, SYSTEM_ID, AUTH, { cursor: "ak_cursor-id" });
 
     // where() called with conditions that include cursor filter
     expect(mockTx.where).toHaveBeenCalled();
@@ -336,7 +345,7 @@ describe("listApiKeys", () => {
     const revokedRow = makeApiKeyRow({ id: "ak_revoked", revokedAt: 2000 });
     mockTx.limit.mockResolvedValueOnce([activeRow, revokedRow]);
 
-    const result = await listApiKeys({} as never, SYSTEM_ID, AUTH, { includeRevoked: true });
+    const result = await listApiKeys(MOCK_DB, SYSTEM_ID, AUTH, { includeRevoked: true });
 
     expect(result.data).toHaveLength(2);
   });
@@ -344,7 +353,7 @@ describe("listApiKeys", () => {
   it("uses custom limit", async () => {
     mockTx.limit.mockResolvedValueOnce([]);
 
-    await listApiKeys({} as never, SYSTEM_ID, AUTH, { limit: 5 });
+    await listApiKeys(MOCK_DB, SYSTEM_ID, AUTH, { limit: 5 });
 
     // limit() is called with effectiveLimit + 1 = 6
     expect(mockTx.limit).toHaveBeenCalledWith(6);
@@ -353,7 +362,7 @@ describe("listApiKeys", () => {
   it("clamps limit to MAX_PAGE_LIMIT", async () => {
     mockTx.limit.mockResolvedValueOnce([]);
 
-    await listApiKeys({} as never, SYSTEM_ID, AUTH, { limit: 9999 });
+    await listApiKeys(MOCK_DB, SYSTEM_ID, AUTH, { limit: 9999 });
 
     // MAX_PAGE_LIMIT is 100, so limit(101)
     expect(mockTx.limit).toHaveBeenCalledWith(101);
@@ -364,7 +373,7 @@ describe("listApiKeys", () => {
     const rows = Array.from({ length: 26 }, (_, i) => makeApiKeyRow({ id: `ak_key-${String(i)}` }));
     mockTx.limit.mockResolvedValueOnce(rows);
 
-    const result = await listApiKeys({} as never, SYSTEM_ID, AUTH);
+    const result = await listApiKeys(MOCK_DB, SYSTEM_ID, AUTH);
 
     expect(result.hasMore).toBe(true);
     expect(result.data).toHaveLength(25);
@@ -383,7 +392,7 @@ describe("getApiKey", () => {
     const row = makeApiKeyRow();
     mockTx.limit.mockResolvedValueOnce([row]);
 
-    const result = await getApiKey({} as never, SYSTEM_ID, API_KEY_ID, AUTH);
+    const result = await getApiKey(MOCK_DB, SYSTEM_ID, API_KEY_ID, AUTH);
 
     expect(result.id).toBe(API_KEY_ID);
     expect(result.systemId).toBe(SYSTEM_ID);
@@ -393,7 +402,7 @@ describe("getApiKey", () => {
     mockTx.limit.mockResolvedValueOnce([]);
 
     await expect(
-      getApiKey({} as never, SYSTEM_ID, brandId<ApiKeyId>("ak_nonexistent"), AUTH),
+      getApiKey(MOCK_DB, SYSTEM_ID, brandId<ApiKeyId>("ak_nonexistent"), AUTH),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
@@ -409,7 +418,7 @@ describe("revokeApiKey", () => {
   it("revokes an active key", async () => {
     mockTx.limit.mockResolvedValueOnce([{ id: API_KEY_ID, revokedAt: null }]);
 
-    await revokeApiKey({} as never, SYSTEM_ID, API_KEY_ID, AUTH, mockAudit);
+    await revokeApiKey(MOCK_DB, SYSTEM_ID, API_KEY_ID, AUTH, mockAudit);
 
     expect(mockTx.update).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
@@ -421,7 +430,7 @@ describe("revokeApiKey", () => {
   it("is idempotent for already revoked keys", async () => {
     mockTx.limit.mockResolvedValueOnce([{ id: API_KEY_ID, revokedAt: 2000 }]);
 
-    await revokeApiKey({} as never, SYSTEM_ID, API_KEY_ID, AUTH, mockAudit);
+    await revokeApiKey(MOCK_DB, SYSTEM_ID, API_KEY_ID, AUTH, mockAudit);
 
     // update should NOT be called when key is already revoked
     expect(mockTx.update).not.toHaveBeenCalled();
@@ -432,7 +441,7 @@ describe("revokeApiKey", () => {
     mockTx.limit.mockResolvedValueOnce([]);
 
     await expect(
-      revokeApiKey({} as never, SYSTEM_ID, brandId<ApiKeyId>("ak_nonexistent"), AUTH, mockAudit),
+      revokeApiKey(MOCK_DB, SYSTEM_ID, brandId<ApiKeyId>("ak_nonexistent"), AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });

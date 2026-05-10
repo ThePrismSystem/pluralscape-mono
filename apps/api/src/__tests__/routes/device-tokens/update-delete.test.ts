@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -6,9 +7,14 @@ import {
   mockDbFactory,
   mockRateLimitFactory,
 } from "../../helpers/common-route-mocks.js";
-import { MOCK_AUTH, createRouteApp, putJSON } from "../../helpers/route-test-setup.js";
+import {
+  MOCK_SYSTEM_ID,
+  MOCK_AUTH,
+  createRouteApp,
+  putJSON,
+} from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, DeviceTokenId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -55,12 +61,12 @@ const createApp = () => createRouteApp("/systems", systemRoutes);
 const TOKEN_URL = `/systems/${SYS_ID}/device-tokens/${TOKEN_ID}`;
 
 const MOCK_TOKEN = {
-  id: TOKEN_ID as never,
-  systemId: MOCK_AUTH.systemId as never,
+  id: brandId<DeviceTokenId>(TOKEN_ID),
+  systemId: MOCK_SYSTEM_ID,
   platform: "ios" as const,
   tokenHash: "abc123def456abc123def456abc123def456abc123def456abc123def456abcd",
-  lastActiveAt: 2000 as never,
-  createdAt: 1000 as never,
+  lastActiveAt: toUnixMillis(2000),
+  createdAt: toUnixMillis(1000),
 };
 
 // ── Update Tests ────────────────────────────────────────────────

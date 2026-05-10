@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -6,9 +7,20 @@ import {
   mockDbFactory,
   mockRateLimitFactory,
 } from "../../helpers/common-route-mocks.js";
-import { MOCK_AUTH, createRouteApp, postJSON, putJSON } from "../../helpers/route-test-setup.js";
+import {
+  MOCK_SYSTEM_ID,
+  createRouteApp,
+  postJSON,
+  putJSON,
+} from "../../helpers/route-test-setup.js";
 
-import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
+import type {
+  ApiErrorResponse,
+  EncryptedBase64,
+  FrontingCommentId,
+  FrontingSessionId,
+  MemberId,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -82,18 +94,18 @@ const BASE_URL = `${SESSION_URL}/comments`;
 const COMMENT_URL = `${BASE_URL}/fcom_770e8400-e29b-41d4-a716-446655440000`;
 
 const MOCK_COMMENT = {
-  id: "fcom_770e8400-e29b-41d4-a716-446655440000" as never,
-  frontingSessionId: "fs_660e8400-e29b-41d4-a716-446655440000" as never,
-  systemId: MOCK_AUTH.systemId as never,
-  memberId: "mem_880e8400-e29b-41d4-a716-446655440000" as never,
+  id: brandId<FrontingCommentId>("fcom_770e8400-e29b-41d4-a716-446655440000"),
+  frontingSessionId: brandId<FrontingSessionId>("fs_660e8400-e29b-41d4-a716-446655440000"),
+  systemId: MOCK_SYSTEM_ID,
+  memberId: brandId<MemberId>("mem_880e8400-e29b-41d4-a716-446655440000"),
   customFrontId: null,
   structureEntityId: null,
   encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
   archived: false,
   archivedAt: null,
-  createdAt: 1000 as never,
-  updatedAt: 1000 as never,
+  createdAt: toUnixMillis(1000),
+  updatedAt: toUnixMillis(1000),
 };
 
 const EMPTY_PAGE = { data: [], nextCursor: null, hasMore: false, totalCount: null };

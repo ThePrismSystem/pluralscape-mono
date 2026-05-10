@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -7,7 +8,12 @@ import {
 } from "../../../helpers/common-route-mocks.js";
 import { createRouteApp } from "../../../helpers/route-test-setup.js";
 
-import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
+import type {
+  ApiErrorResponse,
+  EncryptedBase64,
+  SystemId,
+  SystemSnapshotId,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -32,11 +38,11 @@ const SNAPSHOT_ID = "snap_660e8400-e29b-41d4-a716-446655440000";
 const LIST_URL = `/systems/${SYS_ID}/snapshots`;
 
 const MOCK_SNAPSHOT = {
-  id: SNAPSHOT_ID as never,
-  systemId: SYS_ID as never,
+  id: brandId<SystemSnapshotId>(SNAPSHOT_ID),
+  systemId: brandId<SystemId>(SYS_ID),
   snapshotTrigger: "manual" as const,
   encryptedData: "dGVzdA==" as EncryptedBase64,
-  createdAt: 1000 as never,
+  createdAt: toUnixMillis(1000),
 };
 
 const MOCK_LIST_RESULT = {

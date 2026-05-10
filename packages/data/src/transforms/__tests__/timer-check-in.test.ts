@@ -18,6 +18,7 @@ import { makeBase64Blob } from "./helpers.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
   CheckInRecordId,
+  CheckInRecordWire,
   MemberId,
   SystemId,
   TimerConfigEncryptedInput,
@@ -70,7 +71,7 @@ function makeRawCheckInRecord(opts?: {
   dismissed?: boolean;
   archived?: boolean;
   archivedAt?: UnixMillis | null;
-}) {
+}): CheckInRecordWire {
   return {
     id: RECORD_ID,
     timerConfigId: TIMER_ID,
@@ -79,8 +80,9 @@ function makeRawCheckInRecord(opts?: {
     respondedByMemberId: opts?.respondedByMemberId ?? null,
     respondedAt: opts?.respondedAt ?? null,
     dismissed: opts?.dismissed ?? false,
-    archived: opts?.archived ?? (false as boolean),
-    archivedAt: opts?.archivedAt ?? (null as UnixMillis | null),
+    archived: opts?.archived ?? false,
+    archivedAt: opts?.archivedAt ?? null,
+    encryptedData: null,
   };
 }
 

@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { makeSnapshot } from "../../__tests__/test-crypto-helpers.js";
+
 import {
   asSyncDocId,
   createTestHarness,
@@ -16,15 +18,9 @@ describe("createWsClientAdapter — submitSnapshot", () => {
     const mock = harness.connectAndAuth();
     const docId = asSyncDocId("doc-snapshot");
 
-    const snapshot = {
-      ciphertext: [9, 8, 7],
-      nonce: Array.from(new Uint8Array(24).fill(1)),
-      documentId: docId,
-      version: 1,
-      createdAt: new Date().toISOString(),
-    };
+    const snapshot = makeSnapshot(1, docId);
 
-    const submitPromise = harness.adapter.submitSnapshot(docId, snapshot as never);
+    const submitPromise = harness.adapter.submitSnapshot(docId, snapshot);
 
     await vi.waitFor(() => {
       const req = mock.sentMessages.find(
@@ -51,7 +47,7 @@ describe("createWsClientAdapter — submitSnapshot", () => {
     const mock = harness.connectAndAuth();
     const docId = asSyncDocId("doc-snapshot-conflict");
 
-    const submitPromise = harness.adapter.submitSnapshot(docId, {} as never);
+    const submitPromise = harness.adapter.submitSnapshot(docId, makeSnapshot(1, docId));
 
     await vi.waitFor(() => {
       const req = mock.sentMessages.find(
@@ -80,7 +76,7 @@ describe("createWsClientAdapter — submitSnapshot", () => {
     const mock = harness.connectAndAuth();
     const docId = asSyncDocId("doc-snapshot-auth-err");
 
-    const submitPromise = harness.adapter.submitSnapshot(docId, {} as never);
+    const submitPromise = harness.adapter.submitSnapshot(docId, makeSnapshot(1, docId));
 
     await vi.waitFor(() => {
       const req = mock.sentMessages.find(
@@ -109,7 +105,7 @@ describe("createWsClientAdapter — submitSnapshot", () => {
     const mock = harness.connectAndAuth();
     const docId = asSyncDocId("doc-snapshot-unexpected");
 
-    const submitPromise = harness.adapter.submitSnapshot(docId, {} as never);
+    const submitPromise = harness.adapter.submitSnapshot(docId, makeSnapshot(1, docId));
 
     await vi.waitFor(() => {
       const req = mock.sentMessages.find(

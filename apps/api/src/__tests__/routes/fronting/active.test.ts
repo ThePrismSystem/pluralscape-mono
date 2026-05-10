@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -6,9 +7,15 @@ import {
   mockDbFactory,
   mockRateLimitFactory,
 } from "../../helpers/common-route-mocks.js";
-import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
+import { MOCK_SYSTEM_ID, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { EncryptedBase64 } from "@pluralscape/types";
+import type {
+  CustomFrontId,
+  EncryptedBase64,
+  FrontingSessionId,
+  MemberId,
+  SystemStructureEntityId,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -72,19 +79,19 @@ const createApp = () => createRouteApp("/systems", systemRoutes);
 const ACTIVE_URL = "/systems/sys_550e8400-e29b-41d4-a716-446655440000/fronting/active";
 
 const MOCK_SESSION = {
-  id: "fs_660e8400-e29b-41d4-a716-446655440000" as never,
-  systemId: MOCK_AUTH.systemId as never,
-  memberId: "mem_770e8400-e29b-41d4-a716-446655440000" as never,
+  id: brandId<FrontingSessionId>("fs_660e8400-e29b-41d4-a716-446655440000"),
+  systemId: MOCK_SYSTEM_ID,
+  memberId: brandId<MemberId>("mem_770e8400-e29b-41d4-a716-446655440000"),
   customFrontId: null,
   structureEntityId: null,
-  startTime: 1000 as never,
+  startTime: toUnixMillis(1000),
   endTime: null,
   encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
   archived: false,
   archivedAt: null,
-  createdAt: 1000 as never,
-  updatedAt: 1000 as never,
+  createdAt: toUnixMillis(1000),
+  updatedAt: toUnixMillis(1000),
 };
 
 // ── Tests ────────────────────────────────────────────────────────
@@ -132,8 +139,8 @@ describe("GET /systems/:id/fronting/active", () => {
   it("returns isCofronting true when multiple sessions active", async () => {
     const session2 = {
       ...MOCK_SESSION,
-      id: "fs_880e8400-e29b-41d4-a716-446655440000" as never,
-      memberId: "mem_990e8400-e29b-41d4-a716-446655440000" as never,
+      id: brandId<FrontingSessionId>("fs_880e8400-e29b-41d4-a716-446655440000"),
+      memberId: brandId<MemberId>("mem_990e8400-e29b-41d4-a716-446655440000"),
     };
 
     vi.mocked(getActiveFronting).mockResolvedValueOnce({
@@ -154,9 +161,9 @@ describe("GET /systems/:id/fronting/active", () => {
   it("reports isCofronting false when only one member plus custom front", async () => {
     const customFrontSession = {
       ...MOCK_SESSION,
-      id: "fs_880e8400-e29b-41d4-a716-446655440000" as never,
+      id: brandId<FrontingSessionId>("fs_880e8400-e29b-41d4-a716-446655440000"),
       memberId: null,
-      customFrontId: "cf_990e8400-e29b-41d4-a716-446655440000" as never,
+      customFrontId: brandId<CustomFrontId>("cf_990e8400-e29b-41d4-a716-446655440000"),
     };
 
     vi.mocked(getActiveFronting).mockResolvedValueOnce({
@@ -178,7 +185,9 @@ describe("GET /systems/:id/fronting/active", () => {
     const entitySession = {
       ...MOCK_SESSION,
       memberId: null,
-      structureEntityId: "ste_aa0e8400-e29b-41d4-a716-446655440000" as never,
+      structureEntityId: brandId<SystemStructureEntityId>(
+        "ste_aa0e8400-e29b-41d4-a716-446655440000",
+      ),
     };
 
     vi.mocked(getActiveFronting).mockResolvedValueOnce({

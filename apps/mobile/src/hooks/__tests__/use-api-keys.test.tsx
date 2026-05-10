@@ -100,7 +100,9 @@ describe("useCreateApiKey", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateApiKey());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.apiKey.list.invalidate).toHaveBeenCalledWith({
@@ -114,7 +116,11 @@ describe("useRevokeApiKey", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useRevokeApiKey());
 
-    await act(() => result.current.mutateAsync({ apiKeyId: "ak_1" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        apiKeyId: brandId<ApiKeyId>("ak_1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.apiKey.get.invalidate).toHaveBeenCalledWith({

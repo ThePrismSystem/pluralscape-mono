@@ -161,7 +161,13 @@ function makeDashboardDb(
   };
 
   const chain = makeThenable();
-  return Object.assign(asDb(chain as never), { _chain: chain });
+  // The thenable chain's runtime shape duck-types as a vi-fn map for
+  // `asDb`'s purposes; widen via `unknown` so the assertion to the helper's
+  // accepted input is a single `as` step.
+  const chainAsFnMap: unknown = chain;
+  return Object.assign(asDb(chainAsFnMap as Record<string, ReturnType<typeof vi.fn>>), {
+    _chain: chain,
+  });
 }
 
 // ── Tests ───────────────────────────────────────────────────────

@@ -243,7 +243,9 @@ describe("useCreateBoardMessage", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateBoardMessage());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.boardMessage.list.invalidate).toHaveBeenCalledWith({
@@ -257,7 +259,11 @@ describe("useUpdateBoardMessage", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdateBoardMessage());
 
-    await act(() => result.current.mutateAsync({ boardMessageId: "bm-1" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        boardMessageId: brandId<BoardMessageId>("bm-1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.boardMessage.get.invalidate).toHaveBeenCalledWith({
@@ -275,7 +281,11 @@ describe("useArchiveBoardMessage", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useArchiveBoardMessage());
 
-    await act(() => result.current.mutateAsync({ boardMessageId: "bm-2" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        boardMessageId: brandId<BoardMessageId>("bm-2"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.boardMessage.get.invalidate).toHaveBeenCalledWith({
@@ -293,7 +303,11 @@ describe("useRestoreBoardMessage", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useRestoreBoardMessage());
 
-    await act(() => result.current.mutateAsync({ boardMessageId: "bm-3" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        boardMessageId: brandId<BoardMessageId>("bm-3"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.boardMessage.get.invalidate).toHaveBeenCalledWith({
@@ -311,7 +325,11 @@ describe("useDeleteBoardMessage", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useDeleteBoardMessage());
 
-    await act(() => result.current.mutateAsync({ boardMessageId: "bm-4" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        boardMessageId: brandId<BoardMessageId>("bm-4"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.boardMessage.get.invalidate).toHaveBeenCalledWith({
@@ -329,7 +347,11 @@ describe("usePinBoardMessage", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => usePinBoardMessage());
 
-    await act(() => result.current.mutateAsync({ boardMessageId: "bm-5" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        boardMessageId: brandId<BoardMessageId>("bm-5"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.boardMessage.get.invalidate).toHaveBeenCalledWith({
@@ -347,7 +369,11 @@ describe("useUnpinBoardMessage", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useUnpinBoardMessage());
 
-    await act(() => result.current.mutateAsync({ boardMessageId: "bm-6" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        boardMessageId: brandId<BoardMessageId>("bm-6"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.boardMessage.get.invalidate).toHaveBeenCalledWith({
@@ -365,7 +391,9 @@ describe("useReorderBoardMessages", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useReorderBoardMessages());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.boardMessage.list.invalidate).toHaveBeenCalledWith({

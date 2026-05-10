@@ -1,4 +1,4 @@
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -17,6 +17,7 @@ import type {
   ApiErrorResponse,
   MemberId,
   PaginatedResult,
+  SystemId,
   SystemStructureEntityAssociationId,
   SystemStructureEntityId,
   SystemStructureEntityLinkId,
@@ -116,11 +117,11 @@ const LINKS_BASE = `/systems/${SYS_ID}/structure/entity-links`;
 
 const MOCK_LINK: EntityLinkResult = {
   id: LINK_ID,
-  systemId: SYS_ID as never,
+  systemId: brandId<SystemId>(SYS_ID),
   entityId: ENTITY_ID,
   parentEntityId: null,
   sortOrder: 0,
-  createdAt: 1000 as never,
+  createdAt: toUnixMillis(1000),
 };
 
 const EMPTY_LINK_PAGE: PaginatedResult<EntityLinkResult> = {
@@ -225,11 +226,11 @@ const ML_BASE = `/systems/${SYS_ID}/structure/entity-member-links`;
 
 const MOCK_MEMBER_LINK: EntityMemberLinkResult = {
   id: ML_ID,
-  systemId: SYS_ID as never,
+  systemId: brandId<SystemId>(SYS_ID),
   parentEntityId: ENTITY_ID,
   memberId: MEMBER_ID,
   sortOrder: 0,
-  createdAt: 1000 as never,
+  createdAt: toUnixMillis(1000),
 };
 
 const EMPTY_ML_PAGE: PaginatedResult<EntityMemberLinkResult> = {
@@ -320,10 +321,10 @@ const ASSOC_BASE = `/systems/${SYS_ID}/structure/entity-associations`;
 
 const MOCK_ASSOC: EntityAssociationResult = {
   id: ASSOC_ID,
-  systemId: SYS_ID as never,
+  systemId: brandId<SystemId>(SYS_ID),
   sourceEntityId: ENTITY_ID,
   targetEntityId: brandId<SystemStructureEntityId>("ste_660e8400-e29b-41d4-a716-446655440000"),
-  createdAt: 1000 as never,
+  createdAt: toUnixMillis(1000),
 };
 
 const EMPTY_ASSOC_PAGE: PaginatedResult<EntityAssociationResult> = {

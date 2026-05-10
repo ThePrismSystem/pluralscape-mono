@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
 import type { AccountId } from "@pluralscape/types";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Mock external deps ───────────────────────────────────────────────
 
@@ -82,9 +83,11 @@ const { deleteAccount } = await import("../../services/account-deletion.service.
 const ACCOUNT_ID = brandId<AccountId>("acct_test");
 const VALID_HASH = new Uint8Array(32).fill(1);
 
-function makeMockDb(): Record<string, unknown> {
+function makeMockDb(): PostgresJsDatabase {
   // The db object is passed to both withCrossAccountTransaction and writeAuditLog.
-  return {};
+  // Widen via `unknown` so the cast is a single `as` step.
+  const opaque: unknown = {};
+  return opaque as PostgresJsDatabase;
 }
 
 // ── Tests ────────────────────────────────────────────────────────────
@@ -104,7 +107,7 @@ describe("deleteAccount", () => {
 
     const auth = makeTestAuth({ accountId: ACCOUNT_ID });
 
-    await deleteAccount(makeMockDb() as never, { authKey: "a".repeat(64) }, auth, mockAudit);
+    await deleteAccount(makeMockDb(), { authKey: "a".repeat(64) }, auth, mockAudit);
 
     expect(verifyAuthKey).toHaveBeenCalled();
     // Audit written via writeAuditLog after the cascade delete
@@ -126,7 +129,7 @@ describe("deleteAccount", () => {
     mockTx.limit.mockResolvedValueOnce([{ authKeyHash: VALID_HASH }]);
 
     const auth = makeTestAuth({ accountId: ACCOUNT_ID });
-    await deleteAccount(makeMockDb() as never, { authKey: "a".repeat(64) }, auth, mockAudit);
+    await deleteAccount(makeMockDb(), { authKey: "a".repeat(64) }, auth, mockAudit);
 
     expect(mockTx.delete).toHaveBeenCalledTimes(2);
   });
@@ -138,7 +141,7 @@ describe("deleteAccount", () => {
     const auth = makeTestAuth({ accountId: ACCOUNT_ID });
 
     await expect(
-      deleteAccount(makeMockDb() as never, { authKey: "a".repeat(64) }, auth, mockAudit),
+      deleteAccount(makeMockDb(), { authKey: "a".repeat(64) }, auth, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
@@ -149,7 +152,7 @@ describe("deleteAccount", () => {
     const auth = makeTestAuth({ accountId: ACCOUNT_ID });
 
     await expect(
-      deleteAccount(makeMockDb() as never, { authKey: "b".repeat(64) }, auth, mockAudit),
+      deleteAccount(makeMockDb(), { authKey: "b".repeat(64) }, auth, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
@@ -160,7 +163,7 @@ describe("deleteAccount", () => {
     const auth = makeTestAuth({ accountId: ACCOUNT_ID });
 
     await expect(
-      deleteAccount(makeMockDb() as never, { authKey: "b".repeat(64) }, auth, mockAudit),
+      deleteAccount(makeMockDb(), { authKey: "b".repeat(64) }, auth, mockAudit),
     ).rejects.toThrow();
 
     expect(writeAuditLog).not.toHaveBeenCalled();
@@ -173,7 +176,7 @@ describe("deleteAccount", () => {
     const auth = makeTestAuth({ accountId: ACCOUNT_ID });
 
     await expect(
-      deleteAccount(makeMockDb() as never, { authKey: "a".repeat(64) }, auth, mockAudit),
+      deleteAccount(makeMockDb(), { authKey: "a".repeat(64) }, auth, mockAudit),
     ).rejects.toThrow();
 
     expect(writeAuditLog).not.toHaveBeenCalled();
@@ -197,7 +200,7 @@ describe("deleteAccount", () => {
     });
 
     const auth = makeTestAuth({ accountId: ACCOUNT_ID });
-    await deleteAccount(makeMockDb() as never, { authKey: "a".repeat(64) }, auth, mockAudit);
+    await deleteAccount(makeMockDb(), { authKey: "a".repeat(64) }, auth, mockAudit);
 
     // Delete happens in the transaction, audit happens after
     expect(callOrder.filter((c) => c === "delete")).toHaveLength(2);

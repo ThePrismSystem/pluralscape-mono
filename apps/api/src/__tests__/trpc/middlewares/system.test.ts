@@ -37,7 +37,12 @@ describe("systemProcedure", () => {
 
   it("rejects requests with missing systemId", async () => {
     const caller = createCaller(makeContext(MOCK_AUTH));
-    await expect(caller.echo({ value: "test" } as never)).rejects.toThrow();
+    // Test specifically exercises the runtime missing-systemId path; widen
+    // via `unknown` so the assertion is a single `as` step.
+    const missingSystemIdInput: unknown = { value: "test" };
+    await expect(
+      caller.echo(missingSystemIdInput as Parameters<typeof caller.echo>[0]),
+    ).rejects.toThrow();
   });
 
   it("passes valid systemId into context", async () => {

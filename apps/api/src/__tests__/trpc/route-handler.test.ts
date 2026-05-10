@@ -56,7 +56,8 @@ describe("tRPC route handler", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getDb).mockResolvedValue({ __mock: "db" } as never);
+    const dbStub: unknown = { __mock: "db" };
+    vi.mocked(getDb).mockResolvedValue(dbStub as Awaited<ReturnType<typeof getDb>>);
     app = new Hono();
     app.route("/v1/trpc", trpcRoute);
   });
@@ -71,7 +72,7 @@ describe("tRPC route handler", () => {
     vi.mocked(validateSession).mockResolvedValue({
       ok: true,
       auth: MOCK_AUTH,
-    } as never);
+    } as Awaited<ReturnType<typeof validateSession>>);
     const res = await app.request("/v1/trpc/test", {
       headers: { authorization: "Bearer tok_test123" },
     });

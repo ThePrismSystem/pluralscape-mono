@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -8,7 +9,12 @@ import {
 } from "../../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type {
+  ApiErrorResponse,
+  BucketKeyRotationId,
+  BucketRotationItemId,
+  ChunkClaimResponse,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -46,21 +52,21 @@ const BUCKET_ID = "bkt_660e8400-e29b-41d4-a716-446655440000";
 const ROTATION_ID = "bkr_770e8400-e29b-41d4-a716-446655440000";
 const CLAIM_URL = `/systems/${SYS_ID}/buckets/${BUCKET_ID}/rotations/${ROTATION_ID}/claim`;
 
-const MOCK_CLAIM_RESPONSE = {
+const MOCK_CLAIM_RESPONSE: ChunkClaimResponse = {
   data: [
     {
-      id: "bri_880e8400-e29b-41d4-a716-446655440000" as never,
-      rotationId: ROTATION_ID as never,
-      entityType: "content_tag" as never,
+      id: brandId<BucketRotationItemId>("bri_880e8400-e29b-41d4-a716-446655440000"),
+      rotationId: brandId<BucketKeyRotationId>(ROTATION_ID),
+      entityType: "member" as const,
       entityId: "ct_990e8400-e29b-41d4-a716-446655440000",
-      status: "claimed" as never,
+      status: "claimed" as const,
       claimedBy: "sess_test",
-      claimedAt: 1000 as never,
+      claimedAt: toUnixMillis(1000),
       completedAt: null,
       attempts: 0,
     },
   ],
-  rotationState: "migrating" as never,
+  rotationState: "migrating" as const,
 };
 
 const VALID_BODY = { chunkSize: 10 };
@@ -88,11 +94,11 @@ describe("POST /systems/:id/buckets/:bucketId/rotations/:rotationId/claim", () =
     const body = (await res.json()) as { data: typeof MOCK_CLAIM_RESPONSE };
     expect(body.data.data).toHaveLength(1);
     expect(body.data.rotationState).toBe("migrating");
-    expect((body.data.data[0] as Record<string, unknown>).id).toBe(
-      "bri_880e8400-e29b-41d4-a716-446655440000",
-    );
-    expect((body.data.data[0] as Record<string, unknown>).status).toBe("claimed");
-    expect((body.data.data[0] as Record<string, unknown>).entityType).toBe("content_tag");
+    const firstItem = body.data.data[0];
+    if (!firstItem) throw new Error("Expected first item");
+    expect(firstItem.id).toBe("bri_880e8400-e29b-41d4-a716-446655440000");
+    expect(firstItem.status).toBe("claimed");
+    expect(firstItem.entityType).toBe("member");
   });
 
   it("returns 400 for malformed JSON body", async () => {

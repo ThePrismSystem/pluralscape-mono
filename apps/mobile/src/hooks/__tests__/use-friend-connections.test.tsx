@@ -1,8 +1,11 @@
 // @vitest-environment happy-dom
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderHookWithProviders } from "./helpers/render-hook-with-providers.js";
+
+import type { FriendConnectionId } from "@pluralscape/types";
 
 type CapturedOpts = Record<string, unknown>;
 let lastListOpts: CapturedOpts = {};
@@ -100,7 +103,7 @@ beforeEach(() => {
 
 describe("useFriendConnection", () => {
   it("passes connectionId to query", () => {
-    renderHookWithProviders(() => useFriendConnection("fc_test" as never));
+    renderHookWithProviders(() => useFriendConnection(brandId<FriendConnectionId>("fc_test")));
     expect(lastGetInput["connectionId"]).toBe("fc_test");
   });
 });
@@ -121,7 +124,11 @@ describe("useAcceptFriendConnection", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useAcceptFriendConnection());
 
-    await act(() => result.current.mutateAsync({ connectionId: "fc_test" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        connectionId: brandId<FriendConnectionId>("fc_test"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.friend.get.invalidate).toHaveBeenCalledWith({ connectionId: "fc_test" });
@@ -134,7 +141,11 @@ describe("useRejectFriendConnection", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useRejectFriendConnection());
 
-    await act(() => result.current.mutateAsync({ connectionId: "fc_test" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        connectionId: brandId<FriendConnectionId>("fc_test"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.friend.get.invalidate).toHaveBeenCalledWith({ connectionId: "fc_test" });
@@ -147,7 +158,11 @@ describe("useBlockFriendConnection", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useBlockFriendConnection());
 
-    await act(() => result.current.mutateAsync({ connectionId: "fc_test" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        connectionId: brandId<FriendConnectionId>("fc_test"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.friend.get.invalidate).toHaveBeenCalledWith({ connectionId: "fc_test" });
@@ -160,7 +175,11 @@ describe("useRemoveFriendConnection", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useRemoveFriendConnection());
 
-    await act(() => result.current.mutateAsync({ connectionId: "fc_test" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        connectionId: brandId<FriendConnectionId>("fc_test"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.friend.get.invalidate).toHaveBeenCalledWith({ connectionId: "fc_test" });
@@ -173,7 +192,11 @@ describe("useArchiveFriendConnection", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useArchiveFriendConnection());
 
-    await act(() => result.current.mutateAsync({ connectionId: "fc_test" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        connectionId: brandId<FriendConnectionId>("fc_test"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.friend.get.invalidate).toHaveBeenCalledWith({ connectionId: "fc_test" });
@@ -186,7 +209,11 @@ describe("useRestoreFriendConnection", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useRestoreFriendConnection());
 
-    await act(() => result.current.mutateAsync({ connectionId: "fc_test" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        connectionId: brandId<FriendConnectionId>("fc_test"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.friend.get.invalidate).toHaveBeenCalledWith({ connectionId: "fc_test" });
@@ -199,7 +226,11 @@ describe("useUpdateFriendVisibility", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdateFriendVisibility());
 
-    await act(() => result.current.mutateAsync({ connectionId: "fc_test" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        connectionId: brandId<FriendConnectionId>("fc_test"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.friend.get.invalidate).toHaveBeenCalledWith({ connectionId: "fc_test" });
@@ -210,22 +241,28 @@ describe("useUpdateFriendVisibility", () => {
 
 describe("useFriendNotificationPrefs", () => {
   it("forwards connectionId to the underlying tRPC query", () => {
-    renderHookWithProviders(() => useFriendNotificationPrefs("fc_notif" as never), {
-      querySource: "remote",
-    });
+    renderHookWithProviders(
+      () => useFriendNotificationPrefs(brandId<FriendConnectionId>("fc_notif")),
+      {
+        querySource: "remote",
+      },
+    );
     expect(lastNotifInput["connectionId"]).toBe("fc_notif");
   });
 
   it("merges enabled flag with parent query enablement (default true)", () => {
-    renderHookWithProviders(() => useFriendNotificationPrefs("fc_notif" as never), {
-      querySource: "remote",
-    });
+    renderHookWithProviders(
+      () => useFriendNotificationPrefs(brandId<FriendConnectionId>("fc_notif")),
+      {
+        querySource: "remote",
+      },
+    );
     expect(lastNotifOpts["enabled"]).toBe(true);
   });
 
   it("respects opts.enabled === false override", () => {
     renderHookWithProviders(
-      () => useFriendNotificationPrefs("fc_notif" as never, { enabled: false }),
+      () => useFriendNotificationPrefs(brandId<FriendConnectionId>("fc_notif"), { enabled: false }),
       { querySource: "remote" },
     );
     expect(lastNotifOpts["enabled"]).toBe(false);
@@ -235,7 +272,11 @@ describe("useFriendNotificationPrefs", () => {
 describe("useUpdateFriendNotificationPrefs", () => {
   it("invalidates getNotifications and get on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdateFriendNotificationPrefs());
-    await act(() => result.current.mutateAsync({ connectionId: "fc_test" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        connectionId: brandId<FriendConnectionId>("fc_test"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
     // The mocked useUtils returns a fresh utils object per call; assertions on the
     // singleton mockUtils.friend.get cover the cross-cutting "get invalidated" path.
     await waitFor(() => {

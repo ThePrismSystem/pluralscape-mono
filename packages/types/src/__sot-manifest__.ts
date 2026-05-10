@@ -331,6 +331,7 @@ import type {
 import type {
   SnapshotContent,
   SystemSnapshot,
+  SystemSnapshotResult,
   SystemSnapshotServerMetadata,
   SystemSnapshotWire,
 } from "./entities/system-snapshot.js";
@@ -570,6 +571,7 @@ export type SotEntityManifest = {
     encryptedFields: never;
     encryptedInput: SnapshotContent;
     server: SystemSnapshotServerMetadata;
+    result: SystemSnapshotResult;
     wire: SystemSnapshotWire;
     // Class C entity per ADR-023: the encrypted blob carries the auxiliary
     // type `SnapshotContent` (members, structure entities, relationships,

@@ -12,7 +12,10 @@ import { mockDb } from "../helpers/mock-db.js";
 import type { BlobStorageAdapter } from "@pluralscape/storage";
 
 function fakeAdapter(): BlobStorageAdapter {
-  return {
+  // Widen via `unknown` (the structural common parent) so the assertion is a
+  // single `as` step — the runtime shape only stubs the methods the tests
+  // exercise; full BlobStorageAdapter conformance is enforced elsewhere.
+  const stub: unknown = {
     upload: vi.fn(),
     download: vi.fn(),
     delete: vi.fn(),
@@ -20,7 +23,8 @@ function fakeAdapter(): BlobStorageAdapter {
     createPresignedUploadUrl: vi.fn(),
     createPresignedDownloadUrl: vi.fn(),
     supportsPresignedUrls: true,
-  } as never;
+  };
+  return stub as BlobStorageAdapter;
 }
 
 describe("storage", () => {

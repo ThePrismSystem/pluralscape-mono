@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -8,7 +9,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, SystemId, WebhookDeliveryId, WebhookId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -34,16 +35,16 @@ const WEBHOOK_ID = "wh_770e8400-e29b-41d4-a716-446655440000";
 const GET_URL = `/systems/${SYS_ID}/webhook-deliveries/${DELIVERY_ID}`;
 
 const MOCK_RESULT = {
-  id: DELIVERY_ID as never,
-  webhookId: WEBHOOK_ID as never,
-  systemId: SYS_ID as never,
+  id: brandId<WebhookDeliveryId>(DELIVERY_ID),
+  webhookId: brandId<WebhookId>(WEBHOOK_ID),
+  systemId: brandId<SystemId>(SYS_ID),
   eventType: "fronting.started" as const,
   status: "success" as const,
   httpStatus: 200,
   attemptCount: 1,
-  lastAttemptAt: 1000 as never,
+  lastAttemptAt: toUnixMillis(1000),
   nextRetryAt: null,
-  createdAt: 1000 as never,
+  createdAt: toUnixMillis(1000),
 };
 
 // ── Tests ────────────────────────────────────────────────────────

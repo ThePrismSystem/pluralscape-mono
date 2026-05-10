@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { SnapshotContentSchema } from "@pluralscape/validation";
 
 import { decodeAndDecryptT1, encryptInput } from "./decode-blob.js";
@@ -8,6 +9,7 @@ import type {
   SnapshotTrigger,
   SystemId,
   SystemSnapshotId,
+  SystemSnapshotWire,
   UnixMillis,
 } from "@pluralscape/types";
 
@@ -23,30 +25,25 @@ export interface SnapshotDecrypted {
 
 // ── Wire types ────────────────────────────────────────────────────────
 
-export interface SnapshotRaw {
-  readonly id: SystemSnapshotId;
-  readonly systemId: SystemId;
-  readonly snapshotTrigger: SnapshotTrigger;
-  readonly createdAt: UnixMillis;
-  readonly encryptedData: string;
-}
-
 export interface SnapshotPage {
-  readonly data: readonly SnapshotRaw[];
+  readonly data: readonly SystemSnapshotWire[];
   readonly nextCursor: string | null;
 }
 
 // ── Transforms ────────────────────────────────────────────────────────
 
-export function decryptSnapshot(raw: SnapshotRaw, masterKey: KdfMasterKey): SnapshotDecrypted {
+export function decryptSnapshot(
+  raw: SystemSnapshotWire,
+  masterKey: KdfMasterKey,
+): SnapshotDecrypted {
   const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
   const content = SnapshotContentSchema.parse(decrypted);
 
   return {
-    id: raw.id,
-    systemId: raw.systemId,
+    id: brandId<SystemSnapshotId>(raw.id),
+    systemId: brandId<SystemId>(raw.systemId),
     snapshotTrigger: raw.snapshotTrigger,
-    createdAt: raw.createdAt,
+    createdAt: toUnixMillis(raw.createdAt),
     content,
   };
 }

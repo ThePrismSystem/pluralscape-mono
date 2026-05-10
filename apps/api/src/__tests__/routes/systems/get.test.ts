@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -8,7 +9,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, EncryptedBase64, SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -46,11 +47,11 @@ describe("GET /systems/:id", () => {
 
   it("returns 200 with system profile", async () => {
     vi.mocked(getSystemProfile).mockResolvedValueOnce({
-      id: "sys_550e8400-e29b-41d4-a716-446655440000" as never,
+      id: brandId<SystemId>("sys_550e8400-e29b-41d4-a716-446655440000"),
       encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
-      createdAt: 1000 as never,
-      updatedAt: 1000 as never,
+      createdAt: toUnixMillis(1000),
+      updatedAt: toUnixMillis(1000),
     });
 
     const app = createApp();
@@ -67,11 +68,11 @@ describe("GET /systems/:id", () => {
 
   it("forwards systemId and auth to service", async () => {
     vi.mocked(getSystemProfile).mockResolvedValueOnce({
-      id: "sys_550e8400-e29b-41d4-a716-446655440000" as never,
+      id: brandId<SystemId>("sys_550e8400-e29b-41d4-a716-446655440000"),
       encryptedData: null,
       version: 1,
-      createdAt: 1000 as never,
-      updatedAt: 1000 as never,
+      createdAt: toUnixMillis(1000),
+      updatedAt: toUnixMillis(1000),
     });
 
     const app = createApp();

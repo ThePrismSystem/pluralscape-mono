@@ -2,6 +2,7 @@ import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AccountId, SystemId } from "@pluralscape/types";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Mock external deps ───────────────────────────────────────────────
 
@@ -84,6 +85,14 @@ const SYSTEM_ID = brandId<SystemId>("sys_test-system");
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 const VALID_PIN = "1234";
 
+/**
+ * The service routes through a mocked `withAccountTransaction` that ignores
+ * the db argument; tests pass an opaque stub. Widen via `unknown` so the
+ * cast to PostgresJsDatabase is a single `as` step.
+ */
+const MOCK_DB_STUB: unknown = {};
+const MOCK_DB = MOCK_DB_STUB as PostgresJsDatabase;
+
 // ── Tests ────────────────────────────────────────────────────────────
 
 describe("setAccountPin", () => {
@@ -99,7 +108,7 @@ describe("setAccountPin", () => {
     // update system_settings → returns row
     mockTx.returning.mockResolvedValueOnce([{ id: "ss_1" }]);
 
-    await setAccountPin({} as never, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit);
+    await setAccountPin(MOCK_DB, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit);
 
     expect(vi.mocked(hashPinOffload)).toHaveBeenCalledWith(VALID_PIN);
     expect(mockAudit).toHaveBeenCalledWith(
@@ -112,9 +121,7 @@ describe("setAccountPin", () => {
     // resolveSystemId → empty
     mockTx.limit.mockResolvedValueOnce([]);
 
-    await expect(
-      setAccountPin({} as never, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit),
-    ).rejects.toThrow(
+    await expect(setAccountPin(MOCK_DB, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit)).rejects.toThrow(
       expect.objectContaining({
         status: 404,
         code: "NOT_FOUND",
@@ -129,9 +136,7 @@ describe("setAccountPin", () => {
     // update returns empty
     mockTx.returning.mockResolvedValueOnce([]);
 
-    await expect(
-      setAccountPin({} as never, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit),
-    ).rejects.toThrow(
+    await expect(setAccountPin(MOCK_DB, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit)).rejects.toThrow(
       expect.objectContaining({
         status: 404,
         code: "NOT_FOUND",
@@ -156,7 +161,7 @@ describe("removeAccountPin", () => {
     mockTx.for.mockResolvedValueOnce([{ pinHash: "$argon2id$existing-hash" }]);
     vi.mocked(verifyPinOffload).mockResolvedValueOnce(true);
 
-    await removeAccountPin({} as never, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit);
+    await removeAccountPin(MOCK_DB, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit);
 
     expect(vi.mocked(verifyPinOffload)).toHaveBeenCalledWith("$argon2id$existing-hash", VALID_PIN);
     expect(mockAudit).toHaveBeenCalledWith(
@@ -169,7 +174,7 @@ describe("removeAccountPin", () => {
     mockTx.limit.mockResolvedValueOnce([]);
 
     await expect(
-      removeAccountPin({} as never, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit),
+      removeAccountPin(MOCK_DB, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit),
     ).rejects.toThrow(
       expect.objectContaining({
         status: 404,
@@ -187,7 +192,7 @@ describe("removeAccountPin", () => {
     mockTx.for.mockResolvedValueOnce([]);
 
     await expect(
-      removeAccountPin({} as never, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit),
+      removeAccountPin(MOCK_DB, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit),
     ).rejects.toThrow(
       expect.objectContaining({
         status: 404,
@@ -205,7 +210,7 @@ describe("removeAccountPin", () => {
     mockTx.for.mockResolvedValueOnce([{ pinHash: null }]);
 
     await expect(
-      removeAccountPin({} as never, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit),
+      removeAccountPin(MOCK_DB, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit),
     ).rejects.toThrow(
       expect.objectContaining({ status: 404, code: "NOT_FOUND", message: "No PIN is set" }),
     );
@@ -219,9 +224,9 @@ describe("removeAccountPin", () => {
     mockTx.for.mockResolvedValueOnce([{ pinHash: "$argon2id$existing-hash" }]);
     vi.mocked(verifyPinOffload).mockResolvedValueOnce(false);
 
-    await expect(
-      removeAccountPin({} as never, ACCOUNT_ID, { pin: "9999" }, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 401, code: "INVALID_PIN" }));
+    await expect(removeAccountPin(MOCK_DB, ACCOUNT_ID, { pin: "9999" }, mockAudit)).rejects.toThrow(
+      expect.objectContaining({ status: 401, code: "INVALID_PIN" }),
+    );
   });
 });
 
@@ -240,7 +245,7 @@ describe("verifyAccountPin", () => {
       .mockResolvedValueOnce([{ pinHash: "$argon2id$real-hash" }]);
     vi.mocked(verifyPinOffload).mockResolvedValueOnce(true);
 
-    const result = await verifyAccountPin({} as never, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit);
+    const result = await verifyAccountPin(MOCK_DB, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit);
 
     expect(result).toEqual({ verified: true });
     expect(vi.mocked(verifyPinOffload)).toHaveBeenCalledWith("$argon2id$real-hash", VALID_PIN);
@@ -254,7 +259,7 @@ describe("verifyAccountPin", () => {
     mockTx.limit.mockResolvedValueOnce([]);
 
     await expect(
-      verifyAccountPin({} as never, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit),
+      verifyAccountPin(MOCK_DB, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit),
     ).rejects.toThrow(
       expect.objectContaining({
         status: 404,
@@ -274,7 +279,7 @@ describe("verifyAccountPin", () => {
     vi.mocked(verifyPinOffload).mockResolvedValueOnce(false);
 
     await expect(
-      verifyAccountPin({} as never, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit),
+      verifyAccountPin(MOCK_DB, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit),
     ).rejects.toThrow(
       expect.objectContaining({
         status: 404,
@@ -300,7 +305,7 @@ describe("verifyAccountPin", () => {
     vi.mocked(verifyPinOffload).mockResolvedValueOnce(false);
 
     await expect(
-      verifyAccountPin({} as never, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit),
+      verifyAccountPin(MOCK_DB, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit),
     ).rejects.toThrow(
       expect.objectContaining({ status: 404, code: "NOT_FOUND", message: "No PIN is set" }),
     );
@@ -317,8 +322,8 @@ describe("verifyAccountPin", () => {
       .mockResolvedValueOnce([{ pinHash: "$argon2id$real-hash" }]);
     vi.mocked(verifyPinOffload).mockResolvedValueOnce(false);
 
-    await expect(
-      verifyAccountPin({} as never, ACCOUNT_ID, { pin: "9999" }, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 401, code: "INVALID_PIN" }));
+    await expect(verifyAccountPin(MOCK_DB, ACCOUNT_ID, { pin: "9999" }, mockAudit)).rejects.toThrow(
+      expect.objectContaining({ status: 401, code: "INVALID_PIN" }),
+    );
   });
 });

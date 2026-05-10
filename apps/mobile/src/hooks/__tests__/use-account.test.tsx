@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderHookWithProviders } from "./helpers/render-hook-with-providers.js";
 
+import type { RouterInput } from "@pluralscape/api-client/trpc";
+
 let queryWasCalled = false;
 
 const mockUtils = {
@@ -64,7 +66,7 @@ describe("useChangeEmail", () => {
   it("invalidates account.get on success", async () => {
     const { result } = renderHookWithProviders(() => useChangeEmail());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() => result.current.mutateAsync({} as RouterInput["account"]["changeEmail"]));
 
     await waitFor(() => {
       expect(mockUtils.account.get.invalidate).toHaveBeenCalled();
@@ -76,7 +78,7 @@ describe("useChangePassword", () => {
   it("invalidates account.get on success", async () => {
     const { result } = renderHookWithProviders(() => useChangePassword());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() => result.current.mutateAsync({} as RouterInput["account"]["changePassword"]));
 
     await waitFor(() => {
       expect(mockUtils.account.get.invalidate).toHaveBeenCalled();
@@ -88,7 +90,7 @@ describe("useUpdateAccountSettings", () => {
   it("invalidates account.get on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdateAccountSettings());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() => result.current.mutateAsync({} as RouterInput["account"]["updateSettings"]));
 
     await waitFor(() => {
       expect(mockUtils.account.get.invalidate).toHaveBeenCalled();
@@ -100,7 +102,7 @@ describe("useDeleteAccount", () => {
   it("does not invalidate account.get on success", async () => {
     const { result } = renderHookWithProviders(() => useDeleteAccount());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() => result.current.mutateAsync({} as RouterInput["account"]["deleteAccount"]));
 
     await waitFor(() => {
       expect(mockUtils.account.get.invalidate).not.toHaveBeenCalled();

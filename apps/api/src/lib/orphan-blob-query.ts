@@ -2,6 +2,8 @@ import { blobMetadata } from "@pluralscape/db/pg";
 import { toUnixMillis } from "@pluralscape/types";
 import { and, eq, isNull, lt } from "drizzle-orm";
 
+import { asStorageKey } from "./storage-key-brand.js";
+
 import type { OrphanBlobQuery } from "@pluralscape/storage/quota";
 import type { StorageKey, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -33,7 +35,9 @@ export class OrphanBlobQueryImpl implements OrphanBlobQuery {
       );
 
     // Drop the `ServerInternal<…>` brand on the way to the storage adapter —
-    // `StorageKey` is a peer brand that doesn't intersect with `ServerInternal<…>`.
-    return rows.map((r) => r.storageKey as string as StorageKey);
+    // `StorageKey` is a peer brand that doesn't intersect with
+    // `ServerInternal<…>`. The shared helper performs the brand swap with
+    // a single internal assertion.
+    return rows.map((r) => asStorageKey(r.storageKey));
   }
 }

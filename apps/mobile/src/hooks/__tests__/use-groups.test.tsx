@@ -9,7 +9,7 @@ import { makeRawGroup } from "../../__tests__/factories/index.js";
 
 import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
 
-import type { GroupId } from "@pluralscape/types";
+import type { GroupId, MemberId } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -214,7 +214,9 @@ describe("useCreateGroup", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateGroup());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.group.list.invalidate).toHaveBeenCalledWith({
@@ -228,7 +230,11 @@ describe("useUpdateGroup", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdateGroup());
 
-    await act(() => result.current.mutateAsync({ groupId: "g-1" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        groupId: brandId<GroupId>("g-1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.group.get.invalidate).toHaveBeenCalledWith({
@@ -246,7 +252,11 @@ describe("useDeleteGroup", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useDeleteGroup());
 
-    await act(() => result.current.mutateAsync({ groupId: "g-2" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        groupId: brandId<GroupId>("g-2"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.group.get.invalidate).toHaveBeenCalledWith({
@@ -264,7 +274,12 @@ describe("useAddGroupMembers", () => {
   it("invalidates listMembers and listMemberships on success", async () => {
     const { result } = renderHookWithProviders(() => useAddGroupMembers());
 
-    await act(() => result.current.mutateAsync({ groupId: "g-1", memberId: "m-1" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        groupId: brandId<GroupId>("g-1"),
+        memberId: brandId<MemberId>("m-1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.group.listMembers.invalidate).toHaveBeenCalledWith({
@@ -283,7 +298,12 @@ describe("useRemoveGroupMembers", () => {
   it("invalidates listMembers and listMemberships on success", async () => {
     const { result } = renderHookWithProviders(() => useRemoveGroupMembers());
 
-    await act(() => result.current.mutateAsync({ groupId: "g-2", memberId: "m-2" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        groupId: brandId<GroupId>("g-2"),
+        memberId: brandId<MemberId>("m-2"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.group.listMembers.invalidate).toHaveBeenCalledWith({
@@ -302,7 +322,9 @@ describe("useReorderGroups", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useReorderGroups());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.group.list.invalidate).toHaveBeenCalledWith({

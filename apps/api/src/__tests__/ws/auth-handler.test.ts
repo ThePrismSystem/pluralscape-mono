@@ -10,6 +10,7 @@ import { WS_CLOSE_POLICY_VIOLATION } from "../../ws/ws.constants.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { AppLogger } from "../../lib/logger.js";
 import type { ValidateSessionResult } from "../../lib/session-auth.js";
+import type { SessionRow } from "@pluralscape/db/pg";
 import type { AuthenticateRequest } from "@pluralscape/sync";
 import type { AccountId, SessionId, SystemId } from "@pluralscape/types";
 
@@ -28,8 +29,30 @@ vi.mock("../../lib/db.js", () => ({
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-function mockWs(): { close: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi.fn> } {
+type MockWs = { close: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi.fn> };
+type RegisterWs = Parameters<ConnectionManager["register"]>[1];
+
+function mockWs(): MockWs {
   return { close: vi.fn(), send: vi.fn() };
+}
+
+/**
+ * Widen a MockWs through `unknown` so the cast to the manager's WSContext
+ * parameter is a single `as` step.
+ */
+function asRegisterWs(ws: MockWs): RegisterWs {
+  const opaque: unknown = ws;
+  return opaque as RegisterWs;
+}
+
+/**
+ * The handler only inspects the {@link ValidateSessionResult.auth} branch;
+ * the `session` row is never read. Provide an empty stub typed via `unknown`
+ * so the narrowing cast is a single `as` step.
+ */
+function emptySessionStub(): SessionRow {
+  const opaque: unknown = {};
+  return opaque as SessionRow;
 }
 
 function mockLog(): AppLogger {
@@ -89,9 +112,9 @@ describe("handleAuthenticate", () => {
 
   it("succeeds with valid token and protocol version", async () => {
     const auth = validAuth();
-    mockValidateSession.mockResolvedValue({ ok: true, auth, session: {} as never });
+    mockValidateSession.mockResolvedValue({ ok: true, auth, session: emptySessionStub() });
     manager.reserveUnauthSlot();
-    const state = manager.register("conn-1", mockWs() as never, Date.now());
+    const state = manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
     state.authTimeoutHandle = setTimeout(() => {}, 10_000);
 
     const result = await handleAuthenticate(validRequest(auth.systemId), state, manager, log);
@@ -111,7 +134,7 @@ describe("handleAuthenticate", () => {
     const systemId = brandId<SystemId>(crypto.randomUUID());
     mockValidateSession.mockResolvedValue({ ok: false, error: "UNAUTHENTICATED" });
     manager.reserveUnauthSlot();
-    const state = manager.register("conn-1", mockWs() as never, Date.now());
+    const state = manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
 
     const result = await handleAuthenticate(validRequest(systemId), state, manager, log);
 
@@ -126,7 +149,7 @@ describe("handleAuthenticate", () => {
     const systemId = brandId<SystemId>(crypto.randomUUID());
     mockValidateSession.mockResolvedValue({ ok: false, error: "SESSION_EXPIRED" });
     manager.reserveUnauthSlot();
-    const state = manager.register("conn-1", mockWs() as never, Date.now());
+    const state = manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
 
     const result = await handleAuthenticate(validRequest(systemId), state, manager, log);
 
@@ -142,9 +165,9 @@ describe("handleAuthenticate", () => {
       ownedSystemIds: new Set<SystemId>(),
       auditLogIpTracking: false,
     };
-    mockValidateSession.mockResolvedValue({ ok: true, auth, session: {} as never });
+    mockValidateSession.mockResolvedValue({ ok: true, auth, session: emptySessionStub() });
     manager.reserveUnauthSlot();
-    const state = manager.register("conn-1", mockWs() as never, Date.now());
+    const state = manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
 
     const result = await handleAuthenticate(validRequest(auth.systemId), state, manager, log);
 
@@ -160,9 +183,9 @@ describe("handleAuthenticate", () => {
       ownedSystemIds: new Set<SystemId>(),
       auditLogIpTracking: false,
     };
-    mockValidateSession.mockResolvedValue({ ok: true, auth, session: {} as never });
+    mockValidateSession.mockResolvedValue({ ok: true, auth, session: emptySessionStub() });
     manager.reserveUnauthSlot();
-    const state = manager.register("conn-1", mockWs() as never, Date.now());
+    const state = manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
 
     const result = await handleAuthenticate(
       validRequest(auth.systemId, { profileType: "friend" }),
@@ -179,9 +202,9 @@ describe("handleAuthenticate", () => {
 
   it("friend profile succeeds when system is owned", async () => {
     const auth = validAuth();
-    mockValidateSession.mockResolvedValue({ ok: true, auth, session: {} as never });
+    mockValidateSession.mockResolvedValue({ ok: true, auth, session: emptySessionStub() });
     manager.reserveUnauthSlot();
-    const state = manager.register("conn-1", mockWs() as never, Date.now());
+    const state = manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
 
     const result = await handleAuthenticate(
       validRequest(auth.systemId, { profileType: "friend" }),
@@ -195,18 +218,18 @@ describe("handleAuthenticate", () => {
 
   it("returns RATE_LIMITED when per-account connection limit exceeded", async () => {
     const auth = validAuth();
-    mockValidateSession.mockResolvedValue({ ok: true, auth, session: {} as never });
+    mockValidateSession.mockResolvedValue({ ok: true, auth, session: emptySessionStub() });
 
     // Fill up account connections to the limit
     for (let i = 0; i < 10; i++) {
       const id = `existing-${String(i)}`;
       manager.reserveUnauthSlot();
-      manager.register(id, mockWs() as never, Date.now());
+      manager.register(id, asRegisterWs(mockWs()), Date.now());
       manager.authenticate(id, auth, auth.systemId, "owner-full");
     }
 
     manager.reserveUnauthSlot();
-    const state = manager.register("conn-new", mockWs() as never, Date.now());
+    const state = manager.register("conn-new", asRegisterWs(mockWs()), Date.now());
     const result = await handleAuthenticate(validRequest(auth.systemId), state, manager, log);
 
     expect(result.ok).toBe(false);
@@ -217,9 +240,9 @@ describe("handleAuthenticate", () => {
 
   it("clears auth timeout on success", async () => {
     const auth = validAuth();
-    mockValidateSession.mockResolvedValue({ ok: true, auth, session: {} as never });
+    mockValidateSession.mockResolvedValue({ ok: true, auth, session: emptySessionStub() });
     manager.reserveUnauthSlot();
-    const state = manager.register("conn-1", mockWs() as never, Date.now());
+    const state = manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
     state.authTimeoutHandle = setTimeout(() => {}, 10_000);
 
     await handleAuthenticate(validRequest(auth.systemId), state, manager, log);
@@ -231,9 +254,9 @@ describe("handleAuthenticate", () => {
 
   it("returns AUTH_FAILED when connection removed during auth", async () => {
     const auth = validAuth();
-    mockValidateSession.mockResolvedValue({ ok: true, auth, session: {} as never });
+    mockValidateSession.mockResolvedValue({ ok: true, auth, session: emptySessionStub() });
     manager.reserveUnauthSlot();
-    const state = manager.register("conn-1", mockWs() as never, Date.now());
+    const state = manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
     // Simulate connection removal during async auth
     manager.remove("conn-1");
 
@@ -247,9 +270,9 @@ describe("handleAuthenticate", () => {
 
   it("preserves correlationId in response", async () => {
     const auth = validAuth();
-    mockValidateSession.mockResolvedValue({ ok: true, auth, session: {} as never });
+    mockValidateSession.mockResolvedValue({ ok: true, auth, session: emptySessionStub() });
     manager.reserveUnauthSlot();
-    const state = manager.register("conn-1", mockWs() as never, Date.now());
+    const state = manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
 
     const result = await handleAuthenticate(
       validRequest(auth.systemId, { correlationId: "my-corr-id" }),
@@ -268,7 +291,7 @@ describe("handleAuthenticate", () => {
     const systemId = brandId<SystemId>(crypto.randomUUID());
     mockGetDb.mockRejectedValueOnce(new Error("DB connection failed"));
     manager.reserveUnauthSlot();
-    const state = manager.register("conn-1", mockWs() as never, Date.now());
+    const state = manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
 
     const result = await handleAuthenticate(validRequest(systemId), state, manager, log);
 
@@ -283,7 +306,7 @@ describe("handleAuthenticate", () => {
     const systemId = brandId<SystemId>(crypto.randomUUID());
     mockValidateSession.mockRejectedValueOnce(new Error("session service down"));
     manager.reserveUnauthSlot();
-    const state = manager.register("conn-1", mockWs() as never, Date.now());
+    const state = manager.register("conn-1", asRegisterWs(mockWs()), Date.now());
 
     const result = await handleAuthenticate(validRequest(systemId), state, manager, log);
 

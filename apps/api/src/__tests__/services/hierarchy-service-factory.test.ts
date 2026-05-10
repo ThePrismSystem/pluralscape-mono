@@ -5,7 +5,12 @@ import { mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
-import type { EncryptedBase64, SystemId } from "@pluralscape/types";
+import type {
+  HierarchyColumns,
+  HierarchyServiceConfig,
+} from "../../services/hierarchy-service-types.js";
+import type { EncryptedBase64, NoteId, SystemId } from "@pluralscape/types";
+import type { PgTable } from "drizzle-orm/pg-core";
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
@@ -145,11 +150,12 @@ function makeService(overrides?: {
     body: TestUpdateBody,
     systemId: SystemId,
   ) => Promise<void>;
-  webhookEvents?: {
-    created: string;
-    updated: string;
-    buildPayload: (id: string) => Record<string, unknown>;
-  };
+  webhookEvents?: HierarchyServiceConfig<
+    Record<string, unknown>,
+    TestResult,
+    TestCreateBody,
+    TestUpdateBody
+  >["webhookEvents"];
 }) {
   return createHierarchyService<
     Record<string, unknown>,
@@ -158,8 +164,12 @@ function makeService(overrides?: {
     TestCreateBody,
     TestUpdateBody
   >({
-    table: mockTable as never,
-    columns: mockColumns as never,
+    // The mock table/columns/event names mirror the factory's expected
+    // shapes for the methods exercised by these tests; widen each via
+    // `unknown` so the cast to the canonical config types is a single
+    // `as` step.
+    table: opaqueTable() as PgTable,
+    columns: opaqueColumns() as HierarchyColumns,
     idPrefix: "ent_",
     entityName: "Entity",
     parentFieldName: "parentId",
@@ -168,15 +178,25 @@ function makeService(overrides?: {
     updateSetValues: (body) => ({ name: body.name }),
     dependentChecks: [],
     events: {
-      created: "entity.created" as never,
-      updated: "entity.updated" as never,
-      deleted: "entity.deleted" as never,
-      archived: "entity.archived" as never,
-      restored: "entity.restored" as never,
+      created: "note.created" as const,
+      updated: "note.updated" as const,
+      deleted: "note.deleted" as const,
+      archived: "note.archived" as const,
+      restored: "note.restored" as const,
     },
     beforeUpdate: overrides?.beforeUpdate,
-    webhookEvents: overrides?.webhookEvents as never,
+    webhookEvents: overrides?.webhookEvents,
   });
+}
+
+/** Widen mockTable through `unknown` so the cast is a single `as` step. */
+function opaqueTable(): unknown {
+  return mockTable;
+}
+
+/** Widen mockColumns through `unknown` so the cast is a single `as` step. */
+function opaqueColumns(): unknown {
+  return mockColumns;
 }
 
 // ── Tests ────────────────────────────────────────────────────────────
@@ -203,7 +223,7 @@ describe("hierarchy-service-factory — create", () => {
     expect(result.id).toBe(ENTITY_ID);
     expect(mockAudit).toHaveBeenCalledWith(
       chain,
-      expect.objectContaining({ eventType: "entity.created" }),
+      expect.objectContaining({ eventType: "note.created" }),
     );
   });
 
@@ -258,9 +278,9 @@ describe("hierarchy-service-factory — create", () => {
   });
 
   it("dispatches webhook on create when webhookEvents configured", async () => {
-    const buildPayload = vi.fn((id: string) => ({ entityId: id }));
+    const buildPayload = vi.fn((id: string) => ({ noteId: brandId<NoteId>(id) }));
     const service = makeService({
-      webhookEvents: { created: "entity.created", updated: "entity.updated", buildPayload },
+      webhookEvents: { created: "note.created", updated: "note.updated", buildPayload },
     });
     const { db, chain } = mockDb();
     chain.returning.mockResolvedValueOnce([makeTestRow()]);
@@ -463,7 +483,7 @@ describe("hierarchy-service-factory — update", () => {
     expect(result.id).toBe(ENTITY_ID);
     expect(mockAudit).toHaveBeenCalledWith(
       chain,
-      expect.objectContaining({ eventType: "entity.updated" }),
+      expect.objectContaining({ eventType: "note.updated" }),
     );
   });
 
@@ -479,9 +499,9 @@ describe("hierarchy-service-factory — update", () => {
   });
 
   it("dispatches webhook on update when webhookEvents configured", async () => {
-    const buildPayload = vi.fn((id: string) => ({ entityId: id }));
+    const buildPayload = vi.fn((id: string) => ({ noteId: brandId<NoteId>(id) }));
     const service = makeService({
-      webhookEvents: { created: "entity.created", updated: "entity.updated", buildPayload },
+      webhookEvents: { created: "note.created", updated: "note.updated", buildPayload },
     });
     const { db } = mockDb();
     vi.mocked(assertOccUpdated).mockResolvedValueOnce(makeTestRow({ version: 2 }));
@@ -529,7 +549,7 @@ describe("hierarchy-service-factory — remove", () => {
 
     expect(mockAudit).toHaveBeenCalledWith(
       chain,
-      expect.objectContaining({ eventType: "entity.deleted" }),
+      expect.objectContaining({ eventType: "note.deleted" }),
     );
     expect(checkDependents).toHaveBeenCalledWith(chain, []);
   });
@@ -574,8 +594,8 @@ describe("hierarchy-service-factory — archive", () => {
       mockAudit,
       expect.objectContaining({
         entityName: "Entity",
-        archiveEvent: "entity.archived",
-        restoreEvent: "entity.restored",
+        archiveEvent: "note.archived",
+        restoreEvent: "note.restored",
       }),
     );
   });
@@ -599,7 +619,7 @@ describe("hierarchy-service-factory — restore", () => {
     expect(result.id).toBe(ENTITY_ID);
     expect(mockAudit).toHaveBeenCalledWith(
       chain,
-      expect.objectContaining({ eventType: "entity.restored" }),
+      expect.objectContaining({ eventType: "note.restored" }),
     );
   });
 

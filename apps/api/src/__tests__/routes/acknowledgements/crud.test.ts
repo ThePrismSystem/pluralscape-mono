@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -7,10 +8,15 @@ import {
   mockRateLimitFactory,
   mockSystemOwnershipFactory,
 } from "../../helpers/common-route-mocks.js";
-import { createRouteApp, MOCK_AUTH, postJSON } from "../../helpers/route-test-setup.js";
+import {
+  createRouteApp,
+  MOCK_SYSTEM_ID,
+  MOCK_AUTH,
+  postJSON,
+} from "../../helpers/route-test-setup.js";
 
 import type { AcknowledgementResult } from "../../../services/acknowledgement/internal.js";
-import type { EncryptedBase64 } from "@pluralscape/types";
+import type { AcknowledgementId, EncryptedBase64 } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -62,14 +68,14 @@ const BASE = "/systems/sys_550e8400-e29b-41d4-a716-446655440000/acknowledgements
 const ACK_ID = "ack_550e8400-e29b-41d4-a716-446655440000";
 
 const MOCK_RESULT: AcknowledgementResult = {
-  id: ACK_ID as never,
-  systemId: MOCK_AUTH.systemId as never,
+  id: brandId<AcknowledgementId>(ACK_ID),
+  systemId: MOCK_SYSTEM_ID,
   createdByMemberId: null,
   confirmed: false,
   encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
-  createdAt: 1000 as never,
-  updatedAt: 1000 as never,
+  createdAt: toUnixMillis(1000),
+  updatedAt: toUnixMillis(1000),
   archived: false,
   archivedAt: null,
 };

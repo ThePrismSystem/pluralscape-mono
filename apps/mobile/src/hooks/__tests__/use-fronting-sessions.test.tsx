@@ -388,7 +388,9 @@ describe("useStartSession", () => {
   it("cancels list onMutate and invalidates list and getActive onSettled", async () => {
     const { result } = renderHookWithProviders(() => useStartSession());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.frontingSession.list.cancel).toHaveBeenCalledWith({
@@ -409,7 +411,9 @@ describe("useEndSession", () => {
     const { result } = renderHookWithProviders(() => useEndSession());
 
     await act(() =>
-      result.current.mutateAsync({ sessionId: brandId<FrontingSessionId>("fs-1") } as never),
+      result.current.mutateAsync({
+        sessionId: brandId<FrontingSessionId>("fs-1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
     );
 
     await waitFor(() => {
@@ -439,7 +443,9 @@ describe("useEndSession", () => {
 
     // Verify getData is called during onMutate (via cancel step)
     await act(() =>
-      result.current.mutateAsync({ sessionId: brandId<FrontingSessionId>("fs-1") } as never),
+      result.current.mutateAsync({
+        sessionId: brandId<FrontingSessionId>("fs-1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
     );
 
     await waitFor(() => {
@@ -456,7 +462,9 @@ describe("useUpdateSession", () => {
     const { result } = renderHookWithProviders(() => useUpdateSession());
 
     await act(() =>
-      result.current.mutateAsync({ sessionId: brandId<FrontingSessionId>("fs-1") } as never),
+      result.current.mutateAsync({
+        sessionId: brandId<FrontingSessionId>("fs-1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
     );
 
     await waitFor(() => {

@@ -78,7 +78,10 @@ export function createAuthenticatedState(
   systemId: SystemId,
 ): SyncConnectionState {
   manager.reserveUnauthSlot();
-  manager.register(connId, mockWs() as never, Date.now());
+  // The mock ws stub only implements the methods the manager exercises;
+  // widen via `unknown` so the cast to WSContext is a single `as` step.
+  const opaqueWs: unknown = mockWs();
+  manager.register(connId, opaqueWs as Parameters<typeof manager.register>[1], Date.now());
   manager.authenticate(connId, auth, systemId, "owner-full");
   const state = manager.get(connId);
   if (!state) {
@@ -119,7 +122,11 @@ export function mockDb(authorPublicKey: Uint8Array = pubkey(10)): PostgresJsData
     execute: vi.fn().mockResolvedValue(undefined),
     transaction: vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(db)),
   };
-  return db as never as PostgresJsDatabase;
+  // Widen via `unknown` (the structural common parent) so the assertion
+  // is a single `as` step — the runtime shape is duck-compatible with
+  // PostgresJsDatabase for the methods exercised in tests.
+  const opaque: unknown = db;
+  return opaque as PostgresJsDatabase;
 }
 
 /** Account ID used across the happy-path handlers tests. */

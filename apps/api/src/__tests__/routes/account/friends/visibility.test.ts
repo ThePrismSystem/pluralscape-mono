@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -12,7 +13,12 @@ import {
   putJSON,
 } from "../../../helpers/route-test-setup.js";
 
-import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
+import type {
+  AccountId,
+  ApiErrorResponse,
+  EncryptedBase64,
+  FriendConnectionId,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -59,14 +65,14 @@ const VALID_BODY = {
 };
 
 const MOCK_CONNECTION = {
-  id: CONNECTION_ID as never,
-  accountId: "acct_test" as never,
-  friendAccountId: "acct_friend" as never,
-  status: "accepted" as never,
+  id: brandId<FriendConnectionId>(CONNECTION_ID),
+  accountId: brandId<AccountId>("acct_test"),
+  friendAccountId: brandId<AccountId>("acct_friend"),
+  status: "accepted" as const,
   encryptedData: VALID_BODY.encryptedData,
   version: 2,
-  createdAt: 1000 as never,
-  updatedAt: 2000 as never,
+  createdAt: toUnixMillis(1000),
+  updatedAt: toUnixMillis(2000),
 };
 
 // ── Tests ────────────────────────────────────────────────────────

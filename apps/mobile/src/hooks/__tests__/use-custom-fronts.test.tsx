@@ -9,6 +9,7 @@ import { makeRawCustomFront } from "../../__tests__/factories/index.js";
 
 import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
 
+import type { LocalDatabase } from "../../data/local-database.js";
 import type { CustomFrontId } from "@pluralscape/types";
 
 beforeAll(async () => {
@@ -190,17 +191,19 @@ describe("useCustomFrontsList", () => {
 
   it("local query excludes archived when includeArchived is false", () => {
     const queryAllMock = vi.fn().mockReturnValue([]);
-    const localDb = {
+    const localDb: LocalDatabase = {
       initialize: vi.fn(),
       queryOne: vi.fn(),
       queryAll: queryAllMock,
       execute: vi.fn(),
-      transaction: vi.fn((fn: () => unknown) => fn()),
+      transaction: vi.fn((fn: () => unknown) =>
+        Promise.resolve(fn()),
+      ) as LocalDatabase["transaction"],
       close: vi.fn(),
     };
     renderHookWithProviders(() => useCustomFrontsList(), {
       querySource: "local",
-      localDb: localDb as never,
+      localDb,
     });
     expect(queryAllMock).toHaveBeenCalledWith(
       expect.stringContaining("AND archived = 0"),
@@ -210,17 +213,19 @@ describe("useCustomFrontsList", () => {
 
   it("local query includes archived when includeArchived is true", () => {
     const queryAllMock = vi.fn().mockReturnValue([]);
-    const localDb = {
+    const localDb: LocalDatabase = {
       initialize: vi.fn(),
       queryOne: vi.fn(),
       queryAll: queryAllMock,
       execute: vi.fn(),
-      transaction: vi.fn((fn: () => unknown) => fn()),
+      transaction: vi.fn((fn: () => unknown) =>
+        Promise.resolve(fn()),
+      ) as LocalDatabase["transaction"],
       close: vi.fn(),
     };
     renderHookWithProviders(() => useCustomFrontsList({ includeArchived: true }), {
       querySource: "local",
-      localDb: localDb as never,
+      localDb,
     });
     expect(queryAllMock).toHaveBeenCalledWith(
       expect.not.stringContaining("AND archived = 0"),
@@ -234,7 +239,9 @@ describe("useCreateCustomFront", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateCustomFront());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.customFront.list.invalidate).toHaveBeenCalledWith({
@@ -248,7 +255,11 @@ describe("useUpdateCustomFront", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdateCustomFront());
 
-    await act(() => result.current.mutateAsync({ customFrontId: "cf-1" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        customFrontId: brandId<CustomFrontId>("cf-1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.customFront.get.invalidate).toHaveBeenCalledWith({
@@ -266,7 +277,11 @@ describe("useDeleteCustomFront", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useDeleteCustomFront());
 
-    await act(() => result.current.mutateAsync({ customFrontId: "cf-2" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        customFrontId: brandId<CustomFrontId>("cf-2"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.customFront.get.invalidate).toHaveBeenCalledWith({

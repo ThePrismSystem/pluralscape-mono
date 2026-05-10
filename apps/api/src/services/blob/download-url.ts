@@ -4,12 +4,13 @@ import { and, eq, sql } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { withTenantRead } from "../../lib/rls-context.js";
+import { asStorageKey } from "../../lib/storage-key-brand.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { BlobStorageAdapter } from "@pluralscape/storage";
-import type { BlobId, StorageKey, SystemId, UnixMillis } from "@pluralscape/types";
+import type { BlobId, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export interface DownloadUrlResult {
@@ -49,8 +50,9 @@ export async function getDownloadUrl(
 
     // The DB column is branded `ServerInternal<string>` for wire-strip; drop
     // the brand on the way to the storage adapter (a `StorageKey` brand is
-    // a peer marker that doesn't intersect with `ServerInternal<…>`).
-    return row.storageKey as string as StorageKey;
+    // a peer marker that doesn't intersect with `ServerInternal<…>`). The
+    // shared helper performs the brand swap with a single internal assertion.
+    return asStorageKey(row.storageKey);
   });
 
   const presigned = await storageAdapter.generatePresignedDownloadUrl({ storageKey });

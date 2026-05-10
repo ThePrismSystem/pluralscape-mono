@@ -7,6 +7,8 @@ import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
 import type { BlobResult } from "../../services/blob/internal.js";
+import type { BlobStorageAdapter } from "@pluralscape/storage";
+import type { BlobQuotaService } from "@pluralscape/storage/quota";
 import type { BlobId, PaginatedResult, SystemId } from "@pluralscape/types";
 
 // ── Mock external deps ───────────────────────────────────────────────
@@ -76,8 +78,21 @@ function makeBlobRow(overrides: Record<string, unknown> = {}): Record<string, un
   };
 }
 
-function makeStorageAdapter(overrides: Record<string, unknown> = {}) {
-  return {
+/**
+ * The mock storage adapter and quota service expose only the methods
+ * exercised by the tests; widen via `unknown` so the cast to the canonical
+ * service interface is a single `as` step.
+ */
+type MockStorageAdapter = BlobStorageAdapter & {
+  generatePresignedUploadUrl: ReturnType<typeof vi.fn>;
+  generatePresignedDownloadUrl: ReturnType<typeof vi.fn>;
+};
+type MockQuotaService = BlobQuotaService & {
+  assertQuota: ReturnType<typeof vi.fn>;
+};
+
+function makeStorageAdapter(overrides: Record<string, unknown> = {}): MockStorageAdapter {
+  const stub: unknown = {
     generatePresignedUploadUrl: vi.fn().mockResolvedValue({
       supported: true,
       url: "https://storage.example.com/upload/presigned",
@@ -90,13 +105,15 @@ function makeStorageAdapter(overrides: Record<string, unknown> = {}) {
     }),
     ...overrides,
   };
+  return stub as MockStorageAdapter;
 }
 
-function makeQuotaService(overrides: Record<string, unknown> = {}) {
-  return {
+function makeQuotaService(overrides: Record<string, unknown> = {}): MockQuotaService {
+  const stub: unknown = {
     assertQuota: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
+  return stub as MockQuotaService;
 }
 
 // ── Tests: createUploadUrl ────────────────────────────────────────────
@@ -116,8 +133,8 @@ describe("createUploadUrl", () => {
     await expect(
       createUploadUrl(
         db,
-        storageAdapter as never,
-        quotaService as never,
+        storageAdapter,
+        quotaService,
         SYSTEM_ID,
         { purpose: "avatar", mimeType: "image/png", sizeBytes: 1024, encryptionTier: 1 },
         AUTH,
@@ -134,8 +151,8 @@ describe("createUploadUrl", () => {
 
     const result = await createUploadUrl(
       db,
-      storageAdapter as never,
-      quotaService as never,
+      storageAdapter,
+      quotaService,
       SYSTEM_ID,
       { purpose: "avatar", mimeType: "image/png", sizeBytes: 1024, encryptionTier: 1 },
       AUTH,
@@ -159,8 +176,8 @@ describe("createUploadUrl", () => {
     await expect(
       createUploadUrl(
         db,
-        storageAdapter as never,
-        quotaService as never,
+        storageAdapter,
+        quotaService,
         SYSTEM_ID,
         { purpose: "avatar", mimeType: "image/png", sizeBytes: 6_000_000, encryptionTier: 1 },
         AUTH,
@@ -184,8 +201,8 @@ describe("createUploadUrl", () => {
     await expect(
       createUploadUrl(
         db,
-        storageAdapter as never,
-        quotaService as never,
+        storageAdapter,
+        quotaService,
         SYSTEM_ID,
         { purpose: "avatar", mimeType: "image/png", sizeBytes: 1024, encryptionTier: 1 },
         AUTH,
@@ -211,8 +228,8 @@ describe("createUploadUrl", () => {
     await expect(
       createUploadUrl(
         db,
-        storageAdapter as never,
-        quotaService as never,
+        storageAdapter,
+        quotaService,
         SYSTEM_ID,
         { purpose: "avatar", mimeType: "image/png", sizeBytes: 1024, encryptionTier: 1 },
         AUTH,
@@ -340,7 +357,7 @@ describe("getDownloadUrl", () => {
     chain.limit.mockResolvedValueOnce([{ storageKey: VALID_STORAGE_KEY }]);
     const storageAdapter = makeStorageAdapter();
 
-    const result = await getDownloadUrl(db, storageAdapter as never, SYSTEM_ID, BLOB_ID, AUTH);
+    const result = await getDownloadUrl(db, storageAdapter, SYSTEM_ID, BLOB_ID, AUTH);
 
     expect(result.blobId).toBe(BLOB_ID);
     expect(result.downloadUrl).toBe("https://storage.example.com/download/presigned");
@@ -356,7 +373,7 @@ describe("getDownloadUrl", () => {
     const storageAdapter = makeStorageAdapter();
 
     await expect(
-      getDownloadUrl(db, storageAdapter as never, SYSTEM_ID, BLOB_ID, AUTH),
+      getDownloadUrl(db, storageAdapter, SYSTEM_ID, BLOB_ID, AUTH),
     ).rejects.toMatchObject({ code: "NOT_FOUND", status: 404 });
 
     expect(storageAdapter.generatePresignedDownloadUrl).not.toHaveBeenCalled();
@@ -471,7 +488,7 @@ describe("listBlobs", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([]);
 
-    await listBlobs(db, SYSTEM_ID, AUTH, { cursor: "blob_some-cursor" as never });
+    await listBlobs(db, SYSTEM_ID, AUTH, { cursor: brandId<BlobId>("blob_some-cursor") });
 
     expect(chain.where).toHaveBeenCalled();
   });

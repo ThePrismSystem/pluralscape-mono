@@ -224,7 +224,9 @@ describe("useCreateRelationship", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateRelationship());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.relationship.list.invalidate).toHaveBeenCalledWith({
@@ -238,7 +240,11 @@ describe("useUpdateRelationship", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdateRelationship());
 
-    await act(() => result.current.mutateAsync({ relationshipId: "rel_1" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        relationshipId: brandId<RelationshipId>("rel_1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.relationship.get.invalidate).toHaveBeenCalledWith({
@@ -256,7 +262,11 @@ describe("useArchiveRelationship", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useArchiveRelationship());
 
-    await act(() => result.current.mutateAsync({ relationshipId: "rel_2" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        relationshipId: brandId<RelationshipId>("rel_2"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.relationship.get.invalidate).toHaveBeenCalledWith({
@@ -274,7 +284,11 @@ describe("useRestoreRelationship", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useRestoreRelationship());
 
-    await act(() => result.current.mutateAsync({ relationshipId: "rel_3" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        relationshipId: brandId<RelationshipId>("rel_3"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.relationship.get.invalidate).toHaveBeenCalledWith({
@@ -292,7 +306,11 @@ describe("useDeleteRelationship", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useDeleteRelationship());
 
-    await act(() => result.current.mutateAsync({ relationshipId: "rel_4" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        relationshipId: brandId<RelationshipId>("rel_4"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.relationship.get.invalidate).toHaveBeenCalledWith({

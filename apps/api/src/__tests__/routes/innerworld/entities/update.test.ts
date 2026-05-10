@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -6,9 +7,14 @@ import {
   mockDbFactory,
   mockRateLimitFactory,
 } from "../../../helpers/common-route-mocks.js";
-import { MOCK_AUTH, createRouteApp } from "../../../helpers/route-test-setup.js";
+import { MOCK_SYSTEM_ID, createRouteApp } from "../../../helpers/route-test-setup.js";
 
-import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
+import type {
+  ApiErrorResponse,
+  EncryptedBase64,
+  InnerWorldEntityId,
+  InnerWorldRegionId,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -36,15 +42,15 @@ const BASE_URL = "/systems/sys_550e8400-e29b-41d4-a716-446655440000/innerworld/e
 const ENTITY_URL = `${BASE_URL}/iwe_660e8400-e29b-41d4-a716-446655440000`;
 
 const MOCK_ENTITY = {
-  id: "iwe_660e8400-e29b-41d4-a716-446655440000" as never,
-  systemId: MOCK_AUTH.systemId as never,
-  regionId: "iwr_test" as never,
+  id: brandId<InnerWorldEntityId>("iwe_660e8400-e29b-41d4-a716-446655440000"),
+  systemId: MOCK_SYSTEM_ID,
+  regionId: brandId<InnerWorldRegionId>("iwr_test"),
   encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 2,
   archived: false,
   archivedAt: null,
-  createdAt: 1000 as never,
-  updatedAt: 2000 as never,
+  createdAt: toUnixMillis(1000),
+  updatedAt: toUnixMillis(2000),
 };
 
 const VALID_BODY = { encryptedData: "dXBkYXRlZA==" as EncryptedBase64, version: 1 };

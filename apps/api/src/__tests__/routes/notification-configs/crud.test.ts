@@ -60,7 +60,10 @@ describe("GET /systems/:systemId/notification-configs", () => {
   });
 
   it("returns 200 with config list", async () => {
-    vi.mocked(listNotificationConfigs).mockResolvedValueOnce([MOCK_CONFIG] as never);
+    const list: unknown = [MOCK_CONFIG];
+    vi.mocked(listNotificationConfigs).mockResolvedValueOnce(
+      list as Awaited<ReturnType<typeof listNotificationConfigs>>,
+    );
 
     const res = await createApp().request(BASE_URL);
 
@@ -98,10 +101,10 @@ describe("PATCH /systems/:systemId/notification-configs/:eventType", () => {
   });
 
   it("returns 200 with updated config", async () => {
-    vi.mocked(updateNotificationConfig).mockResolvedValueOnce({
-      ...MOCK_CONFIG,
-      enabled: false,
-    } as never);
+    const updated: unknown = { ...MOCK_CONFIG, enabled: false };
+    vi.mocked(updateNotificationConfig).mockResolvedValueOnce(
+      updated as Awaited<ReturnType<typeof updateNotificationConfig>>,
+    );
 
     const res = await patchJSON(createApp(), `${BASE_URL}/switch-reminder`, {
       enabled: false,
@@ -113,7 +116,10 @@ describe("PATCH /systems/:systemId/notification-configs/:eventType", () => {
   });
 
   it("passes eventType and params to service", async () => {
-    vi.mocked(updateNotificationConfig).mockResolvedValueOnce(MOCK_CONFIG as never);
+    const opaque: unknown = MOCK_CONFIG;
+    vi.mocked(updateNotificationConfig).mockResolvedValueOnce(
+      opaque as Awaited<ReturnType<typeof updateNotificationConfig>>,
+    );
 
     await patchJSON(createApp(), `${BASE_URL}/switch-reminder`, {
       enabled: false,

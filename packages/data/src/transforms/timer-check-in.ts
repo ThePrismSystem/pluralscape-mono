@@ -8,13 +8,13 @@ import type {
   Archived,
   CheckInRecord,
   CheckInRecordId,
+  CheckInRecordWire,
   MemberId,
   SystemId,
   TimerConfig,
   TimerConfigEncryptedInput,
   TimerConfigWire,
   TimerId,
-  UnixMillis,
 } from "@pluralscape/types";
 
 /**
@@ -31,22 +31,9 @@ export interface TimerConfigPage {
   readonly nextCursor: string | null;
 }
 
-/** Wire shape for a single check-in record. */
-export interface CheckInRecordRaw {
-  readonly id: CheckInRecordId;
-  readonly timerConfigId: TimerId;
-  readonly systemId: SystemId;
-  readonly scheduledAt: UnixMillis;
-  readonly respondedByMemberId: MemberId | null;
-  readonly respondedAt: UnixMillis | null;
-  readonly dismissed: boolean;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-}
-
 /** Shape returned by `checkInRecord.list`. */
 export interface CheckInRecordPage {
-  readonly data: readonly CheckInRecordRaw[];
+  readonly data: readonly CheckInRecordWire[];
   readonly nextCursor: string | null;
 }
 
@@ -106,24 +93,29 @@ export function encryptTimerConfigUpdate(
 }
 
 export function decryptCheckInRecord(
-  raw: CheckInRecordRaw,
+  raw: CheckInRecordWire,
 ): CheckInRecord | Archived<CheckInRecord> {
+  const respondedByMemberId =
+    raw.respondedByMemberId === null ? null : brandId<MemberId>(raw.respondedByMemberId);
+  const respondedAt = raw.respondedAt === null ? null : toUnixMillis(raw.respondedAt);
+  const archivedAt = raw.archivedAt === null ? null : toUnixMillis(raw.archivedAt);
+
   const base = {
-    id: raw.id,
-    timerConfigId: raw.timerConfigId,
-    systemId: raw.systemId,
-    scheduledAt: raw.scheduledAt,
-    respondedByMemberId: raw.respondedByMemberId,
-    respondedAt: raw.respondedAt,
+    id: brandId<CheckInRecordId>(raw.id),
+    timerConfigId: brandId<TimerId>(raw.timerConfigId),
+    systemId: brandId<SystemId>(raw.systemId),
+    scheduledAt: toUnixMillis(raw.scheduledAt),
+    respondedByMemberId,
+    respondedAt,
     dismissed: raw.dismissed,
-    archivedAt: raw.archivedAt,
+    archivedAt,
   };
 
   if (raw.archived) {
-    if (raw.archivedAt === null) throw new Error("Archived check-in record missing archivedAt");
-    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
+    if (archivedAt === null) throw new Error("Archived check-in record missing archivedAt");
+    return { ...base, archived: true as const, archivedAt };
   }
-  return { ...base, archived: false as const, archivedAt: raw.archivedAt };
+  return { ...base, archived: false as const, archivedAt };
 }
 
 export function decryptCheckInRecordPage(raw: CheckInRecordPage): {

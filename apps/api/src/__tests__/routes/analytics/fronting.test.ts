@@ -47,7 +47,10 @@ describe("GET /systems/:systemId/analytics/fronting", () => {
   });
 
   it("returns 200 with breakdown", async () => {
-    vi.mocked(computeFrontingBreakdown).mockResolvedValueOnce({ entries: [] } as never);
+    const empty: unknown = { entries: [] };
+    vi.mocked(computeFrontingBreakdown).mockResolvedValueOnce(
+      empty as Awaited<ReturnType<typeof computeFrontingBreakdown>>,
+    );
 
     const res = await createApp().request(BASE_URL);
 
@@ -57,7 +60,10 @@ describe("GET /systems/:systemId/analytics/fronting", () => {
   });
 
   it("passes systemId and parsed query to service", async () => {
-    vi.mocked(computeFrontingBreakdown).mockResolvedValueOnce({ entries: [] } as never);
+    const empty: unknown = { entries: [] };
+    vi.mocked(computeFrontingBreakdown).mockResolvedValueOnce(
+      empty as Awaited<ReturnType<typeof computeFrontingBreakdown>>,
+    );
 
     await createApp().request(BASE_URL);
 

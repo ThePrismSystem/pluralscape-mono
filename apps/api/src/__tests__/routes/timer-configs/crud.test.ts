@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -6,9 +7,14 @@ import {
   mockDbFactory,
   mockRateLimitFactory,
 } from "../../helpers/common-route-mocks.js";
-import { MOCK_AUTH, createRouteApp, postJSON, putJSON } from "../../helpers/route-test-setup.js";
+import {
+  MOCK_SYSTEM_ID,
+  createRouteApp,
+  postJSON,
+  putJSON,
+} from "../../helpers/route-test-setup.js";
 
-import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, EncryptedBase64, TimerId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -58,8 +64,8 @@ const BASE_URL = "/systems/sys_550e8400-e29b-41d4-a716-446655440000/timer-config
 const TIMER_URL = `${BASE_URL}/tmr_660e8400-e29b-41d4-a716-446655440000`;
 
 const MOCK_TIMER = {
-  id: "tmr_660e8400-e29b-41d4-a716-446655440000" as never,
-  systemId: MOCK_AUTH.systemId as never,
+  id: brandId<TimerId>("tmr_660e8400-e29b-41d4-a716-446655440000"),
+  systemId: MOCK_SYSTEM_ID,
   enabled: true,
   intervalMinutes: 30,
   wakingHoursOnly: false as const,
@@ -69,8 +75,8 @@ const MOCK_TIMER = {
   version: 1,
   archived: false,
   archivedAt: null,
-  createdAt: 1000 as never,
-  updatedAt: 1000 as never,
+  createdAt: toUnixMillis(1000),
+  updatedAt: toUnixMillis(1000),
 };
 
 const EMPTY_PAGE = { data: [], nextCursor: null, hasMore: false, totalCount: null };

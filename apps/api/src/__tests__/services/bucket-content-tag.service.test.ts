@@ -5,6 +5,7 @@ import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
 import type { BucketContentEntityType, BucketId, MemberId, SystemId } from "@pluralscape/types";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Mock tx ──────────────────────────────────────────────────────────
 
@@ -35,6 +36,14 @@ function wireChain(): void {
 // ── Mocks ────────────────────────────────────────────────────────────
 
 const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+
+/**
+ * The service routes through a mocked tenant tx that ignores the db argument;
+ * tests pass an opaque stub. Widen via `unknown` so the cast to
+ * PostgresJsDatabase is a single `as` step.
+ */
+const MOCK_DB_STUB: unknown = {};
+const MOCK_DB = MOCK_DB_STUB as PostgresJsDatabase;
 
 vi.mock("../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn(),
@@ -133,14 +142,7 @@ describe("bucket-content-tag service", () => {
     it("tags content and returns result", async () => {
       mockTx.returning.mockResolvedValueOnce([makeTagRow()]);
 
-      const result = await tagContent(
-        {} as never,
-        SYSTEM_ID,
-        BUCKET_ID,
-        validPayload,
-        AUTH,
-        mockAudit,
-      );
+      const result = await tagContent(MOCK_DB, SYSTEM_ID, BUCKET_ID, validPayload, AUTH, mockAudit);
 
       expect(result.entityType).toBe(ENTITY_TYPE);
       expect(result.entityId).toBe(ENTITY_ID);
@@ -152,14 +154,7 @@ describe("bucket-content-tag service", () => {
     it("returns result without audit/webhook on conflict (duplicate tag)", async () => {
       mockTx.returning.mockResolvedValueOnce([]);
 
-      const result = await tagContent(
-        {} as never,
-        SYSTEM_ID,
-        BUCKET_ID,
-        validPayload,
-        AUTH,
-        mockAudit,
-      );
+      const result = await tagContent(MOCK_DB, SYSTEM_ID, BUCKET_ID, validPayload, AUTH, mockAudit);
 
       expect(result.entityType).toBe(ENTITY_TYPE);
       expect(mockAudit).not.toHaveBeenCalled();
@@ -170,14 +165,14 @@ describe("bucket-content-tag service", () => {
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
       await expect(
-        tagContent({} as never, SYSTEM_ID, BUCKET_ID, validPayload, AUTH, mockAudit),
+        tagContent(MOCK_DB, SYSTEM_ID, BUCKET_ID, validPayload, AUTH, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ status: 404 }));
     });
 
     it("calls assertBucketExists", async () => {
       mockTx.returning.mockResolvedValueOnce([makeTagRow()]);
 
-      await tagContent({} as never, SYSTEM_ID, BUCKET_ID, validPayload, AUTH, mockAudit);
+      await tagContent(MOCK_DB, SYSTEM_ID, BUCKET_ID, validPayload, AUTH, mockAudit);
 
       expect(assertBucketExists).toHaveBeenCalledWith(mockTx, SYSTEM_ID, BUCKET_ID);
     });
@@ -189,7 +184,7 @@ describe("bucket-content-tag service", () => {
     it("untags content and writes audit", async () => {
       mockTx.returning.mockResolvedValueOnce([makeTagRow()]);
 
-      await untagContent({} as never, SYSTEM_ID, BUCKET_ID, ENTITY_REF, AUTH, mockAudit);
+      await untagContent(MOCK_DB, SYSTEM_ID, BUCKET_ID, ENTITY_REF, AUTH, mockAudit);
 
       expect(mockAudit).toHaveBeenCalledWith(
         mockTx,
@@ -202,7 +197,7 @@ describe("bucket-content-tag service", () => {
       mockTx.returning.mockResolvedValueOnce([]);
 
       await expect(
-        untagContent({} as never, SYSTEM_ID, BUCKET_ID, ENTITY_REF, AUTH, mockAudit),
+        untagContent(MOCK_DB, SYSTEM_ID, BUCKET_ID, ENTITY_REF, AUTH, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
     });
 
@@ -210,7 +205,7 @@ describe("bucket-content-tag service", () => {
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
       await expect(
-        untagContent({} as never, SYSTEM_ID, BUCKET_ID, ENTITY_REF, AUTH, mockAudit),
+        untagContent(MOCK_DB, SYSTEM_ID, BUCKET_ID, ENTITY_REF, AUTH, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ status: 404 }));
     });
   });
@@ -224,7 +219,7 @@ describe("bucket-content-tag service", () => {
         makeTagRow({ entityId: "mem_880e8400-e29b-41d4-a716-446655440000" }),
       ]);
 
-      const result = await listTagsByBucket({} as never, SYSTEM_ID, BUCKET_ID, AUTH);
+      const result = await listTagsByBucket(MOCK_DB, SYSTEM_ID, BUCKET_ID, AUTH);
 
       expect(result).toHaveLength(2);
       expect(result[0]?.entityType).toBe(ENTITY_TYPE);
@@ -233,14 +228,14 @@ describe("bucket-content-tag service", () => {
     it("returns empty list when no tags", async () => {
       mockTx.limit.mockResolvedValueOnce([]);
 
-      const result = await listTagsByBucket({} as never, SYSTEM_ID, BUCKET_ID, AUTH);
+      const result = await listTagsByBucket(MOCK_DB, SYSTEM_ID, BUCKET_ID, AUTH);
       expect(result).toHaveLength(0);
     });
 
     it("filters by entityType when provided", async () => {
       mockTx.limit.mockResolvedValueOnce([]);
 
-      await listTagsByBucket({} as never, SYSTEM_ID, BUCKET_ID, AUTH, { entityType: ENTITY_TYPE });
+      await listTagsByBucket(MOCK_DB, SYSTEM_ID, BUCKET_ID, AUTH, { entityType: ENTITY_TYPE });
 
       expect(mockTx.where).toHaveBeenCalled();
     });
@@ -248,7 +243,7 @@ describe("bucket-content-tag service", () => {
     it("rejects when ownership check fails", async () => {
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
-      await expect(listTagsByBucket({} as never, SYSTEM_ID, BUCKET_ID, AUTH)).rejects.toThrow(
+      await expect(listTagsByBucket(MOCK_DB, SYSTEM_ID, BUCKET_ID, AUTH)).rejects.toThrow(
         expect.objectContaining({ status: 404 }),
       );
     });

@@ -81,7 +81,7 @@ vi.mock("@pluralscape/api-client/trpc", async () => {
             };
             if (opts.refetchInterval !== undefined) {
               fixtures.set("importJob.get.lastRefetchInterval", opts.refetchInterval);
-              queryOpts.refetchInterval = opts.refetchInterval as never;
+              queryOpts.refetchInterval = opts.refetchInterval as typeof queryOpts.refetchInterval;
             }
             return rq.useQuery(queryOpts);
           },

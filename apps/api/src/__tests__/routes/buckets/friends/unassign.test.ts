@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -8,7 +9,7 @@ import {
 } from "../../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, MOCK_SYSTEM_ID, createRouteApp } from "../../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, BucketId, SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -43,8 +44,8 @@ const BASE_URL = `/systems/${SYS_ID}/buckets/${BUCKET_ID}/friends/${CONNECTION_I
 
 const MOCK_UNASSIGN_RESULT = {
   pendingRotation: {
-    systemId: SYS_ID as never,
-    bucketId: BUCKET_ID as never,
+    systemId: brandId<SystemId>(SYS_ID),
+    bucketId: brandId<BucketId>(BUCKET_ID),
   },
 };
 

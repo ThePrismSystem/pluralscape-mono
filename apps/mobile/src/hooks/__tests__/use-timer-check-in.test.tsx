@@ -439,7 +439,9 @@ describe("useCreateTimer", () => {
   it("invalidates timerConfig.list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateTimer());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.timerConfig.list.invalidate).toHaveBeenCalledWith({
@@ -453,7 +455,11 @@ describe("useUpdateTimer", () => {
   it("invalidates timerConfig.get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdateTimer());
 
-    await act(() => result.current.mutateAsync({ timerId: "tmr-1" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        timerId: brandId<TimerId>("tmr-1"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.timerConfig.get.invalidate).toHaveBeenCalledWith({
@@ -471,7 +477,11 @@ describe("useDeleteTimer", () => {
   it("invalidates timerConfig.get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useDeleteTimer());
 
-    await act(() => result.current.mutateAsync({ timerId: "tmr-2" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        timerId: brandId<TimerId>("tmr-2"),
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.timerConfig.get.invalidate).toHaveBeenCalledWith({
@@ -489,7 +499,9 @@ describe("useCreateCheckIn", () => {
   it("invalidates checkInRecord.list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateCheckIn());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.checkInRecord.list.invalidate).toHaveBeenCalledWith({
@@ -503,7 +515,11 @@ describe("useMarkCheckInResponded", () => {
   it("invalidates checkInRecord.get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useMarkCheckInResponded());
 
-    await act(() => result.current.mutateAsync({ recordId: "cir-1" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        recordId: "cir-1",
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.checkInRecord.get.invalidate).toHaveBeenCalledWith({
@@ -521,7 +537,11 @@ describe("useMarkCheckInDismissed", () => {
   it("invalidates checkInRecord.get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useMarkCheckInDismissed());
 
-    await act(() => result.current.mutateAsync({ recordId: "cir-2" } as never));
+    await act(() =>
+      result.current.mutateAsync({
+        recordId: "cir-2",
+      } as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.checkInRecord.get.invalidate).toHaveBeenCalledWith({

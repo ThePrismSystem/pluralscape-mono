@@ -2,6 +2,17 @@ import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AccountId, ApiKeyId, ApiKeyScope, SystemId } from "@pluralscape/types";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+
+/**
+ * Widen the mock chain object so it can be passed where the validator
+ * expects a PostgresJsDatabase. The runtime shape duck-types as needed
+ * for the methods exercised; the cast is a single `as` step after going
+ * through `unknown`.
+ */
+function asDb(mock: unknown): PostgresJsDatabase {
+  return mock as PostgresJsDatabase;
+}
 
 // ── Mock db chain ───────────────────────────────────────────────────
 
@@ -96,7 +107,7 @@ describe("validateApiKey", () => {
   it("returns result for valid, non-revoked, non-expired key", async () => {
     mockChain.limit.mockResolvedValueOnce([makeValidRow()]);
 
-    const result = await validateApiKey(mockChain as never, TOKEN);
+    const result = await validateApiKey(asDb(mockChain), TOKEN);
 
     expect(result).not.toBeNull();
     expect(result?.accountId).toBe(ACCOUNT_ID);
@@ -107,7 +118,7 @@ describe("validateApiKey", () => {
 
   it("returns null when no row matches the token hash", async () => {
     // limit defaults to [] — no rows
-    const result = await validateApiKey(mockChain as never, TOKEN);
+    const result = await validateApiKey(asDb(mockChain), TOKEN);
 
     expect(result).toBeNull();
   });
@@ -115,7 +126,7 @@ describe("validateApiKey", () => {
   it("returns null when key is revoked", async () => {
     mockChain.limit.mockResolvedValueOnce([makeValidRow({ revokedAt: 500 })]);
 
-    const result = await validateApiKey(mockChain as never, TOKEN);
+    const result = await validateApiKey(asDb(mockChain), TOKEN);
 
     expect(result).toBeNull();
   });
@@ -124,7 +135,7 @@ describe("validateApiKey", () => {
     mockNow = 2000;
     mockChain.limit.mockResolvedValueOnce([makeValidRow({ expiresAt: 1500 })]);
 
-    const result = await validateApiKey(mockChain as never, TOKEN);
+    const result = await validateApiKey(asDb(mockChain), TOKEN);
 
     expect(result).toBeNull();
   });
@@ -133,7 +144,7 @@ describe("validateApiKey", () => {
     mockNow = 1000;
     mockChain.limit.mockResolvedValueOnce([makeValidRow({ expiresAt: 5000 })]);
 
-    const result = await validateApiKey(mockChain as never, TOKEN);
+    const result = await validateApiKey(asDb(mockChain), TOKEN);
 
     expect(result).not.toBeNull();
     expect(result?.keyId).toBe(KEY_ID);
@@ -142,7 +153,7 @@ describe("validateApiKey", () => {
   it("returns result when expiresAt is null (no expiry)", async () => {
     mockChain.limit.mockResolvedValueOnce([makeValidRow({ expiresAt: null })]);
 
-    const result = await validateApiKey(mockChain as never, TOKEN);
+    const result = await validateApiKey(asDb(mockChain), TOKEN);
 
     expect(result).not.toBeNull();
     expect(result?.keyId).toBe(KEY_ID);
@@ -151,7 +162,7 @@ describe("validateApiKey", () => {
   it("includes auditLogIpTracking from joined account", async () => {
     mockChain.limit.mockResolvedValueOnce([makeValidRow({ auditLogIpTracking: true })]);
 
-    const result = await validateApiKey(mockChain as never, TOKEN);
+    const result = await validateApiKey(asDb(mockChain), TOKEN);
 
     expect(result).not.toBeNull();
     expect(result?.auditLogIpTracking).toBe(true);
@@ -160,7 +171,7 @@ describe("validateApiKey", () => {
   it("hashes token with HMAC-SHA256 for lookup", async () => {
     mockChain.limit.mockResolvedValueOnce([makeValidRow()]);
 
-    await validateApiKey(mockChain as never, TOKEN);
+    await validateApiKey(asDb(mockChain), TOKEN);
 
     // Verify innerJoin and where were called (proving the query chain ran)
     expect(mockChain.innerJoin).toHaveBeenCalled();

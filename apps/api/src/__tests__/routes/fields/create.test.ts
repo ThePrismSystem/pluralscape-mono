@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -9,7 +10,12 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp, postJSON } from "../../helpers/route-test-setup.js";
 
-import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
+import type {
+  ApiErrorResponse,
+  FieldDefinitionId,
+  EncryptedBase64,
+  SystemId,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -47,15 +53,15 @@ const VALID_BODY = {
 };
 
 const FIELD_DEFINITION_RESULT = {
-  id: FLD_ID as never,
-  systemId: SYS_ID as never,
+  id: brandId<FieldDefinitionId>(FLD_ID),
+  systemId: brandId<SystemId>(SYS_ID),
   fieldType: "text" as const,
   required: false,
   sortOrder: 0,
   encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
-  createdAt: 1000 as never,
-  updatedAt: 1000 as never,
+  createdAt: toUnixMillis(1000),
+  updatedAt: toUnixMillis(1000),
   archived: false,
   archivedAt: null,
 };

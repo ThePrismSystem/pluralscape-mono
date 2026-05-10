@@ -3,11 +3,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type {
+  AccountId,
   BucketId,
   FriendAccessContext,
   FriendConnectionId,
+  SessionId,
   SystemId,
 } from "@pluralscape/types";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+
+/**
+ * Widen `{}` through `unknown` so the cast to `PostgresJsDatabase` is a
+ * single `as` step. The mock chain (mockTx) is what actually answers; the
+ * `db` argument is opaque to `withCrossAccountRead` (which is mocked).
+ */
+function asDb(): PostgresJsDatabase {
+  const opaque: unknown = {};
+  return opaque as PostgresJsDatabase;
+}
 
 // ── Mocks ─────────────────────────────────────────────────────────
 
@@ -90,23 +103,24 @@ const BUCKET_A = brandId<BucketId>("bkt_aaa");
 
 function makeAuth(): AuthContext {
   return {
-    accountId: "acc_caller",
+    authMethod: "session" as const,
+    accountId: brandId<AccountId>("acc_caller"),
     systemId: null,
-    sessionId: "sess_test",
+    sessionId: brandId<SessionId>("sess_test"),
     accountType: "system" as const,
     ownedSystemIds: new Set<SystemId>(),
     auditLogIpTracking: false,
-  } as never;
+  };
 }
 
 function makeAccessContext(overrides?: Partial<FriendAccessContext>): FriendAccessContext {
   return {
-    targetAccountId: "acc_target",
+    targetAccountId: brandId<AccountId>("acc_target"),
     targetSystemId: SYSTEM_ID,
     connectionId: CONNECTION_ID,
     assignedBucketIds: [BUCKET_A],
     ...overrides,
-  } as never;
+  };
 }
 
 // ── Tests ─────────────────────────────────────────────────────────
@@ -128,7 +142,7 @@ describe("getFriendDashboardSync", () => {
     // frontingSessionSyncEntry query
     mockTx.where.mockResolvedValueOnce([{ count: 4, latest: 1100 }]);
 
-    const result = await getFriendDashboardSync({} as never, CONNECTION_ID, makeAuth());
+    const result = await getFriendDashboardSync(asDb(), CONNECTION_ID, makeAuth());
 
     expect(result.systemId).toBe(SYSTEM_ID);
     expect(result.entries).toHaveLength(4);
@@ -162,7 +176,7 @@ describe("getFriendDashboardSync", () => {
     // All helpers (including frontingSessionSyncEntry) now take bucketIds
     // and early-return when bucketIds is empty — no DB queries needed.
 
-    const result = await getFriendDashboardSync({} as never, CONNECTION_ID, makeAuth());
+    const result = await getFriendDashboardSync(asDb(), CONNECTION_ID, makeAuth());
 
     expect(result.entries).toHaveLength(4);
 
@@ -198,7 +212,7 @@ describe("getFriendDashboardSync", () => {
     mockTx.where.mockResolvedValueOnce([{ count: undefined, latest: undefined }]);
     mockTx.where.mockResolvedValueOnce([{ count: undefined, latest: undefined }]);
 
-    const result = await getFriendDashboardSync({} as never, CONNECTION_ID, makeAuth());
+    const result = await getFriendDashboardSync(asDb(), CONNECTION_ID, makeAuth());
 
     for (const entry of result.entries) {
       expect(entry.count).toBe(0);
@@ -215,7 +229,7 @@ describe("getFriendDashboardSync", () => {
     mockTx.where.mockResolvedValueOnce([]);
     mockTx.where.mockResolvedValueOnce([]);
 
-    const result = await getFriendDashboardSync({} as never, CONNECTION_ID, makeAuth());
+    const result = await getFriendDashboardSync(asDb(), CONNECTION_ID, makeAuth());
 
     for (const entry of result.entries) {
       expect(entry.count).toBe(0);
@@ -226,7 +240,7 @@ describe("getFriendDashboardSync", () => {
   it("propagates errors from assertFriendAccess", async () => {
     vi.mocked(assertFriendAccess).mockRejectedValueOnce(new Error("Friend connection not found"));
 
-    await expect(getFriendDashboardSync({} as never, CONNECTION_ID, makeAuth())).rejects.toThrow(
+    await expect(getFriendDashboardSync(asDb(), CONNECTION_ID, makeAuth())).rejects.toThrow(
       "Friend connection not found",
     );
   });
@@ -243,7 +257,7 @@ describe("getFriendDashboardSync", () => {
     // fronting-session: no rows
     mockTx.where.mockResolvedValueOnce([]);
 
-    const result = await getFriendDashboardSync({} as never, CONNECTION_ID, makeAuth());
+    const result = await getFriendDashboardSync(asDb(), CONNECTION_ID, makeAuth());
 
     expect(result.entries[0]).toEqual({
       entityType: "member",

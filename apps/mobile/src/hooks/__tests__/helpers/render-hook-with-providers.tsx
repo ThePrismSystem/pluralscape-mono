@@ -12,11 +12,20 @@ import { SyncCtx } from "../../../sync/sync-context.js";
 
 import { TEST_ACCOUNT_ID, TEST_MASTER_KEY, TEST_SYSTEM_ID } from "./test-crypto.js";
 
+import type { AuthSession, AuthStateSnapshot } from "../../../auth/auth-types.js";
 import type { DataLayerContextValue } from "../../../data/DataLayerProvider.js";
 import type { LocalDatabase } from "../../../data/local-database.js";
 import type { PlatformContext } from "../../../platform/types.js";
 import type { SyncContextValue } from "../../../sync/sync-context.js";
-import type { KdfMasterKey, SodiumAdapter } from "@pluralscape/crypto";
+import type {
+  BoxPublicKey,
+  BoxSecretKey,
+  KdfMasterKey,
+  PwhashSalt,
+  SignPublicKey,
+  SignSecretKey,
+  SodiumAdapter,
+} from "@pluralscape/crypto";
 import type { DataLayerEventMap, EventBus } from "@pluralscape/sync";
 import type {
   OfflineQueueAdapter,
@@ -122,6 +131,17 @@ function createTestQueryClient(): QueryClient {
   });
 }
 
+const STUB_IDENTITY_KEYS: AuthSession["identityKeys"] = {
+  sign: {
+    publicKey: new Uint8Array(32) as SignPublicKey,
+    secretKey: new Uint8Array(64) as SignSecretKey,
+  },
+  box: {
+    publicKey: new Uint8Array(32) as BoxPublicKey,
+    secretKey: new Uint8Array(32) as BoxSecretKey,
+  },
+};
+
 export function renderHookWithProviders<TResult>(
   hook: () => TResult,
   opts?: RenderOptions,
@@ -152,19 +172,23 @@ export function renderHookWithProviders<TResult>(
       }
     : null;
 
-  const authSnapshot =
+  const authSnapshot: AuthStateSnapshot =
     accountId !== null
-      ? ({
-          state: "unlocked",
-          credentials: {
+      ? (() => {
+          const credentials = {
             sessionToken: "test-token",
             accountId,
             systemId: TEST_SYSTEM_ID,
-            salt: new Uint8Array(16) as never,
-          },
-          session: null as never,
-        } as const)
-      : ({ state: "unauthenticated", session: null, credentials: null } as const);
+            salt: new Uint8Array(16) as PwhashSalt,
+          } as const;
+          const session: AuthSession = {
+            credentials,
+            masterKey: TEST_MASTER_KEY,
+            identityKeys: STUB_IDENTITY_KEYS,
+          };
+          return { state: "unlocked", credentials, session };
+        })()
+      : { state: "unauthenticated", session: null, credentials: null };
 
   const authValue = {
     snapshot: authSnapshot,

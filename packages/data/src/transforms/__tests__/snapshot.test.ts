@@ -8,9 +8,13 @@ import { decryptSnapshot, decryptSnapshotPage, encryptSnapshotInput } from "../s
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { SnapshotRaw } from "../snapshot.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { SnapshotContent, SystemSnapshotId, SystemId } from "@pluralscape/types";
+import type {
+  SnapshotContent,
+  SystemId,
+  SystemSnapshotId,
+  SystemSnapshotWire,
+} from "@pluralscape/types";
 
 let masterKey: KdfMasterKey;
 
@@ -39,7 +43,7 @@ function makeSnapshotContent(): SnapshotContent {
   };
 }
 
-function makeRawSnapshot(overrides?: Partial<SnapshotRaw>): SnapshotRaw {
+function makeRawSnapshot(overrides?: Partial<SystemSnapshotWire>): SystemSnapshotWire {
   return {
     id: brandId<SystemSnapshotId>("snap_001"),
     systemId: brandId<SystemId>("sys_test"),

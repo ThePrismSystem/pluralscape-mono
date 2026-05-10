@@ -167,7 +167,7 @@ describe("useCreateSystem", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useCreateSystem());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() => result.current.mutateAsync());
 
     await waitFor(() => {
       expect(mockUtils.system.list.invalidate).toHaveBeenCalled();
@@ -179,7 +179,9 @@ describe("useUpdateSystem", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdateSystem());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.system.get.invalidate).toHaveBeenCalledWith({
@@ -194,7 +196,9 @@ describe("useArchiveSystem", () => {
   it("invalidates get and list on success", async () => {
     const { result } = renderHookWithProviders(() => useArchiveSystem());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.system.get.invalidate).toHaveBeenCalledWith({
@@ -209,7 +213,9 @@ describe("useDuplicateSystem", () => {
   it("invalidates list on success", async () => {
     const { result } = renderHookWithProviders(() => useDuplicateSystem());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockUtils.system.list.invalidate).toHaveBeenCalled();
@@ -221,7 +227,9 @@ describe("usePurgeSystem", () => {
   it("invalidates all cached data on success", async () => {
     const { result } = renderHookWithProviders(() => usePurgeSystem());
 
-    await act(() => result.current.mutateAsync({} as never));
+    await act(() =>
+      result.current.mutateAsync({} as Parameters<typeof result.current.mutateAsync>[0]),
+    );
 
     await waitFor(() => {
       expect(mockInvalidateAll).toHaveBeenCalled();

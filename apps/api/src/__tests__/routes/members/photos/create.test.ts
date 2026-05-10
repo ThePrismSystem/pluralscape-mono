@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -9,7 +10,13 @@ import {
 } from "../../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp, postJSON } from "../../../helpers/route-test-setup.js";
 
-import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
+import type {
+  ApiErrorResponse,
+  EncryptedBase64,
+  MemberId,
+  MemberPhotoId,
+  SystemId,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -42,14 +49,14 @@ const createApp = () => createRouteApp("/systems", systemRoutes);
 const VALID_BODY = { encryptedData: "dGVzdA==" as EncryptedBase64 };
 
 const PHOTO_RESULT = {
-  id: "mp_550e8400-e29b-41d4-a716-446655440000" as never,
-  memberId: MEM_ID as never,
-  systemId: SYS_ID as never,
+  id: brandId<MemberPhotoId>("mp_550e8400-e29b-41d4-a716-446655440000"),
+  memberId: brandId<MemberId>(MEM_ID),
+  systemId: brandId<SystemId>(SYS_ID),
   sortOrder: 0,
   encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
-  createdAt: 1000 as never,
-  updatedAt: 1000 as never,
+  createdAt: toUnixMillis(1000),
+  updatedAt: toUnixMillis(1000),
   archived: false,
   archivedAt: null,
 };

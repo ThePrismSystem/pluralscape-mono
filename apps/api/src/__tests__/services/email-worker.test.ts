@@ -75,6 +75,16 @@ function makeJobPayload(
   };
 }
 
+/**
+ * Build a deliberately-malformed email-send payload to exercise the worker's
+ * runtime input validation. The compile-time type rejects these `vars`
+ * values, so we widen through `unknown` and cast — a single `as` step.
+ */
+function makeMalformedJobPayload(varsOverride: unknown): JobPayloadMap["email-send"] {
+  const malformed: unknown = { ...makeJobPayload(), vars: varsOverride };
+  return malformed as JobPayloadMap["email-send"];
+}
+
 // ── Tests ────────────────────────────────────────────────────────────
 
 describe("email-worker", () => {
@@ -137,7 +147,7 @@ describe("email-worker", () => {
       const { db } = mockDb();
       mockResolveAccountEmail.mockResolvedValueOnce("user@example.com");
 
-      await expect(processEmailJob(db, makeJobPayload({ vars: null as never }))).rejects.toThrow(
+      await expect(processEmailJob(db, makeMalformedJobPayload(null))).rejects.toThrow(
         "Invalid template vars",
       );
     });
@@ -146,7 +156,7 @@ describe("email-worker", () => {
       const { db } = mockDb();
       mockResolveAccountEmail.mockResolvedValueOnce("user@example.com");
 
-      await expect(processEmailJob(db, makeJobPayload({ vars: "bad" as never }))).rejects.toThrow(
+      await expect(processEmailJob(db, makeMalformedJobPayload("bad"))).rejects.toThrow(
         "Invalid template vars",
       );
     });
@@ -155,16 +165,16 @@ describe("email-worker", () => {
       const { db } = mockDb();
       mockResolveAccountEmail.mockResolvedValueOnce("user@example.com");
 
-      await expect(
-        processEmailJob(db, makeJobPayload({ vars: undefined as never })),
-      ).rejects.toThrow("Invalid template vars");
+      await expect(processEmailJob(db, makeMalformedJobPayload(undefined))).rejects.toThrow(
+        "Invalid template vars",
+      );
     });
 
     it("includes template name in assertion error message", async () => {
       const { db } = mockDb();
       mockResolveAccountEmail.mockResolvedValueOnce("user@example.com");
 
-      await expect(processEmailJob(db, makeJobPayload({ vars: null as never }))).rejects.toThrow(
+      await expect(processEmailJob(db, makeMalformedJobPayload(null))).rejects.toThrow(
         "recovery-key-regenerated",
       );
     });
