@@ -198,7 +198,6 @@ StyleDictionary.registerFormat({
   format: ({ dictionary }) => {
     const sem = {};
     for (const t of dictionary.allTokens) {
-      if (!t.path[0] === "semantic") continue;
       if (t.path[0] === "semantic" && t.path[1] === "default") {
         sem[t.path[2]] = t.value;
       }
@@ -295,13 +294,6 @@ const palette = {
 };
 
 // Spacing: scale (xs, sm, md, lg, xl, 2xl) — raw numbers
-const spacingScale = sortedObj(
-  Object.entries(colors.scale ?? {})
-    .concat(Object.entries(spacing.scale ?? {}))
-    .filter(([k]) => !["_doc"].includes(k))
-    .map(([k, v]) => [k, typeof v === "number" ? v : primitiveVal(v)]),
-);
-// Use spacing.scale directly since colors has no 'scale'
 const spacingOut = sortedObj(
   Object.entries(spacing.scale ?? {})
     .filter(([k]) => k !== "_doc")
