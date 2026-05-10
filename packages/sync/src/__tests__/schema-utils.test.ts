@@ -7,7 +7,7 @@ import type { MemberId } from "@pluralscape/types";
 
 describe("entityKeys", () => {
   it("returns keys preserving the branded type", () => {
-    const record: Record<MemberId, { name: string }> = {} as Record<MemberId, { name: string }>;
+    const record: Record<MemberId, { name: string }> = {};
 
     (record as Record<string, { name: string }>)["mem_1"] = { name: "Alice" };
 
@@ -20,14 +20,14 @@ describe("entityKeys", () => {
   });
 
   it("returns empty array for empty record", () => {
-    const record: Record<MemberId, unknown> = {} as Record<MemberId, unknown>;
+    const record: Record<MemberId, unknown> = {};
     expect(entityKeys(record)).toHaveLength(0);
   });
 });
 
 describe("entityEntries", () => {
   it("returns entries preserving the branded key type", () => {
-    const record: Record<MemberId, { name: string }> = {} as Record<MemberId, { name: string }>;
+    const record: Record<MemberId, { name: string }> = {};
 
     (record as Record<string, { name: string }>)["mem_1"] = { name: "Alice" };
     (record as Record<string, { name: string }>)["mem_2"] = { name: "Bob" };
@@ -39,7 +39,7 @@ describe("entityEntries", () => {
   });
 
   it("returns empty array for empty record", () => {
-    const record: Record<MemberId, unknown> = {} as Record<MemberId, unknown>;
+    const record: Record<MemberId, unknown> = {};
     expect(entityEntries(record)).toHaveLength(0);
   });
 });

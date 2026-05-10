@@ -91,7 +91,7 @@ export async function restoreEntity<
         [parentFieldName]: newParentId,
         updatedAt: timestamp,
         version: sql`${columns.version} + 1`,
-      } as Record<string, unknown>)
+      })
       .where(and(eq(columns.id, entityId), eq(columns.systemId, systemId)))
       .returning();
 

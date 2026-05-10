@@ -247,7 +247,7 @@ describe("runAllValidations: onError callback invocation", () => {
       };
     });
 
-    const result = runAllValidations(session as EncryptedSyncSession<unknown>);
+    const result = runAllValidations(session);
 
     expect(result.webhookConfigIssues).toBe(1);
     expect(result.notifications.some((n) => n.fieldName === "url")).toBe(true);

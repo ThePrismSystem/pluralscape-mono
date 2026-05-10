@@ -137,7 +137,7 @@ export function makeBatchDispatch(
   mapBatch: (docs: readonly SourceDocument[], ctx: MappingContext) => readonly BatchMapperOutput[],
 ): Readonly<Record<string, MapperDispatchEntry>> {
   return {
-    items: { entityType: "member", batch: true, mapBatch } as BatchMapperEntry,
+    items: { entityType: "member", batch: true, mapBatch },
   };
 }
 

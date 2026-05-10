@@ -63,7 +63,7 @@ function immStr(val: string): ImmutableString {
  * Each bucket ID becomes a key mapped to `true`.
  */
 function bucketArrayToMap(bucketIds: readonly BucketId[]): Record<BucketId, true> {
-  return Object.fromEntries(bucketIds.map((id) => [id, true])) as Record<BucketId, true>;
+  return Object.fromEntries(bucketIds.map((id) => [id, true]));
 }
 
 // ── pure projection functions ────────────────────────────────────────

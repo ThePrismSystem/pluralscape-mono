@@ -9,7 +9,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse, EncryptedBase64, SystemId } from "@pluralscape/types";
+import type { ApiErrorResponse, SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -48,7 +48,7 @@ describe("GET /systems/:id", () => {
   it("returns 200 with system profile", async () => {
     vi.mocked(getSystemProfile).mockResolvedValueOnce({
       id: brandId<SystemId>("sys_550e8400-e29b-41d4-a716-446655440000"),
-      encryptedData: "dGVzdA==" as EncryptedBase64,
+      encryptedData: "dGVzdA==",
       version: 1,
       createdAt: toUnixMillis(1000),
       updatedAt: toUnixMillis(1000),

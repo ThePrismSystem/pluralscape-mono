@@ -299,7 +299,7 @@ describe("PostMergeValidator: validateBucketContentTags", () => {
       documentId: asSyncDocId("doc-bct-no-field"),
       sodium,
     });
-    const result = validateBucketContentTags(session as EncryptedSyncSession<unknown>);
+    const result = validateBucketContentTags(session);
     expect(result.count).toBe(0);
     expect(result.notifications).toHaveLength(0);
     expect(result.envelope).toBeNull();

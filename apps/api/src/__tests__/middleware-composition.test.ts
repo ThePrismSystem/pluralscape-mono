@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ApiErrorResponse } from "@pluralscape/types";
 
 const mockEnv = vi.hoisted(() => ({
-  NODE_ENV: "test" as "development" | "test" | "production",
+  NODE_ENV: "test",
   LOG_LEVEL: "info" as const,
   TRUST_PROXY: false,
   DISABLE_RATE_LIMIT: false,

@@ -108,7 +108,7 @@ export async function archiveEntity<TId extends string>(
         archivedAt: timestamp,
         updatedAt: timestamp,
         version: sql`${columns.version} + 1`,
-      } as Record<string, unknown>)
+      })
       .where(
         and(eq(columns.id, entityId), eq(columns.systemId, systemId), eq(columns.archived, false)),
       )
@@ -176,7 +176,7 @@ export async function restoreEntity<TId extends string, TResult>(
         archivedAt: null,
         updatedAt: timestamp,
         version: sql`${columns.version} + 1`,
-      } as Record<string, unknown>)
+      })
       .where(
         and(eq(columns.id, entityId), eq(columns.systemId, systemId), eq(columns.archived, true)),
       )
@@ -243,7 +243,7 @@ export async function archiveAccountEntity<TId extends string>(
         archivedAt: timestamp,
         updatedAt: timestamp,
         version: sql`${columns.version} + 1`,
-      } as Record<string, unknown>)
+      })
       .where(
         and(
           eq(columns.id, entityId),
@@ -313,7 +313,7 @@ export async function restoreAccountEntity<TId extends string, TResult>(
         archivedAt: null,
         updatedAt: timestamp,
         version: sql`${columns.version} + 1`,
-      } as Record<string, unknown>)
+      })
       .where(
         and(eq(columns.id, entityId), eq(columns.accountId, accountId), eq(columns.archived, true)),
       )

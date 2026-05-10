@@ -67,7 +67,7 @@ const MOCK_RESULT: ChannelResult = {
   type: "channel",
   parentId: null,
   sortOrder: 0,
-  encryptedData: "dGVzdA==" as EncryptedBase64,
+  encryptedData: "dGVzdA==",
   version: 1,
   createdAt: toUnixMillis(1000),
   updatedAt: toUnixMillis(1000),

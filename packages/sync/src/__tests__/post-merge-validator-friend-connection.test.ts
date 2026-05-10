@@ -255,7 +255,7 @@ describe("normalizeFriendConnection: additional branch coverage", () => {
       sodium,
     });
 
-    const result = normalizeFriendConnection(session as EncryptedSyncSession<unknown>);
+    const result = normalizeFriendConnection(session);
 
     expect(result.count).toBe(0);
     expect(result.envelope).toBeNull();

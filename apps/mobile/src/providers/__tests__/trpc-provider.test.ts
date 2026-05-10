@@ -119,6 +119,6 @@ describe("shouldRetryRateLimit", () => {
 
   it("returns false when error data is missing", () => {
     const opts = { error: {}, attempts: 1 };
-    expect(shouldRetryRateLimit(opts as Parameters<typeof shouldRetryRateLimit>[0])).toBe(false);
+    expect(shouldRetryRateLimit(opts)).toBe(false);
   });
 });

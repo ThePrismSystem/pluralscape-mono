@@ -29,13 +29,7 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type {
-  AccountId,
-  ApiErrorCode,
-  BucketId,
-  FriendConnectionId,
-  SystemId,
-} from "@pluralscape/types";
+import type { AccountId, BucketId, FriendConnectionId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { buckets, friendConnections, friendBucketAssignments, keyGrants } = schema;
@@ -215,7 +209,7 @@ describe("bucket-assignment.service (PGlite integration)", () => {
           auth,
           noopAudit,
         ),
-        "CONNECTION_NOT_ACCEPTED" as ApiErrorCode,
+        "CONNECTION_NOT_ACCEPTED",
         400,
       );
     });

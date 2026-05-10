@@ -45,7 +45,7 @@ function newDb(): MockDatabase {
       executeSync: vi.fn((params?: SQLiteBindParams) => {
         void params;
         return newResult<TRow>(queryRows.get(sql) ?? []);
-      }) as MockStatement<TRow>["executeSync"],
+      }),
       finalizeSync: vi.fn(),
     }),
     execSync: vi.fn(),

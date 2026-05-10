@@ -67,7 +67,7 @@ describe("materializer-registry", () => {
     }
 
     it("delegates to materializeDocument and emits lifecycle events", () => {
-      const m = createMaterializer("system-core" as SyncDocumentType);
+      const m = createMaterializer("system-core");
       const db = makeDb();
       const bus = makeEventBus();
       const received: string[] = [];
@@ -86,7 +86,7 @@ describe("materializer-registry", () => {
     });
 
     it("forwards the dirtyEntityTypes set to materializeDocument", () => {
-      const m = createMaterializer("system-core" as SyncDocumentType);
+      const m = createMaterializer("system-core");
       const queryAll = vi.fn().mockReturnValue([] as EntityRow[]);
       const db: MaterializerDb = {
         queryAll,

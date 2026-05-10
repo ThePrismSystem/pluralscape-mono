@@ -37,7 +37,7 @@ export function validateBucketContentTags(session: EncryptedSyncSession<unknown>
       typeof rawType === "object" &&
       rawType !== null &&
       "val" in rawType &&
-      typeof (rawType as { val: unknown }).val === "string"
+      typeof rawType.val === "string"
     ) {
       typeStr = (rawType as { val: string }).val;
     }

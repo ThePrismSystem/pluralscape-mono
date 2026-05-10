@@ -159,7 +159,7 @@ describe("member router", () => {
         caller.member.update({
           systemId: MOCK_SYSTEM_ID,
           memberId: MEMBER_ID,
-          encryptedData: "dGVzdGRhdGFmb3JtZW1iZXI=" as EncryptedBase64,
+          encryptedData: "dGVzdGRhdGFmb3JtZW1iZXI=",
           version: 1,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "CONFLICT" }));
@@ -173,7 +173,7 @@ describe("member router", () => {
       await expect(
         caller.member.create({
           systemId: MOCK_SYSTEM_ID,
-          encryptedData: "dGVzdGRhdGFmb3JtZW1iZXI=" as EncryptedBase64,
+          encryptedData: "dGVzdGRhdGFmb3JtZW1iZXI=",
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });

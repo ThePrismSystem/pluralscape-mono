@@ -59,9 +59,7 @@ export function useFrontingSession(
     decrypt: decryptFrontingSession,
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.frontingSession.get.useQuery({ systemId, sessionId }, { enabled, select }) as DataQuery<
-        FrontingSession | Archived<FrontingSession>
-      >,
+      trpc.frontingSession.get.useQuery({ systemId, sessionId }, { enabled, select }),
   });
 }
 
@@ -109,7 +107,7 @@ export function useFrontingSessionsList(
           getNextPageParam: (lastPage: FrontingSessionWirePage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<FrontingSession | Archived<FrontingSession>>,
+      ),
   });
 }
 

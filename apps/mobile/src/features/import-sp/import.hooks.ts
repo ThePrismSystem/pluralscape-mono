@@ -48,12 +48,7 @@ import type { AppRouter, RouterOutput } from "@pluralscape/api-client/trpc";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { AvatarFetcher } from "@pluralscape/import-sp/avatar-fetcher-types";
 import type { ImportDataSource } from "@pluralscape/import-sp/source-types";
-import type {
-  ImportCheckpointState,
-  ImportCollectionType,
-  ImportJobId,
-  SystemId,
-} from "@pluralscape/types";
+import type { ImportCheckpointState, ImportJobId, SystemId } from "@pluralscape/types";
 import type { TRPCClient, TRPCUntypedClient } from "@trpc/client";
 
 /** Shape returned by `trpc.importJob.get.useQuery` — includes `checkpointState`. */
@@ -254,10 +249,7 @@ export function useStartImport(): UseStartImportReturn {
         const job = await createJobAsync({
           systemId: activeSystemId,
           source: "simply-plural",
-          selectedCategories: args.options.selectedCategories as Record<
-            ImportCollectionType,
-            boolean | undefined
-          >,
+          selectedCategories: args.options.selectedCategories,
           avatarMode: args.options.avatarMode,
         });
         if (args.options.persistToken === true) {
@@ -300,10 +292,7 @@ export function useStartImport(): UseStartImportReturn {
         const job = await createJobAsync({
           systemId: activeSystemId,
           source: "simply-plural",
-          selectedCategories: args.options.selectedCategories as Record<
-            ImportCollectionType,
-            boolean | undefined
-          >,
+          selectedCategories: args.options.selectedCategories,
           avatarMode: args.options.avatarMode,
         });
         const controller = new AbortController();

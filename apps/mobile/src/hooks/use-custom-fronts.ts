@@ -37,9 +37,7 @@ export function useCustomFront(
     decrypt: decryptCustomFront,
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.customFront.get.useQuery({ systemId, customFrontId }, { enabled, select }) as DataQuery<
-        CustomFront | Archived<CustomFront>
-      >,
+      trpc.customFront.get.useQuery({ systemId, customFrontId }, { enabled, select }),
   });
 }
 
@@ -64,7 +62,7 @@ export function useCustomFrontsList(
           getNextPageParam: (lastPage: CustomFrontRawPage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<CustomFront | Archived<CustomFront>>,
+      ),
   });
 }
 

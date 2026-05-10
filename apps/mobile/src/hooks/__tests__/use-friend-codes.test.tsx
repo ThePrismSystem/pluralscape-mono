@@ -87,7 +87,7 @@ describe("useRedeemFriendCode", () => {
     await act(() =>
       result.current.mutateAsync({
         code: "ABCD1234",
-      } as Parameters<typeof result.current.mutateAsync>[0]),
+      }),
     );
 
     await waitFor(() => {
@@ -104,7 +104,7 @@ describe("useArchiveFriendCode", () => {
     await act(() =>
       result.current.mutateAsync({
         codeId: brandId<FriendCodeId>("frc_test"),
-      } as Parameters<typeof result.current.mutateAsync>[0]),
+      }),
     );
 
     await waitFor(() => {

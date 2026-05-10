@@ -338,7 +338,7 @@ describe("encryptTier1Batch/decryptTier1Batch", () => {
     if (!secondBlob) throw new Error("Expected blob at index 1");
     const tampered = new Uint8Array(secondBlob.ciphertext);
     tampered[0] = (tampered[0] ?? 0) ^ 0xff;
-    blobs[1] = { ...secondBlob, ciphertext: tampered } as T1EncryptedBlob;
+    blobs[1] = { ...secondBlob, ciphertext: tampered };
     expect(() => decryptTier1Batch(blobs, masterKey)).toThrow(DecryptionFailedError);
   });
 });

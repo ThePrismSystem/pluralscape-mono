@@ -206,7 +206,7 @@ export function wrapArchived<T extends { readonly archived: false }>(
 ): Archived<T> {
   // Object.assign overwrites `archived: false` with `archived: true` without
   // needing a destructure (which would produce an unused-var lint error).
-  return Object.assign({}, base, { archived: true as const, archivedAt }) as Archived<T>;
+  return Object.assign({}, base, { archived: true as const, archivedAt });
 }
 
 // ── Transform functions ──────────────────────────────────────────────────────

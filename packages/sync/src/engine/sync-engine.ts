@@ -546,7 +546,7 @@ export class SyncEngine {
     } else {
       // Fresh document — create empty
       session = new EncryptedSyncSession<Record<string, unknown>>({
-        doc: createDocument(docType) as Record<string, unknown>,
+        doc: createDocument(docType),
         keys,
         documentId: docId,
         sodium: this.config.sodium,

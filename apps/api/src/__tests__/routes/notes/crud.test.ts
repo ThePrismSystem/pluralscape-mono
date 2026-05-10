@@ -71,7 +71,7 @@ const MOCK_RESULT: NoteResult = {
   systemId: MOCK_SYSTEM_ID,
   authorEntityType: null,
   authorEntityId: null,
-  encryptedData: "dGVzdA==" as EncryptedBase64,
+  encryptedData: "dGVzdA==",
   version: 1,
   createdAt: toUnixMillis(1000),
   updatedAt: toUnixMillis(1000),

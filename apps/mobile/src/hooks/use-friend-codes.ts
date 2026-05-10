@@ -33,7 +33,7 @@ export function useFriendCodesList(
           getNextPageParam: (lastPage: FriendCodePage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<FriendCode | ArchivedFriendCode>,
+      ),
   });
 }
 

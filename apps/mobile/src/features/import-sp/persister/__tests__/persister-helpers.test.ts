@@ -61,10 +61,7 @@ interface NamedThing {
 
 function isNamedThing(value: unknown): value is NamedThing {
   return (
-    typeof value === "object" &&
-    value !== null &&
-    "name" in value &&
-    typeof (value as { name: unknown }).name === "string"
+    typeof value === "object" && value !== null && "name" in value && typeof value.name === "string"
   );
 }
 

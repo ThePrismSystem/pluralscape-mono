@@ -210,7 +210,7 @@ describe("friend-connection.service (PGlite integration)", () => {
     it("throws INVALID_CURSOR for malformed cursor string", async () => {
       await assertApiError(
         listFriendConnections(asDb(db), accountId, auth, { cursor: "not-a-valid-cursor" }),
-        "INVALID_CURSOR" as Parameters<typeof assertApiError>[1],
+        "INVALID_CURSOR",
         400,
       );
     });

@@ -45,10 +45,7 @@ export function useLifecycleEvent(
     decrypt: decryptLifecycleEvent,
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.lifecycleEvent.get.useQuery(
-        { systemId, eventId },
-        { enabled, select },
-      ) as DataQuery<LifecycleEventDecrypted>,
+      trpc.lifecycleEvent.get.useQuery({ systemId, eventId }, { enabled, select }),
   });
 }
 
@@ -83,7 +80,7 @@ export function useLifecycleEventsList(
           getNextPageParam: (lastPage: { nextCursor: string | null }) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<LifecycleEventDecrypted>,
+      ),
   });
 }
 

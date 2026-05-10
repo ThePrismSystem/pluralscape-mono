@@ -292,10 +292,7 @@ async function dispatch(req: Req): Promise<Res> {
     // Propagate numeric code so callers can branch on SQLite result codes
     // without string-matching message text.
     const code =
-      typeof err === "object" &&
-      err !== null &&
-      "code" in err &&
-      typeof (err as { code: unknown }).code === "number"
+      typeof err === "object" && err !== null && "code" in err && typeof err.code === "number"
         ? (err as { code: number }).code
         : undefined;
     return {

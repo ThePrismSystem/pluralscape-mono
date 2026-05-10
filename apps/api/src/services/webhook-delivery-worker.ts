@@ -307,10 +307,5 @@ export async function findPendingDeliveries(
     )
     .limit(limit);
 
-  return rows as {
-    id: WebhookDeliveryId;
-    webhookId: WebhookId;
-    systemId: SystemId;
-    eventType: WebhookEventType;
-  }[];
+  return rows;
 }

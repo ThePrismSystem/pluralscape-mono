@@ -298,7 +298,7 @@ describe("poll option id collision prevention", () => {
         name: "A",
         custom: false,
         options: [{ name: "x" }],
-      } as SPPoll,
+      },
       ctx,
     );
     const b = mapPoll(
@@ -307,7 +307,7 @@ describe("poll option id collision prevention", () => {
         name: "B",
         custom: false,
         options: [{ name: "y" }],
-      } as SPPoll,
+      },
       ctx,
     );
     const idA = a.status === "mapped" ? a.payload.encrypted.options[0]?.id : null;

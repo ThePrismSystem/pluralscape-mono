@@ -53,7 +53,7 @@ const FieldOwnerSchema = z.discriminatedUnion("kind", [
  * This single-point assertion bridges the gap.
  */
 function toFieldValueOwner(owner: z.infer<typeof FieldOwnerSchema>): FieldValueOwner {
-  return owner as FieldValueOwner;
+  return owner;
 }
 
 export const fieldRouter = router({

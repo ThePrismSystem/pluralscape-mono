@@ -264,7 +264,7 @@ describe("friend router", () => {
       const caller = createCaller();
       await caller.friend.updateVisibility({
         connectionId: CONNECTION_ID,
-        encryptedData: "dXBkYXRlZA==" as EncryptedBase64,
+        encryptedData: "dXBkYXRlZA==",
         version: 2,
       });
 
@@ -282,7 +282,7 @@ describe("friend router", () => {
       await expect(
         caller.friend.updateVisibility({
           connectionId: CONNECTION_ID,
-          encryptedData: "dGVzdA==" as EncryptedBase64,
+          encryptedData: "dGVzdA==",
           version: 0,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));

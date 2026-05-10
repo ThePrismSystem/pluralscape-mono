@@ -49,9 +49,7 @@ export class WasmSodiumAdapter extends BaseSodiumAdapter {
     const sodium = this.lib();
     // Type defs report Uint8Array but runtime returns a null-terminated ASCII string.
     // Handle both cases: decode Uint8Array or strip null terminator from string.
-    const result: Uint8Array | string = sodium.crypto_pwhash_str(password, opsLimit, memLimit) as
-      | Uint8Array
-      | string;
+    const result: Uint8Array | string = sodium.crypto_pwhash_str(password, opsLimit, memLimit);
     if (typeof result === "string") {
       return result.replace(/\0+$/, "");
     }

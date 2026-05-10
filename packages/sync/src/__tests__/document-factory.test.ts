@@ -265,8 +265,8 @@ describe("Document factories", () => {
 
     it("each returned doc survives save/load roundtrip", () => {
       for (const type of ALL_DOCUMENT_TYPES) {
-        const doc = createDocument(type);
-        const bytes = Automerge.save(doc as Automerge.Doc<Record<string, unknown>>);
+        const doc: Automerge.Doc<Record<string, unknown>> = createDocument(type);
+        const bytes = Automerge.save(doc);
         const loaded = Automerge.load<Record<string, unknown>>(bytes);
         expect(typeof loaded, `Roundtrip failed for type: ${type}`).toBe("object");
       }

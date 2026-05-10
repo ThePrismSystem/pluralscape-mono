@@ -28,7 +28,7 @@ describe("Result", () => {
   });
 
   it("rejects mutation of readonly fields", () => {
-    const r: Result<string, string> = { ok: true as const, value: "v" } as Result<string, string>;
+    const r: Result<string, string> = { ok: true as const, value: "v" };
     // @ts-expect-error readonly property
     r.ok = false;
   });

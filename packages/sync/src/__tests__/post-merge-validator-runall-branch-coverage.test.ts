@@ -63,7 +63,7 @@ describe("normalizeTimerConfig: edge case branches", () => {
       documentId: asSyncDocId("doc-timer-no-field"),
       sodium,
     });
-    const result = normalizeTimerConfig(session as EncryptedSyncSession<unknown>);
+    const result = normalizeTimerConfig(session);
     expect(result.count).toBe(0);
     expect(result.envelope).toBeNull();
     expect(result.notifications).toHaveLength(0);
@@ -249,7 +249,7 @@ describe("normalizeWebhookConfigs: additional branch coverage", () => {
         enabled: true,
       };
     });
-    const result = normalizeWebhookConfigs(session as EncryptedSyncSession<unknown>);
+    const result = normalizeWebhookConfigs(session);
     expect(result.count).toBe(0);
     expect(result.notifications).toHaveLength(0);
   });
@@ -264,7 +264,7 @@ describe("normalizeWebhookConfigs: additional branch coverage", () => {
         enabled: true,
       };
     });
-    const result = normalizeWebhookConfigs(session as EncryptedSyncSession<unknown>);
+    const result = normalizeWebhookConfigs(session);
     expect(result.count).toBe(1);
     expect(result.notifications).toHaveLength(1);
     expect(result.notifications[0]?.fieldName).toBe("eventTypes");
@@ -280,7 +280,7 @@ describe("normalizeWebhookConfigs: additional branch coverage", () => {
         enabled: true,
       };
     });
-    const result = normalizeWebhookConfigs(session as EncryptedSyncSession<unknown>);
+    const result = normalizeWebhookConfigs(session);
     expect(result.count).toBe(0);
     expect(result.notifications).toHaveLength(0);
   });
@@ -295,7 +295,7 @@ describe("normalizeWebhookConfigs: additional branch coverage", () => {
         enabled: true,
       };
     });
-    const result = normalizeWebhookConfigs(session as EncryptedSyncSession<unknown>);
+    const result = normalizeWebhookConfigs(session);
     expect(result.count).toBe(1);
     expect(result.notifications).toHaveLength(1);
     expect(result.notifications[0]?.fieldName).toBe("eventTypes");
@@ -319,7 +319,7 @@ describe("normalizeWebhookConfigs: object/number eventType and protocol edge cas
         enabled: true,
       };
     });
-    const result = normalizeWebhookConfigs(session as EncryptedSyncSession<unknown>);
+    const result = normalizeWebhookConfigs(session);
     expect(result.count).toBe(1);
     expect(result.notifications).toHaveLength(1);
     expect(result.notifications[0]?.fieldName).toBe("eventTypes");
@@ -336,7 +336,7 @@ describe("normalizeWebhookConfigs: object/number eventType and protocol edge cas
         enabled: true,
       };
     });
-    const result = normalizeWebhookConfigs(session as EncryptedSyncSession<unknown>);
+    const result = normalizeWebhookConfigs(session);
     expect(result.count).toBe(1);
     expect(result.notifications).toHaveLength(1);
     expect(result.notifications[0]?.summary).toContain("null");
@@ -351,7 +351,7 @@ describe("normalizeWebhookConfigs: object/number eventType and protocol edge cas
         enabled: true,
       };
     });
-    const result = normalizeWebhookConfigs(session as EncryptedSyncSession<unknown>);
+    const result = normalizeWebhookConfigs(session);
     expect(result.count).toBe(1);
     expect(result.notifications).toHaveLength(1);
     expect(result.notifications[0]?.fieldName).toBe("url");
@@ -367,7 +367,7 @@ describe("normalizeWebhookConfigs: object/number eventType and protocol edge cas
         enabled: true,
       };
     });
-    const result = normalizeWebhookConfigs(session as EncryptedSyncSession<unknown>);
+    const result = normalizeWebhookConfigs(session);
     expect(result.count).toBe(1);
     expect(result.notifications).toHaveLength(1);
     expect(result.notifications[0]?.fieldName).toBe("url");
@@ -384,7 +384,7 @@ describe("normalizeWebhookConfigs: object/number eventType and protocol edge cas
         enabled: true,
       };
     });
-    const result = normalizeWebhookConfigs(session as EncryptedSyncSession<unknown>);
+    const result = normalizeWebhookConfigs(session);
     expect(result.count).toBe(1);
     expect(result.notifications).toHaveLength(1);
     expect(result.notifications[0]?.fieldName).toBe("eventTypes");
@@ -398,7 +398,7 @@ describe("normalizeWebhookConfigs: object/number eventType and protocol edge cas
       documentId: asSyncDocId("doc-wh-no-field"),
       sodium,
     });
-    const result = normalizeWebhookConfigs(session as EncryptedSyncSession<unknown>);
+    const result = normalizeWebhookConfigs(session);
     expect(result.count).toBe(0);
     expect(result.notifications).toHaveLength(0);
     expect(result.envelope).toBeNull();

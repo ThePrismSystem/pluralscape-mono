@@ -58,9 +58,9 @@ function snapshotToRecord(
     documentId,
     snapshotVersion: snapshot.snapshotVersion,
     ciphertext: snapshot.ciphertext,
-    nonce: snapshot.nonce as Uint8Array,
-    signature: snapshot.signature as Uint8Array,
-    authorPublicKey: snapshot.authorPublicKey as Uint8Array,
+    nonce: snapshot.nonce,
+    signature: snapshot.signature,
+    authorPublicKey: snapshot.authorPublicKey,
   };
 }
 
@@ -69,9 +69,9 @@ function changeToRecord(documentId: SyncDocumentId, change: EncryptedChangeEnvel
     documentId,
     seq: change.seq,
     ciphertext: change.ciphertext,
-    nonce: change.nonce as Uint8Array,
-    signature: change.signature as Uint8Array,
-    authorPublicKey: change.authorPublicKey as Uint8Array,
+    nonce: change.nonce,
+    signature: change.signature,
+    authorPublicKey: change.authorPublicKey,
   };
 }
 

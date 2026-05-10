@@ -40,10 +40,7 @@ export function useSnapshot(
     decrypt: decryptSnapshot,
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.snapshot.get.useQuery(
-        { systemId, snapshotId },
-        { enabled, select },
-      ) as DataQuery<SnapshotDecrypted>,
+      trpc.snapshot.get.useQuery({ systemId, snapshotId }, { enabled, select }),
   });
 }
 
@@ -68,7 +65,7 @@ export function useSnapshotsList(opts?: SnapshotListOpts): DataListQuery<Snapsho
           getNextPageParam: (lastPage: SystemSnapshotWirePage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<SnapshotDecrypted>,
+      ),
   });
 }
 

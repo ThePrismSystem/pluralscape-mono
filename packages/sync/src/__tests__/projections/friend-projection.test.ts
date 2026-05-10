@@ -36,7 +36,6 @@ import type {
   BucketId,
   FriendCodeId,
   FriendConnectionId,
-  FriendConnectionStatus,
   KeyGrantId,
 } from "@pluralscape/types";
 
@@ -71,7 +70,7 @@ function makeFriendConnectionInput(
     id: brandId<FriendConnectionId>("fc_1"),
     accountId: brandId<AccountId>("acc_1"),
     friendAccountId: brandId<AccountId>("acc_2"),
-    status: "pending" as FriendConnectionStatus,
+    status: "pending",
     visibility: JSON.stringify({
       showMembers: true,
       showGroups: false,

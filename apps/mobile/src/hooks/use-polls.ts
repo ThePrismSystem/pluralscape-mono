@@ -56,9 +56,7 @@ export function usePoll(pollId: PollId, opts?: SystemIdOverride): DataQuery<Poll
     decrypt: decryptPoll,
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.poll.get.useQuery({ systemId, pollId }, { enabled, select }) as DataQuery<
-        Poll | Archived<Poll>
-      >,
+      trpc.poll.get.useQuery({ systemId, pollId }, { enabled, select }),
   });
 }
 
@@ -83,7 +81,7 @@ export function usePollsList(opts?: PollListOpts): DataListQuery<Poll | Archived
           getNextPageParam: (lastPage: PollWirePage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<Poll | Archived<Poll>>,
+      ),
   });
 }
 

@@ -46,9 +46,7 @@ export function useAcknowledgement(
     decrypt: decryptAcknowledgement,
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.acknowledgement.get.useQuery({ systemId, ackId }, { enabled, select }) as DataQuery<
-        AcknowledgementRequest | Archived<AcknowledgementRequest>
-      >,
+      trpc.acknowledgement.get.useQuery({ systemId, ackId }, { enabled, select }),
   });
 }
 
@@ -78,7 +76,7 @@ export function useAcknowledgementsList(
           getNextPageParam: (lastPage: AcknowledgementWirePage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<AcknowledgementRequest | Archived<AcknowledgementRequest>>,
+      ),
   });
 }
 

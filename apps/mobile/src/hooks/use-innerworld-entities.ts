@@ -44,9 +44,7 @@ export function useInnerWorldEntity(
     decrypt: decryptInnerWorldEntity,
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.innerworld.entity.get.useQuery({ systemId, entityId }, { enabled, select }) as DataQuery<
-        InnerWorldEntity | Archived<InnerWorldEntity>
-      >,
+      trpc.innerworld.entity.get.useQuery({ systemId, entityId }, { enabled, select }),
   });
 }
 
@@ -89,7 +87,7 @@ export function useInnerWorldEntitiesList(
           getNextPageParam: (lastPage: InnerWorldEntityWirePage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<InnerWorldEntity | Archived<InnerWorldEntity>>,
+      ),
   });
 }
 

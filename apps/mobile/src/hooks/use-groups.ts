@@ -38,9 +38,7 @@ export function useGroup(
     decrypt: decryptGroup,
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.group.get.useQuery({ systemId, groupId }, { enabled, select }) as DataQuery<
-        Group | Archived<Group>
-      >,
+      trpc.group.get.useQuery({ systemId, groupId }, { enabled, select }),
   });
 }
 
@@ -64,7 +62,7 @@ export function useGroupsList(opts?: GroupListOpts): DataListQuery<Group | Archi
           getNextPageParam: (lastPage: GroupWirePage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<Group | Archived<Group>>,
+      ),
   });
 }
 

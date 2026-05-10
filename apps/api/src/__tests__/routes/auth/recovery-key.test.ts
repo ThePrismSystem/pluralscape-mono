@@ -353,9 +353,7 @@ describe("POST /auth/recovery-key/regenerate", () => {
     });
 
     expect(mockEnqueue).toHaveBeenCalledTimes(1);
-    const callArg = mockEnqueue.mock.calls[0]?.[0] as
-      | { payload?: { vars?: { deviceInfo?: string } } }
-      | undefined;
+    const callArg = mockEnqueue.mock.calls[0]?.[0];
     expect(callArg?.payload?.vars?.deviceInfo).toBe("test-agent/1.0");
   });
 
@@ -378,9 +376,7 @@ describe("POST /auth/recovery-key/regenerate", () => {
     });
 
     expect(mockEnqueue).toHaveBeenCalledTimes(1);
-    const callArg = mockEnqueue.mock.calls[0]?.[0] as
-      | { payload?: { vars?: { deviceInfo?: string } } }
-      | undefined;
+    const callArg = mockEnqueue.mock.calls[0]?.[0];
     expect(callArg?.payload?.vars?.deviceInfo).toBe("Unknown device");
   });
 

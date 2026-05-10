@@ -4,7 +4,7 @@ import { entityEntries, entityKeys } from "../schema-utils.js";
 
 describe("entityKeys", () => {
   it("returns an empty array for an empty record", () => {
-    const result = entityKeys({} as Record<string, unknown>);
+    const result = entityKeys({});
     expect(result).toEqual([]);
   });
 
@@ -27,7 +27,7 @@ describe("entityKeys", () => {
 
 describe("entityEntries", () => {
   it("returns an empty array for an empty record", () => {
-    const result = entityEntries({} as Record<string, number>);
+    const result = entityEntries({});
     expect(result).toEqual([]);
   });
 

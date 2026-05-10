@@ -63,3 +63,16 @@ export interface AuthEnv {
     auth: AuthContext;
   };
 }
+
+/**
+ * Hono environment for routes where auth is optional (e.g., tRPC public
+ * procedures). Mirrors AuthEnv but allows c.get("auth") to return undefined,
+ * matching the runtime behavior of the optional auth middleware.
+ */
+export interface OptionalAuthEnv {
+  Variables: {
+    requestId: string;
+    log: AppLogger;
+    auth?: AuthContext;
+  };
+}

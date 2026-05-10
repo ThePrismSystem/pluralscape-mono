@@ -130,7 +130,7 @@ describe("PostMergeValidator: normalizeCheckInRecord", () => {
       sodium,
     });
 
-    const result = normalizeCheckInRecord(session as EncryptedSyncSession<unknown>);
+    const result = normalizeCheckInRecord(session);
 
     expect(result.count).toBe(0);
     expect(result.envelope).toBeNull();
