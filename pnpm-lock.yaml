@@ -275,6 +275,9 @@ importers:
       '@pluralscape/data':
         specifier: workspace:*
         version: link:../../packages/data
+      '@pluralscape/design-system':
+        specifier: workspace:*
+        version: link:../../packages/design-system
       '@pluralscape/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -311,6 +314,9 @@ importers:
       expo-document-picker:
         specifier: ~55.0.13
         version: 55.0.13(expo@55.0.23)
+      expo-font:
+        specifier: ~55.0.7
+        version: 55.0.7(expo@55.0.23)(react-native@0.85.3(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.6))(react@19.2.6)
       expo-linking:
         specifier: ~55.0.15
         version: 55.0.15(expo@55.0.23)(react-native@0.85.3(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.6))(react@19.2.6)
@@ -338,6 +344,9 @@ importers:
       jszip:
         specifier: 'catalog:'
         version: 3.10.1
+      lucide-react-native:
+        specifier: 'catalog:'
+        version: 0.577.0(react-native-svg@15.15.4(react-native@0.85.3(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.6))(react@19.2.6))(react-native@0.85.3(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.6))(react@19.2.6)
       react:
         specifier: ^19.2.6
         version: 19.2.6
@@ -354,7 +363,7 @@ importers:
         specifier: ~4.24.0
         version: 4.24.0(react-native@0.85.3(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.6))(react@19.2.6)
       react-native-svg:
-        specifier: ^15.15.4
+        specifier: 'catalog:'
         version: 15.15.4(react-native@0.85.3(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.6))(react@19.2.6)
       react-native-web:
         specifier: ~0.21.2

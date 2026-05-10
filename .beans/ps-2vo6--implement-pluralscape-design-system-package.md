@@ -52,7 +52,7 @@ Sub-tasks (26 from plan):
 ## Phase 7: Workspace catalog + mobile integration
 
 - [x] T18 Add lucide-react-native + react-native-svg to catalog (advanced earlier — pre-commit unblocker)
-- [ ] T19 Wire apps/mobile (ThemeProvider, fonts, logo re-export)
+- [x] T19 Wire apps/mobile (ThemeProvider, fonts, logo re-export)
 - [ ] T20 Build smoke screen
 - [ ] T21 Manual smoke verification on iOS/Android/web
 
@@ -68,3 +68,19 @@ Sub-tasks (26 from plan):
 - [ ] T26 Push branch and open PR
 
 Branch: feat/implement-design-system
+
+## Summary of Changes
+
+T19 wires `apps/mobile` to consume `@pluralscape/design-system`:
+
+- Add `@pluralscape/design-system` (workspace), `expo-font@~55.0.7`, `lucide-react-native` (catalog), and switch `react-native-svg` to catalog in `apps/mobile/package.json`.
+- Create `apps/mobile/src/lib/fonts.ts` with `useDesignSystemFonts()` loading DM Sans (regular + italic) variable fonts via ESM imports of the design-system asset paths.
+- Add `apps/mobile/src/types/assets.d.ts` ambient declarations for `*.ttf`/`*.otf`/`*.png` so the ESM asset imports type-check.
+- Wrap the entire `apps/mobile/app/_layout.tsx` provider tree with `<ThemeProvider mode="default" onModeChange={noop}>`, including the loading/error early-return branches so all paths have theme context. Gate the entire return on `useDesignSystemFonts()` (returns `<LoadingSpinner />` until loaded). Mode persistence deferred to M10.
+- Replace `apps/mobile/src/components/brand/PluralscapeLogo.tsx` (was 117 LOC inline SVG) with a thin re-export from `@pluralscape/design-system`. Existing import sites in mobile keep working.
+- Extend `apps/mobile/app/__tests__/_layout.test.tsx` with mocks for `@pluralscape/design-system` (ThemeProvider as Fragment) and `../../src/lib/fonts.js` (useDesignSystemFonts → `[true]`), mirroring the existing `expo-secure-store`/`expo-router`/etc. mock pattern.
+
+Verification:
+- `pnpm --filter @pluralscape/mobile typecheck` exit 0.
+- `pnpm --filter @pluralscape/mobile lint` exit 0.
+- `pnpm vitest run --project mobile` 142 files / 1366 tests pass (up from 141/1357 baseline because the layout suite was previously failing at suite-level due to the new design-system import).
