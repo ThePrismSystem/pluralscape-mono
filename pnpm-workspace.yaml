@@ -3,6 +3,18 @@ packages:
   - "packages/*"
   - "tooling/*"
 
+# Build-script allowlist (replaces pnpm v10's onlyBuiltDependencies).
+# Mirrors the prior allowlist; other packages' install scripts stay disabled.
+allowBuilds:
+  "@journeyapps/wa-sqlite": false
+  better-sqlite3-multiple-ciphers: true
+  core-js: false
+  esbuild: true
+  msgpackr-extract: true
+  protobufjs: false
+  react-native-libsodium: false
+  unrs-resolver: true
+
 # Shared external dependency versions. Any package can reference these with
 # `"dep": "catalog:"` — single source of truth, bump in one place.
 # Renovate updates entries here like any other dependency.

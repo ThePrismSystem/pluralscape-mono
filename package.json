@@ -54,7 +54,7 @@
     "eslint": "^10.3.0",
     "husky": "^9.1.7",
     "knip": "^6.12.2",
-    "lint-staged": "^17.0.0",
+    "lint-staged": "^17.0.3",
     "prettier": "^3.8.3",
     "tsx": "^4.21.0",
     "turbo": "^2.9.12",
@@ -96,12 +96,6 @@
       "@xmldom/xmldom": ">=0.8.13",
       "uuid": ">=14.0.0"
     },
-    "onlyBuiltDependencies": [
-      "better-sqlite3-multiple-ciphers",
-      "esbuild",
-      "msgpackr-extract",
-      "unrs-resolver"
-    ],
     "auditConfig": {
       "ignoreCves": [
         "GHSA-gh4j-gqv2-49f6"
