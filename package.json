@@ -43,8 +43,8 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@commitlint/cli": "^20.5.3",
-    "@commitlint/config-conventional": "^20.5.3",
+    "@commitlint/cli": "^21.0.0",
+    "@commitlint/config-conventional": "^21.0.0",
     "@crowdin/crowdin-api-client": "^1.55.1",
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/prettier-config": "workspace:*",
@@ -54,7 +54,7 @@
     "eslint": "^10.3.0",
     "husky": "^9.1.7",
     "knip": "^6.12.2",
-    "lint-staged": "^16.4.0",
+    "lint-staged": "^17.0.3",
     "prettier": "^3.8.3",
     "tsx": "^4.21.0",
     "turbo": "^2.9.12",
@@ -74,7 +74,7 @@
   },
   "pnpm": {
     "overrides": {
-      "@trpc/server": "11.16.0",
+      "@trpc/server": "11.17.0",
       "better-sqlite3": "npm:better-sqlite3-multiple-ciphers@^12.6.2",
       "ioredis": "5.10.1",
       "esbuild": ">=0.25.0",
@@ -87,7 +87,7 @@
       "yaml": ">=2.8.3",
       "node-forge": ">=1.4.0",
       "handlebars": ">=4.7.9",
-      "vite": "8.0.10",
+      "vite": "8.0.11",
       "@tanstack/query-core": "5.100.9",
       "follow-redirects": ">=1.16.0",
       "dompurify": ">=3.4.0",
@@ -96,12 +96,6 @@
       "@xmldom/xmldom": ">=0.8.13",
       "uuid": ">=14.0.0"
     },
-    "onlyBuiltDependencies": [
-      "better-sqlite3-multiple-ciphers",
-      "esbuild",
-      "msgpackr-extract",
-      "unrs-resolver"
-    ],
     "auditConfig": {
       "ignoreCves": [
         "GHSA-gh4j-gqv2-49f6"
@@ -109,5 +103,5 @@
     }
   },
   "prettier": "@pluralscape/prettier-config",
-  "packageManager": "pnpm@10.33.2"
+  "packageManager": "pnpm@11.0.9"
 }
