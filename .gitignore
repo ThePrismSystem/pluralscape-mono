@@ -78,8 +78,6 @@ docs/superpowers/
 # Design system local-only reference bundle (preview HTML, JSX kit,
 # chats, uploads, explorations). Production code lives in packages/design-system/.
 docs/design-system/
-# Per-package agent context (gitignored per design-system spec; other packages commit theirs).
-packages/design-system/CLAUDE.md
 
 # Git worktrees (local workspaces)
 .worktrees/
