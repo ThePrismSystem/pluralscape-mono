@@ -109,5 +109,5 @@
     }
   },
   "prettier": "@pluralscape/prettier-config",
-  "packageManager": "pnpm@10.33.2"
+  "packageManager": "pnpm@11.0.9"
 }
