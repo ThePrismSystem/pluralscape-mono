@@ -578,6 +578,9 @@ importers:
       '@pluralscape/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig
+      '@testing-library/react':
+        specifier: 'catalog:'
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@testing-library/react-native':
         specifier: ^13.0.0
         version: 13.3.3(react-native@0.85.3(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.6))(react-test-renderer@19.2.6(react@19.2.6))(react@19.2.6)
@@ -593,9 +596,6 @@ importers:
       react-native:
         specifier: '*'
         version: 0.85.3(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.6)
-      react-test-renderer:
-        specifier: ^19.2.6
-        version: 19.2.6(react@19.2.6)
       style-dictionary:
         specifier: ^4.0.0
         version: 4.4.0(tslib@2.8.1)

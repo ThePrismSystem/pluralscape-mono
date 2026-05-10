@@ -29,12 +29,12 @@
   "devDependencies": {
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
+    "@testing-library/react": "catalog:",
     "@testing-library/react-native": "^13.0.0",
     "@types/react": "catalog:",
     "eslint": "catalog:",
     "react": "^19.2.6",
     "react-native": "*",
-    "react-test-renderer": "^19.2.6",
     "style-dictionary": "^4.0.0",
     "typescript": "catalog:"
   }

@@ -115,6 +115,18 @@ export default defineConfig({
           hookTimeout: 30000,
         },
       },
+      {
+        test: {
+          name: "design-system",
+          root: "packages/design-system",
+          environment: "node",
+          include: ["src/**/*.{test,spec}.{ts,tsx}"],
+          globals: false,
+          restoreMocks: true,
+          testTimeout: 5000,
+          hookTimeout: 10000,
+        },
+      },
       projectConfig("api", "apps/api"),
       integrationProjectConfig("api", "apps/api"),
       {
