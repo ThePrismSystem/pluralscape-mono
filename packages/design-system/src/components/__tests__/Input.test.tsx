@@ -20,7 +20,7 @@ afterEach(() => {
 describe("Input", () => {
   it("renders with a label", () => {
     render(wrap(<Input label="Email" value="" onChangeText={() => {}} />));
-    expect(screen.getByText("Email")).toBeDefined();
+    expect(screen.getByText("Email").textContent).toBe("Email");
   });
 
   it("invokes onChangeText", () => {
@@ -32,14 +32,14 @@ describe("Input", () => {
 
   it("renders error text when provided", () => {
     render(wrap(<Input label="Email" value="" onChangeText={() => {}} error="Invalid" />));
-    expect(screen.getByText("Invalid")).toBeDefined();
+    expect(screen.getByText("Invalid").textContent).toBe("Invalid");
   });
 
   it("renders hint when provided and no error", () => {
     render(
       wrap(<Input label="Email" value="" onChangeText={() => {}} hint="we never share this" />),
     );
-    expect(screen.getByText("we never share this")).toBeDefined();
+    expect(screen.getByText("we never share this").textContent).toBe("we never share this");
   });
 
   it("hides hint when an error is present", () => {

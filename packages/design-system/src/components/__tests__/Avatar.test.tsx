@@ -20,7 +20,7 @@ afterEach(() => {
 describe("Avatar", () => {
   it("renders the first uppercase letter of label as the initial in aurora fallback", () => {
     render(wrap(<Avatar label="Aria" />));
-    expect(screen.getByText("A")).toBeDefined();
+    expect(screen.getByText("A").textContent).toBe("A");
   });
 
   it("does not render an initial when label is empty", () => {
@@ -40,11 +40,11 @@ describe("Avatar", () => {
 
   it.each(["sm", "md", "lg"] as const)("renders size=%s without crashing", (size) => {
     render(wrap(<Avatar label="A" size={size} />));
-    expect(screen.getByText("A")).toBeDefined();
+    expect(screen.getByText("A").textContent).toBe("A");
   });
 
   it.each(["square", "circle"] as const)("renders shape=%s without crashing", (shape) => {
     render(wrap(<Avatar label="A" shape={shape} />));
-    expect(screen.getByText("A")).toBeDefined();
+    expect(screen.getByText("A").textContent).toBe("A");
   });
 });

@@ -20,7 +20,7 @@ describe("Button", () => {
 
   it("renders the children as label", () => {
     render(wrap(<Button onPress={() => {}}>Save</Button>));
-    expect(screen.getByText("Save")).toBeDefined();
+    expect(screen.getByText("Save").textContent).toBe("Save");
   });
 
   it("invokes onPress when pressed", () => {
@@ -53,7 +53,7 @@ describe("Button", () => {
           </Button>,
         ),
       );
-      expect(screen.getByRole("button")).toBeDefined();
+      expect(screen.getByRole("button").tagName).toBe("BUTTON");
     },
   );
 
@@ -65,7 +65,7 @@ describe("Button", () => {
         </Button>,
       ),
     );
-    expect(screen.getByRole("button")).toBeDefined();
+    expect(screen.getByRole("button").tagName).toBe("BUTTON");
   });
 
   it("uses accessibilityLabel when provided", () => {
@@ -76,6 +76,6 @@ describe("Button", () => {
         </Button>,
       ),
     );
-    expect(screen.getByLabelText("Save changes")).toBeDefined();
+    expect(screen.getByLabelText("Save changes").tagName).toBe("BUTTON");
   });
 });

@@ -22,7 +22,7 @@ const HIT_MIN = 44;
 describe("IconButton", () => {
   it("uses the accessibilityLabel for the rendered control", () => {
     render(wrap(<IconButton name="x" accessibilityLabel="Close" onPress={() => {}} />));
-    expect(screen.getByLabelText("Close")).toBeDefined();
+    expect(screen.getByLabelText("Close").getAttribute("aria-label")).toBe("Close");
   });
 
   it("invokes onPress when pressed", () => {

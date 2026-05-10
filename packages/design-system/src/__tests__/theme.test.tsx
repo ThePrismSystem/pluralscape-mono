@@ -28,16 +28,15 @@ describe("ThemeProvider + useTheme", () => {
         </ThemeProvider>
       ),
     });
-    expect(result.current.color.bg).toBeDefined();
+    const initialBg = result.current.color.bg;
+    expect(typeof initialBg).toBe("string");
 
     act(() => {
       mode = "high-contrast";
       rerender();
     });
 
-    // High-contrast theme has a different fg color than default.
-    // Just check that bg is still defined; the exact value is asserted in the snapshot.
-    expect(result.current.color.bg).toBeDefined();
+    expect(typeof result.current.color.bg).toBe("string");
   });
 
   it("calls onModeChange when setMode is invoked", () => {

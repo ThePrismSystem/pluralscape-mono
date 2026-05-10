@@ -20,14 +20,14 @@ afterEach(() => {
 describe("Badge", () => {
   it("renders children as label", () => {
     render(wrap(<Badge>Fronting</Badge>));
-    expect(screen.getByText("Fronting")).toBeDefined();
+    expect(screen.getByText("Fronting").textContent).toBe("Fronting");
   });
 
   it.each(["success", "intimate", "warning", "danger", "neutral"] as const)(
     "renders tone=%s without crashing",
     (tone) => {
       render(wrap(<Badge tone={tone}>x</Badge>));
-      expect(screen.getByText("x")).toBeDefined();
+      expect(screen.getByText("x").textContent).toBe("x");
     },
   );
 });
