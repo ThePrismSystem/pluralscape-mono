@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="ui-design/logo/pluralscape-wordmark-dark.svg" alt="Pluralscape" width="480">
+  <img src="packages/design-system/assets/logo/pluralscape-wordmark-dark.svg" alt="Pluralscape" width="480">
 </p>
 
 <p align="center">A community-driven, open-source plurality management platform.</p>
@@ -74,16 +74,13 @@ packages/
   import-core/   Shared import orchestration — Persister, checkpoint, entity refs
   import-sp/     Simply Plural import — collection mappers, file + API sources
   import-pk/     PluralKit import — JSON export mapper
+  design-system/ Inner Horizons design system — typed tokens, RN atoms, brand assets
 
 tooling/
   eslint-config/   Shared ESLint configuration
   prettier-config/ Shared Prettier configuration
   test-utils/      Shared test utilities and factories
   tsconfig/        Shared TypeScript configs (base.json, node.json)
-
-ui-design/
-  logo/            Brand assets (SVG icon, wordmark)
-  BRANDING.md      Brand guidelines — colors, typography, components
 
 docs/
   openapi/         OpenAPI 3.1 spec (multi-file source, Redocly CLI)

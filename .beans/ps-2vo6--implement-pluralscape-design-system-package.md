@@ -5,7 +5,7 @@ status: in-progress
 type: feature
 priority: normal
 created_at: 2026-05-10T08:22:37Z
-updated_at: 2026-05-10T09:47:14Z
+updated_at: 2026-05-10T10:07:50Z
 ---
 
 Stand up packages/design-system per spec docs/superpowers/specs/2026-05-10-design-system-package-design.md.
@@ -58,9 +58,9 @@ Sub-tasks (26 from plan):
 
 ## Phase 8: Skill, root CLAUDE.md, ui-design cleanup
 
-- [ ] T22 Write design-pluralscape-screen skill
-- [ ] T23 Update root CLAUDE.md project map
-- [ ] T24 Delete ui-design/ and sweep references
+- [x] T22 Write design-pluralscape-screen skill
+- [x] T23 Update root CLAUDE.md project map
+- [x] T24 Delete ui-design/ and sweep references
 
 ## Phase 9: Final verification & wrap-up
 
