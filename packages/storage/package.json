@@ -10,8 +10,8 @@
     "./filesystem": "./src/adapters/filesystem/index.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1032.0",
-    "@aws-sdk/s3-request-presigner": "^3.1032.0",
+    "@aws-sdk/client-s3": "^3.1045.0",
+    "@aws-sdk/s3-request-presigner": "^3.1045.0",
     "@pluralscape/types": "workspace:*"
   },
   "devDependencies": {

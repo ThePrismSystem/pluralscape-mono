@@ -11,7 +11,7 @@
     "@pluralscape/import-core": "workspace:*",
     "@pluralscape/types": "workspace:*",
     "@pluralscape/validation": "workspace:*",
-    "pkapi.js": "^7.0.0",
+    "pkapi.js": "^7.5.1",
     "zod": "catalog:"
   },
   "devDependencies": {
@@ -21,7 +21,7 @@
     "@pluralscape/test-utils": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
     "@trpc/client": "catalog:",
-    "@types/node": "^25.6.0",
+    "@types/node": "^25.6.2",
     "eslint": "catalog:",
     "typescript": "catalog:"
   },

@@ -9,8 +9,8 @@
   },
   "dependencies": {
     "@pluralscape/types": "workspace:*",
-    "i18next": "^26.0.7",
-    "react-i18next": "^17.0.4"
+    "i18next": "^26.0.10",
+    "react-i18next": "^17.0.7"
   },
   "devDependencies": {
     "@pluralscape/eslint-config": "workspace:*",
@@ -19,7 +19,7 @@
     "@types/react": "catalog:",
     "eslint": "catalog:",
     "happy-dom": "catalog:",
-    "react": "^19.2.5",
+    "react": "^19.2.6",
     "react-dom": "catalog:",
     "typescript": "catalog:"
   },
