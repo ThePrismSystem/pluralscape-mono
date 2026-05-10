@@ -1,0 +1,53 @@
+{
+  "$schema": "../tokens/schema.md",
+  "_doc": "Hand-painted gradient tokens (G1). Replaces the flat 2-stop Lavender→Teal that was previously implicit in the kit. CSS mirror lives in colors_and_type.css as --gradient-aurora and --gradient-aurora-soft. The grain overlay is implemented as a static SVG turbulence filter applied via the .grain utility — see colors_and_type.css.",
+
+  "aurora": {
+    "_doc": "Six-stop linear, 105°. Use as the default brand gradient on logo lines, member avatar placeholders, active-tab glow, onboarding accents, marketing hero. Pair with .grain to get the hand-painted treatment.",
+    "angle": "105deg",
+    "stops": [
+      { "at": "0%",   "color": "#b8a9c9", "doc": "Soft Lavender" },
+      { "at": "22%",  "color": "#b1afcc", "doc": "Lavender drift toward neutral" },
+      { "at": "44%",  "color": "#a4b4c8", "doc": "Cool mid — neither lavender nor teal" },
+      { "at": "66%",  "color": "#95c1c4", "doc": "Teal drift" },
+      { "at": "84%",  "color": "#84c8c0", "doc": "Approach teal" },
+      { "at": "100%", "color": "#7ecbc0", "doc": "Sky Teal" }
+    ]
+  },
+
+  "auroraSoft": {
+    "_doc": "Same stops at lowered alpha (0.46–0.55). For backdrops behind text and for marketing hero washes.",
+    "angle": "105deg",
+    "alpha": [0.55, 0.50, 0.46, 0.50, 0.55]
+  },
+
+  "auroraIntimate": {
+    "_doc": "RARE — Rose-tinted variant for intimate/personal surfaces only (solo journal cover, self-only bucket card). Lavender → Rose → back. Never in primary chrome.",
+    "angle": "105deg",
+    "stops": [
+      { "at": "0%",   "color": "#b8a9c9" },
+      { "at": "30%",  "color": "#c2a8c4" },
+      { "at": "65%",  "color": "#d4a5b5" },
+      { "at": "100%", "color": "#c8a8b8" }
+    ]
+  },
+
+  "grain": {
+    "_doc": "Static SVG turbulence overlay. Pairs with any aurora variant to produce the hand-painted feel. Implemented inline in colors_and_type.css as --grain-bg + .grain utility. Frozen in low-sensory mode.",
+    "frequency": 0.9,
+    "octaves": 2,
+    "tint": "#b8a9c9",
+    "blendMode": "overlay",
+    "opacity": 0.18
+  },
+
+  "modes": {
+    "low-sensory": {
+      "_doc": "Gradients flatten to Lavender; grain disabled.",
+      "aurora": "#b8a9c9",
+      "auroraSoft": "rgba(184,169,201,0.4)",
+      "auroraIntimate": "#b8a9c9",
+      "grain": null
+    }
+  }
+}

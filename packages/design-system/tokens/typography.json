@@ -1,0 +1,43 @@
+{
+  "_doc": "Type tokens. Mode overrides bump scale and weight where readability matters more than airiness.",
+
+  "font": {
+    "sans": "'DM Sans', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    "mono": "'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, monospace"
+  },
+
+  "scale": {
+    "default": {
+      "display":  { "size": 32, "lh": 1.2, "ls": 0.5, "weight": 300 },
+      "h1":       { "size": 24, "lh": 1.3, "ls": 0.3, "weight": 400 },
+      "h2":       { "size": 20, "lh": 1.3, "ls": 0.2, "weight": 500 },
+      "h3":       { "size": 16, "lh": 1.4, "ls": 0.1, "weight": 500 },
+      "body":     { "size": 16, "lh": 1.5, "ls": 0,   "weight": 400 },
+      "bodySm":   { "size": 14, "lh": 1.5, "ls": 0,   "weight": 400 },
+      "caption":  { "size": 12, "lh": 1.4, "ls": 0.2, "weight": 400 },
+      "label":    { "size": 12, "lh": 1.2, "ls": 0.5, "weight": 500 }
+    }
+  },
+
+  "modes": {
+    "high-contrast": {
+      "_doc": "Bump body weight from 400 to 500 to thicken stems on bright text.",
+      "body":   { "weight": 500 },
+      "bodySm": { "weight": 500 }
+    },
+    "littles": {
+      "_doc": "Larger base body and label sizes for easier scanning.",
+      "body":   { "size": 18 },
+      "bodySm": { "size": 16 },
+      "label":  { "size": 13 }
+    }
+  },
+
+  "responsive": {
+    "_doc": "Type-scale overrides at the sm breakpoint. See breakpoints.json (C4) for the full bp set.",
+    "maxWidthSm": {
+      "display": { "size": 28 },
+      "h1":      { "size": 22 }
+    }
+  }
+}
