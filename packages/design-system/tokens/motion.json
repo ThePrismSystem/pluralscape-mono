@@ -1,0 +1,22 @@
+{
+  "_doc": "Motion tokens. 'static' clamps to 0 (strictest); 'reduced-motion' clamps to ≤50ms so state changes still communicate via a brief fade — respects OS prefers-reduced-motion independently.",
+
+  "ease": "cubic-bezier(0.4, 0, 0.2, 1)",
+
+  "duration": {
+    "default": { "micro": 150, "transition": 250, "page": 400 },
+    "static": {
+      "micro": 0,
+      "transition": 0,
+      "page": 0,
+      "_doc": "Effectively instant. Pairs with prefers-reduced-motion."
+    },
+    "reduced-motion": {
+      "micro": 50,
+      "transition": 50,
+      "page": 50,
+      "_doc": "≤50ms — vestibular-safe but state changes still fade. Per GOVERNANCE §3.1."
+    },
+    "high-contrast": { "micro": 100, "transition": 150, "page": 250 }
+  }
+}

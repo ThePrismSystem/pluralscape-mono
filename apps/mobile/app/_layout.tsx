@@ -1,5 +1,6 @@
 import { getSodium } from "@pluralscape/crypto";
 import { createAppQueryClient } from "@pluralscape/data";
+import { ThemeProvider } from "@pluralscape/design-system";
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@pluralscape/i18n";
 import { I18nProvider } from "@pluralscape/i18n/react";
 import { I18N_CACHE_TTL_MS } from "@pluralscape/types";
@@ -20,6 +21,7 @@ import {
   createChainedBackend,
   detectLocale,
 } from "../src/i18n/index.js";
+import { useDesignSystemFonts } from "../src/lib/fonts.js";
 import { logger } from "../src/lib/logger.js";
 import { detectPlatform, PlatformProvider } from "../src/platform/index.js";
 import { BucketKeyProvider } from "../src/providers/bucket-key-provider.js";
@@ -195,6 +197,7 @@ function AuthGate({ children }: { readonly children: ReactNode }): React.JSX.Ele
 }
 
 export default function RootLayout(): React.JSX.Element {
+  const [fontsLoaded] = useDesignSystemFonts();
   const [platform, setPlatform] = useState<PlatformContext | null>(null);
   const [tokenStore, setTokenStore] = useState<TokenStore | null>(null);
   const [initError, setInitError] = useState<Error | null>(null);
@@ -279,51 +282,69 @@ export default function RootLayout(): React.JSX.Element {
     return tokenStore.getToken();
   }, [tokenStore]);
 
+  if (!fontsLoaded) {
+    return <LoadingSpinner />;
+  }
+
   if (i18nInitError !== null) {
     // Module-scope i18n construction failed (typically `getApiBaseUrl()`
     // throwing on a misconfigured build). There is nothing to retry at
     // runtime — retrying would re-run a module-scope singleton that has
     // already thrown — so surface the error with a no-op retry handler.
-    return <ErrorScreen error={i18nInitError} onRetry={noop} />;
+    return (
+      <ThemeProvider mode="default" onModeChange={noop}>
+        <ErrorScreen error={i18nInitError} onRetry={noop} />
+      </ThemeProvider>
+    );
   }
 
   if (initError !== null) {
-    return <ErrorScreen error={initError} onRetry={initPlatform} />;
+    return (
+      <ThemeProvider mode="default" onModeChange={noop}>
+        <ErrorScreen error={initError} onRetry={initPlatform} />
+      </ThemeProvider>
+    );
   }
 
   if (platform === null || tokenStore === null || i18nConfig === null) {
-    return <LoadingSpinner />;
+    return (
+      <ThemeProvider mode="default" onModeChange={noop}>
+        <LoadingSpinner />
+      </ThemeProvider>
+    );
   }
 
   return (
-    <PlatformProvider context={platform}>
-      <I18nProvider config={i18nConfig}>
-        <QueryClientProvider client={queryClientRef.current}>
-          <TRPCProvider
-            queryClient={queryClientRef.current}
-            getToken={getToken}
-            onUnauthorized={() => authMachineRef.current?.dispatch({ type: "LOGOUT" })}
-          >
-            <RestClientProvider getToken={getToken}>
-              <AuthProvider machine={authMachineRef.current} tokenStore={tokenStore}>
-                <AuthBridgeProviders>
-                  <DataLayerProvider>
-                    <ConnectionProvider manager={connectionManagerRef.current}>
-                      <SyncProvider>
-                        <BootstrapGate>
-                          <AuthGate>
-                            <Slot />
-                          </AuthGate>
-                        </BootstrapGate>
-                      </SyncProvider>
-                    </ConnectionProvider>
-                  </DataLayerProvider>
-                </AuthBridgeProviders>
-              </AuthProvider>
-            </RestClientProvider>
-          </TRPCProvider>
-        </QueryClientProvider>
-      </I18nProvider>
-    </PlatformProvider>
+    <ThemeProvider mode="default" onModeChange={noop}>
+      <PlatformProvider context={platform}>
+        <I18nProvider config={i18nConfig}>
+          <QueryClientProvider client={queryClientRef.current}>
+            <TRPCProvider
+              queryClient={queryClientRef.current}
+              getToken={getToken}
+              onUnauthorized={() => authMachineRef.current?.dispatch({ type: "LOGOUT" })}
+            >
+              <RestClientProvider getToken={getToken}>
+                <AuthProvider machine={authMachineRef.current} tokenStore={tokenStore}>
+                  <AuthBridgeProviders>
+                    <DataLayerProvider>
+                      <ConnectionProvider manager={connectionManagerRef.current}>
+                        <SyncProvider>
+                          <BootstrapGate>
+                            <AuthGate>
+                              <Slot />
+                            </AuthGate>
+                          </BootstrapGate>
+                        </SyncProvider>
+                      </ConnectionProvider>
+                    </DataLayerProvider>
+                  </AuthBridgeProviders>
+                </AuthProvider>
+              </RestClientProvider>
+            </TRPCProvider>
+          </QueryClientProvider>
+        </I18nProvider>
+      </PlatformProvider>
+    </ThemeProvider>
   );
 }

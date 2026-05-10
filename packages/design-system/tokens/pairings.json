@@ -1,0 +1,93 @@
+{
+  "_doc": "(C2) Foreground/background pairing registry. Forbidden-pair tests iterate this file rather than guessing implied pairings from semantic tokens. Each entry names a fg+bg combo that the system either *uses* (allowed) or *bans* (forbidden). The shape stays flat-JSON consumable; build-time tests assert: every `allowed` pair clears AA; no `forbidden` pair appears in a semantic.default mapping.",
+  "allowed": [
+    {
+      "id": "fg-on-bg",
+      "fg": "moonlight",
+      "bg": "deepSpaceBlue",
+      "min": 4.5,
+      "doc": "Primary text on canvas. 13.5:1."
+    },
+    {
+      "id": "fg-on-surface",
+      "fg": "moonlight",
+      "bg": "spaceMist",
+      "min": 4.5,
+      "doc": "Primary text on cards. 11.6:1."
+    },
+    {
+      "id": "fgOnAccent-on-accent",
+      "fg": "deepSpaceBlue",
+      "bg": "softLavender",
+      "min": 4.5,
+      "doc": "Button label on primary fill. 8.4:1."
+    },
+    {
+      "id": "fgOnAccent-on-success",
+      "fg": "deepSpaceBlue",
+      "bg": "skyTeal",
+      "min": 4.5,
+      "doc": "9.5:1."
+    },
+    {
+      "id": "fgOnAccent-on-danger",
+      "fg": "deepSpaceBlue",
+      "bg": "softCrimson",
+      "min": 4.5,
+      "doc": "7.4:1."
+    },
+    {
+      "id": "fgOnAccent-on-warning",
+      "fg": "deepSpaceBlue",
+      "bg": "paleAmber",
+      "min": 4.5,
+      "doc": "9.7:1."
+    },
+    {
+      "id": "link-on-bg",
+      "fg": "lavenderBright",
+      "bg": "deepSpaceBlue",
+      "min": 4.5,
+      "doc": "Inline link on canvas (E1)."
+    },
+    {
+      "id": "link-on-surface",
+      "fg": "lavenderBright",
+      "bg": "spaceMist",
+      "min": 4.5,
+      "doc": "Inline link on cards (E1)."
+    }
+  ],
+  "forbidden": [
+    {
+      "id": "moonlight-on-lavender",
+      "fg": "moonlight",
+      "bg": "softLavender",
+      "doc": "1.76:1 \u2014 fails AA. Use deepSpaceBlue on lavender."
+    },
+    {
+      "id": "moonlight-on-teal",
+      "fg": "moonlight",
+      "bg": "skyTeal",
+      "doc": "1.50:1 \u2014 fails AA."
+    },
+    {
+      "id": "moonlight-on-rose",
+      "fg": "moonlight",
+      "bg": "paleRose",
+      "doc": "1.81:1 \u2014 fails AA."
+    },
+    {
+      "id": "moonlight-on-crimson",
+      "fg": "moonlight",
+      "bg": "softCrimson",
+      "doc": "1.50:1 \u2014 fails AA."
+    },
+    {
+      "id": "moonlight-on-amber",
+      "fg": "moonlight",
+      "bg": "paleAmber",
+      "doc": "1.40:1 \u2014 fails AA."
+    }
+  ]
+}

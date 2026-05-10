@@ -1,0 +1,130 @@
+{
+  "$schema": "../tokens/schema.md",
+  "_doc": "Domestic Interiors illustration system (I1). Hand-drawn line vignettes built from a vocabulary of small domestic objects. Used in empty states, onboarding, and marketing only — never as decoration in active UI. Replaces the prior 'subtle constellation in empty states' note as the system's signature surface treatment.",
+
+  "ink": {
+    "_doc": "Three-ink palette. Mirror in colors_and_type.css as --ink-line / --ink-line-soft / --ink-line-warm.",
+    "line": { "value": "#b8a9c9", "doc": "Primary line — Soft Lavender. ~70% of strokes." },
+    "lineSoft": {
+      "value": "#a8a4b8",
+      "doc": "Secondary line — Dim Moonlight. Background contour, distant detail. ~25%."
+    },
+    "lineWarm": {
+      "value": "#7ecbc0",
+      "doc": "Warm point — Sky Teal. ONE per scene: a lit candle, steam off a cup, a flower, a star through the window. ~5%."
+    }
+  },
+
+  "stroke": {
+    "_doc": "Three-tier stroke weight. Never go below 0.75px or above 1.5px in the system.",
+    "primary": { "value": "1.25px" },
+    "secondary": { "value": "1px" },
+    "detail": { "value": "0.75px" }
+  },
+
+  "vocabulary": {
+    "_doc": "12 motifs. New empty states should compose from these — do not invent new motifs without governance review.",
+    "motifs": [
+      {
+        "name": "window",
+        "tag": "interior",
+        "doc": "Four-pane window. The system's most-used motif."
+      },
+      { "name": "cup", "tag": "comfort", "doc": "Mug or cup. Optionally with steam (warm point)." },
+      {
+        "name": "doorway",
+        "tag": "threshold",
+        "doc": "Arched doorway. For first-run, transitions, mode switches."
+      },
+      {
+        "name": "pillow",
+        "tag": "rest",
+        "doc": "Bed pillow. For low-energy / rest-state empty states."
+      },
+      {
+        "name": "lamp",
+        "tag": "comfort",
+        "doc": "Table lamp. Lit (warm point) or unlit (offline / error)."
+      },
+      { "name": "book", "tag": "interior", "doc": "Open book. For journal / notes empty states." },
+      {
+        "name": "plant",
+        "tag": "growth",
+        "doc": "Sprig in a pot. For onboarding / growth states."
+      },
+      {
+        "name": "horizon",
+        "tag": "threshold",
+        "doc": "Distant horizon line. For 'inner horizons' moments."
+      },
+      { "name": "blanket", "tag": "rest", "doc": "Folded blanket / throw." },
+      { "name": "tea", "tag": "comfort", "doc": "Teapot or kettle. With steam (warm point)." },
+      { "name": "candle", "tag": "comfort", "doc": "Lit candle. Always carries the warm point." },
+      {
+        "name": "moonsill",
+        "tag": "interior",
+        "doc": "Moon visible through a sill. For nighttime / private states."
+      }
+    ]
+  },
+
+  "applications": {
+    "_doc": "Six canonical empty states. Each pairs ONE vignette with one short line of body copy and one action.",
+    "states": [
+      {
+        "name": "emptyJournal",
+        "vignette": "open book + moth",
+        "copy": "Nothing yet. When someone writes, this page fills in."
+      },
+      {
+        "name": "emptyFronting",
+        "vignette": "lit window at dusk",
+        "copy": "No one's logged a front yet. Tap to log who's here."
+      },
+      {
+        "name": "emptyFriends",
+        "vignette": "two cups, one steaming",
+        "copy": "When you add someone, they'll show up here."
+      },
+      {
+        "name": "firstRun",
+        "vignette": "doorway opening on a horizon",
+        "copy": "Welcome. Let's set up your system."
+      },
+      {
+        "name": "emptyNotes",
+        "vignette": "pillow + sill plant",
+        "copy": "A quiet drawer. Drop a note in any time."
+      },
+      {
+        "name": "offline",
+        "vignette": "unlit lamp",
+        "copy": "We'll catch up when you're back online."
+      }
+    ]
+  },
+
+  "rules": {
+    "do": [
+      "One scene per empty state — no collages.",
+      "One warm-teal point per scene — a single lit thing.",
+      "Caveat italic for hand-lettered annotations only ('nothing here yet'). Never for instructions.",
+      "Pair with a single short line of body copy and one action.",
+      "Crop generously — empty space is part of the illustration."
+    ],
+    "dont": [
+      "No people, faces, or human figures — too literal.",
+      "No color beyond the three-ink palette.",
+      "Don't reuse vocabulary as decoration in non-empty states.",
+      "Line only — never closed shapes with fills.",
+      "Don't shrink below 96px square; small spots use the icon set instead."
+    ]
+  },
+
+  "size": {
+    "_doc": "Render sizes for each context.",
+    "thumbnail": { "value": "96px", "doc": "Inline within a list item." },
+    "default": { "value": "240px", "doc": "Standard empty-state hero." },
+    "marketing": { "value": "480px", "doc": "Marketing / onboarding wide hero." }
+  }
+}

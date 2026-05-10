@@ -75,6 +75,10 @@ docs/local-audits/
 # Superpowers specs and plans (local working docs)
 docs/superpowers/
 
+# Design system local-only reference bundle (preview HTML, JSX kit,
+# chats, uploads, explorations). Production code lives in packages/design-system/.
+docs/design-system/
+
 # Git worktrees (local workspaces)
 .worktrees/
 

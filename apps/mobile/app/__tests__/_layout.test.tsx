@@ -224,6 +224,15 @@ vi.mock("@tanstack/react-query", () => ({
     React.createElement(React.Fragment, null, children),
 }));
 
+vi.mock("@pluralscape/design-system", () => ({
+  ThemeProvider: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
+}));
+
+vi.mock("../../src/lib/fonts.js", () => ({
+  useDesignSystemFonts: (): readonly [boolean] => [true] as const,
+}));
+
 // ── Helpers ─────────────────────────────────────────────────────────
 
 function makePlatformContext(): PlatformContext {

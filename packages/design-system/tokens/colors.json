@@ -1,0 +1,150 @@
+{
+  "$schema": "../tokens/schema.md",
+  "_doc": "Single source of truth for Pluralscape color tokens. Edit here. Run `node tokens/build.mjs` to regenerate colors_and_type.css and ui_kits/mobile/theme.js. Mode overrides live alongside the default values; consumers apply them via [data-mode='…'].",
+
+  "primary": {
+    "deepSpaceBlue": { "value": "#0f0f23", "doc": "Base — app background, primary surfaces" },
+    "softLavender": {
+      "value": "#b8a9c9",
+      "doc": "Primary — interactive fills · ratio target ~60%"
+    },
+    "skyTeal": { "value": "#7ecbc0", "doc": "Active — fronting, success · ratio target ~30%" },
+    "paleRose": {
+      "value": "#d4a5b5",
+      "doc": "Intimate — RARE accent (~10%). Personal/member-private surfaces only: solo composer, intimate-share badges, self-only privacy buckets, system-level 'just for you' empty states. Never in nav, primary buttons, default focus rings, default badges."
+    },
+    "moonlight": { "value": "#e8e4f0", "doc": "Text — primary on dark" }
+  },
+
+  "_paletteRatios": {
+    "_doc": "Lavender 60% : Teal 30% : Rose 10%. Rose is RARE, not a sibling. If a layout would place Rose adjacent to Teal in chrome, demote Rose. Enforce by review.",
+    "lavender": 0.6,
+    "teal": 0.3,
+    "rose": 0.1
+  },
+
+  "extended": {
+    "spaceMist": {
+      "value": "#181833",
+      "doc": "Elevated surface — cards, modals. Independently tuned shade of deepSpaceBlue; if you rebrand the canvas, hand-re-pick this and friends."
+    },
+    "nebula": {
+      "value": "#12122a",
+      "doc": "Subtle bg differentiation. Independently tuned shade of deepSpaceBlue."
+    },
+    "surfaceHover": {
+      "value": "#1f1f3f",
+      "doc": "Hover state for spaceMist surfaces. Independently tuned."
+    },
+    "dimMoonlight": { "value": "#a8a4b8" },
+    "stardust": { "value": "#908aa5" },
+    "twilight": { "value": "#2a2a4a" },
+    "lavenderBright": {
+      "value": "#c9bcda",
+      "doc": "Focus rings AND inline link color (E1). Distinguishes links from primary buttons (which use softLavender)."
+    },
+    "lavenderHi": {
+      "value": "#d6c5e6",
+      "doc": "Primary-button hover. ~+18% L vs softLavender so the hover delta is actually perceptible (E2)."
+    },
+    "softCrimson": { "value": "#e88691" },
+    "dustyCrimson": {
+      "value": "#b67079",
+      "doc": "Littles-mode danger (B2). Distinct from amber warning, still desaturated and gentle."
+    },
+    "paleAmber": { "value": "#d4b05a" },
+    "darkLavender": { "value": "#6b5d87", "doc": "Used in light wordmark only" },
+    "darkTeal": { "value": "#2d7a72", "doc": "Used in light wordmark only" }
+  },
+
+  "semantic": {
+    "default": {
+      "bg": { "value": "{primary.deepSpaceBlue}" },
+      "bgSubtle": { "value": "{extended.nebula}" },
+      "surface": { "value": "{extended.spaceMist}" },
+      "surfaceHover": { "value": "{extended.surfaceHover}" },
+      "border": { "value": "{extended.twilight}", "doc": "decorative dividers only" },
+      "borderStrong": {
+        "value": "#8780ad",
+        "doc": "WCAG 1.4.11 — interactive chrome (inputs, toggles, checkboxes, buttons). 4.46:1 on card; ~4:1 on bg. Real headroom over the 3:1 target (B1)."
+      },
+      "borderFocus": { "value": "{extended.lavenderBright}" },
+      "fg": { "value": "{primary.moonlight}" },
+      "fgMuted": { "value": "{extended.dimMoonlight}" },
+      "fgSubtle": { "value": "{extended.stardust}" },
+      "fgOnAccent": {
+        "value": "{primary.deepSpaceBlue}",
+        "doc": "Always — never Moonlight on accent fills."
+      },
+      "accent": {
+        "value": "{primary.softLavender}",
+        "doc": "Primary-button fill. NOT link color — see linkColor (E1)."
+      },
+      "accentHover": {
+        "value": "{extended.lavenderHi}",
+        "doc": "+18% L vs accent; perceptible delta (E2)."
+      },
+      "accentActive": { "value": "#ae9fbf" },
+      "linkColor": {
+        "value": "{extended.lavenderBright}",
+        "doc": "Inline link color. Distinct from accent so a paragraph with one link doesn't read as a button-colored word (E1)."
+      },
+      "linkHover": { "value": "#dcd0eb" },
+      "interactiveOn": {
+        "value": "{primary.softLavender}",
+        "doc": "Toggle/Switch 'on' state. Distinct from success — toggling a notification on must not read as 'fronting' (B4)."
+      },
+      "success": { "value": "{primary.skyTeal}" },
+      "intimate": { "value": "{primary.paleRose}" },
+      "warning": { "value": "{extended.paleAmber}" },
+      "danger": { "value": "{extended.softCrimson}" }
+    }
+  },
+
+  "modes": {
+    "_doc": "Mode overrides MERGE on top of semantic.default. Only keys that change need to be listed.",
+
+    "static": {
+      "_doc": "(B3) Static mode — formerly 'low-sensory'. Flat fills, no glow, gradients freeze, motion clamps to 0. Strictest sensory mode. For users who want motion *reduced but not eliminated*, use 'reduced-motion' instead.",
+      "surface": "#161629",
+      "surfaceHover": "#181833",
+      "bgSubtle": "{primary.deepSpaceBlue}",
+      "border": "#3a3a5a"
+    },
+
+    "reduced-motion": {
+      "_doc": "(B3) Motion-only accommodation — visuals untouched, durations clamped to ≤50ms. Respects OS prefers-reduced-motion when applied alongside it. Use for vestibular sensitivity without sensory flattening."
+    },
+
+    "high-contrast": {
+      "_doc": "Promote interactive borders to borderStrong everywhere; promote muted text to fg; remove surface tinting; brighten accent.",
+      "fg": "#ffffff",
+      "fgMuted": "#e8e4f0",
+      "fgSubtle": "#a8a4b8",
+      "border": "#9089b6",
+      "borderStrong": "#b8b1d8",
+      "borderFocus": "#ffffff",
+      "surface": "{primary.deepSpaceBlue}",
+      "surfaceHover": "#1a1a35",
+      "bgSubtle": "{primary.deepSpaceBlue}",
+      "accent": "#d6c8e6",
+      "accentHover": "#ece0f5",
+      "accentActive": "#c6b8d6",
+      "linkColor": "#ffffff",
+      "linkHover": "#e8e4f0",
+      "interactiveOn": "#d6c8e6"
+    },
+
+    "littles": {
+      "_doc": "Littles Safe Mode. Softer accent (Pale Rose), no scary Crimson, friendlier surfaces. Component layer additionally enlarges targets and hides destructive actions. (B2) `danger` uses dustyCrimson — desaturated red, distinct from amber `warning`.",
+      "accent": "{primary.paleRose}",
+      "accentHover": "#dcb1c0",
+      "accentActive": "#c79aac",
+      "danger": "{extended.dustyCrimson}",
+      "surface": "#1c1832",
+      "borderFocus": "{primary.paleRose}",
+      "linkColor": "{extended.lavenderBright}",
+      "interactiveOn": "{primary.paleRose}"
+    }
+  }
+}
