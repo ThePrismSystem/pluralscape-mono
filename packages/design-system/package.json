@@ -1,0 +1,41 @@
+{
+  "name": "@pluralscape/design-system",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./assets/fonts/*": "./assets/fonts/*",
+    "./assets/logo/*": "./assets/logo/*",
+    "./tokens/*": "./tokens/*"
+  },
+  "scripts": {
+    "tokens:build": "node tokens/build.mjs",
+    "tokens:check": "node tokens/build.mjs --check",
+    "build": "pnpm tokens:build && tsc --noEmit",
+    "test": "echo 'Run tests from monorepo root: pnpm vitest run --project design-system' && exit 1",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint --max-warnings 0 .",
+    "lint:fix": "eslint --fix --max-warnings 0 ."
+  },
+  "dependencies": {
+    "lucide-react-native": "catalog:",
+    "react-native-svg": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-native": ">=0.80.0"
+  },
+  "devDependencies": {
+    "@pluralscape/eslint-config": "workspace:*",
+    "@pluralscape/tsconfig": "workspace:*",
+    "@testing-library/react-native": "^13.0.0",
+    "@types/react": "catalog:",
+    "eslint": "catalog:",
+    "react": "^19.2.6",
+    "react-native": "*",
+    "react-test-renderer": "^19.2.6",
+    "style-dictionary": "^4.0.0",
+    "typescript": "catalog:"
+  }
+}

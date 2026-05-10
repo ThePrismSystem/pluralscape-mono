@@ -1,0 +1,11 @@
+{
+  "extends": "@pluralscape/tsconfig/base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "resolveJsonModule": true,
+    "jsx": "react-native"
+  },
+  "include": ["src/**/*", "tokens/**/*.json"],
+  "exclude": ["dist", "node_modules", "**/__tests__/**"]
+}
