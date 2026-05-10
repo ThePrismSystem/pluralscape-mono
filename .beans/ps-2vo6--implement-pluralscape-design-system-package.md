@@ -5,7 +5,7 @@ status: in-progress
 type: feature
 priority: normal
 created_at: 2026-05-10T08:22:37Z
-updated_at: 2026-05-10T09:15:41Z
+updated_at: 2026-05-10T09:23:13Z
 ---
 
 Stand up packages/design-system per spec docs/superpowers/specs/2026-05-10-design-system-package-design.md.
@@ -36,7 +36,7 @@ Sub-tasks (26 from plan):
 ## Phase 5: Atom port (TDD per atom)
 
 - [x] T8 Icon (lucide-react-native wrapper)
-- [ ] T9 Button
+- [x] T9 Button
 - [ ] T10 IconButton
 - [ ] T11 Badge
 - [ ] T12 Avatar
