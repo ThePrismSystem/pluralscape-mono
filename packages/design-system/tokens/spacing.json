@@ -2,17 +2,17 @@
   "_doc": "8px-base spacing scale and touch-target floors. WCAG 2.5.5 AAA = 44px; 2.5.8 AA = 24px with ≥10px separation. Littles mode promotes hitMin to hitComfy.",
 
   "scale": {
-    "xs":  4,
-    "sm":  8,
-    "md":  16,
-    "lg":  24,
-    "xl":  32,
+    "xs": 4,
+    "sm": 8,
+    "md": 16,
+    "lg": 24,
+    "xl": 32,
     "2xl": 48
   },
 
   "hit": {
-    "default":      { "min": 44, "comfy": 48, "dense": 32 },
-    "littles":      { "min": 56, "comfy": 64, "dense": 48 },
-    "high-contrast":{ "min": 48, "comfy": 56, "dense": 40 }
+    "default": { "min": 44, "comfy": 48, "dense": 32 },
+    "littles": { "min": 56, "comfy": 64, "dense": 48 },
+    "high-contrast": { "min": 48, "comfy": 56, "dense": 40 }
   }
 }

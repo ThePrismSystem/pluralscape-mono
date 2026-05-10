@@ -112,12 +112,7 @@ function SmokeContent(): ReactElement {
         <View style={{ flexDirection: "row", gap: LAYOUT.rowGap, alignItems: "center" }}>
           <Icon name="check" />
           <IconButton name="x" accessibilityLabel="Close" onPress={noop} />
-          <IconButton
-            name="settings"
-            accessibilityLabel="Settings"
-            onPress={noop}
-            tone="muted"
-          />
+          <IconButton name="settings" accessibilityLabel="Settings" onPress={noop} tone="muted" />
         </View>
       </Section>
 

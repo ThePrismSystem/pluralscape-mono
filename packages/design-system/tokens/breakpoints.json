@@ -2,10 +2,13 @@
   "_doc": "(C4) Central breakpoint registry. Phone-first; tablet and desktop are progressive enhancements. Use these tokens, not raw px, in every @media query and platform conditional. The mobile app collapses to phone widths regardless of viewport; the web surface uses the full ladder.",
 
   "scale": {
-    "sm":  { "px": 640,  "doc": "Type-scale tightens below this — handsets in portrait." },
-    "md":  { "px": 768,  "doc": "Tablet portrait. Layout still single-column." },
-    "lg":  { "px": 1024, "doc": "Desktop floor (cross_platform_parity.md). Two-column layouts allowed." },
-    "xl":  { "px": 1280, "doc": "Wider gutters, expanded reading column." },
+    "sm": { "px": 640, "doc": "Type-scale tightens below this — handsets in portrait." },
+    "md": { "px": 768, "doc": "Tablet portrait. Layout still single-column." },
+    "lg": {
+      "px": 1024,
+      "doc": "Desktop floor (cross_platform_parity.md). Two-column layouts allowed."
+    },
+    "xl": { "px": 1280, "doc": "Wider gutters, expanded reading column." },
     "2xl": { "px": 1536, "doc": "Marketing hero / wide presentations." }
   },
 

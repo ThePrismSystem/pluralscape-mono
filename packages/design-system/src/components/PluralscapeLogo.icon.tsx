@@ -17,12 +17,7 @@ const NODE_CENTER = { cx: "50", cy: "50", r: "2.5", fill: "#7ecbc0" } as const;
 
 export function IconMark({ size, accessibilityLabel }: IconMarkProps): ReactElement {
   return (
-    <Svg
-      width={size}
-      height={size}
-      viewBox={VIEW_BOX}
-      accessibilityLabel={accessibilityLabel}
-    >
+    <Svg width={size} height={size} viewBox={VIEW_BOX} accessibilityLabel={accessibilityLabel}>
       <Defs>
         <LinearGradient id="p0" x1="20" y1="20" x2="80" y2="75" gradientUnits="userSpaceOnUse">
           <Stop stopColor="#b8a9c9" />

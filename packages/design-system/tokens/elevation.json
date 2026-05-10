@@ -10,15 +10,15 @@
   "glow": {
     "default": {
       "lavender": "0 0 24px rgba(184, 169, 201, 0.25)",
-      "teal":     "0 0 24px rgba(126, 203, 192, 0.25)"
+      "teal": "0 0 24px rgba(126, 203, 192, 0.25)"
     },
     "static": {
       "lavender": "none",
-      "teal":     "none"
+      "teal": "none"
     },
     "high-contrast": {
       "lavender": "none",
-      "teal":     "none"
+      "teal": "none"
     }
   }
 }

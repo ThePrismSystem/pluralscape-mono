@@ -11,15 +11,15 @@ The gates exist because the PDF audit (Apr 2026) flagged that our docs claimed f
 
 ## A. Automated — to wire into CI
 
-| Gate | Tool | Where | Status | Failing means |
-| --- | --- | --- | --- | --- |
-| **Web a11y lint** | [`eslint-plugin-jsx-a11y`](https://github.com/jsx-eslint/eslint-plugin-jsx-a11y) `recommended` ruleset, no rule allowed below `error` | `apps/web/.eslintrc` | planned | block PR |
-| **RN a11y lint** | [`eslint-plugin-react-native-a11y`](https://github.com/FormidableLabs/eslint-plugin-react-native-a11y) `all` ruleset | `apps/mobile/.eslintrc` | planned | block PR |
-| **Token contrast** | `tests/tokens/contrast.test.ts` — iterates `tokens/pairings.json` (C2). Each `allowed` pair must clear its declared min; no `forbidden` pair may resolve as fg+bg in any `semantic.<mode>` mapping. | `tokens/` package CI | planned | block PR |
-| **Hit-area floor** | `tests/components/hit-area.test.tsx` — renders every primitive in default mode, asserts bounding box ≥ 44×44 | components package | planned | block PR |
-| **Mode coverage** | `tests/tokens/mode-coverage.test.ts` — every override key in `tokens/colors.json` modes must reference an existing default token; every primitive must render under all three modes without crashing | tokens + components | planned | block PR |
-| **axe-core in render tests** | [`jest-axe`](https://github.com/nickcolley/jest-axe) on every screen/component test, no violations allowed | components + screens | planned | block PR |
-| **Focus-visible coverage** | `tests/components/focus-visible.test.tsx` — every interactive primitive shows `box-shadow` matching `--focus-ring` when focused via keyboard | components | planned | block PR |
+| Gate                         | Tool                                                                                                                                                                                                 | Where                   | Status  | Failing means |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | ------- | ------------- |
+| **Web a11y lint**            | [`eslint-plugin-jsx-a11y`](https://github.com/jsx-eslint/eslint-plugin-jsx-a11y) `recommended` ruleset, no rule allowed below `error`                                                                | `apps/web/.eslintrc`    | planned | block PR      |
+| **RN a11y lint**             | [`eslint-plugin-react-native-a11y`](https://github.com/FormidableLabs/eslint-plugin-react-native-a11y) `all` ruleset                                                                                 | `apps/mobile/.eslintrc` | planned | block PR      |
+| **Token contrast**           | `tests/tokens/contrast.test.ts` — iterates `tokens/pairings.json` (C2). Each `allowed` pair must clear its declared min; no `forbidden` pair may resolve as fg+bg in any `semantic.<mode>` mapping.  | `tokens/` package CI    | planned | block PR      |
+| **Hit-area floor**           | `tests/components/hit-area.test.tsx` — renders every primitive in default mode, asserts bounding box ≥ 44×44                                                                                         | components package      | planned | block PR      |
+| **Mode coverage**            | `tests/tokens/mode-coverage.test.ts` — every override key in `tokens/colors.json` modes must reference an existing default token; every primitive must render under all three modes without crashing | tokens + components     | planned | block PR      |
+| **axe-core in render tests** | [`jest-axe`](https://github.com/nickcolley/jest-axe) on every screen/component test, no violations allowed                                                                                           | components + screens    | planned | block PR      |
+| **Focus-visible coverage**   | `tests/components/focus-visible.test.tsx` — every interactive primitive shows `box-shadow` matching `--focus-ring` when focused via keyboard                                                         | components              | planned | block PR      |
 
 ### Forbidden-pair tests (C2)
 
@@ -30,22 +30,24 @@ as a resolved fg+bg pair in any `semantic.<mode>` mapping.
 
 ```ts
 // tests/tokens/forbidden-pairs.test.ts
-import colors   from '../../tokens/colors.json';
-import pairings from '../../tokens/pairings.json';
-import { contrast, resolveColor, semanticPairs } from '../helpers/contrast';
+import colors from "../../tokens/colors.json";
+import pairings from "../../tokens/pairings.json";
+import { contrast, resolveColor, semanticPairs } from "../helpers/contrast";
 
-test.each(pairings.allowed)('allowed: $id clears $min:1', (p) => {
+test.each(pairings.allowed)("allowed: $id clears $min:1", (p) => {
   const r = contrast(resolveColor(p.fg), resolveColor(p.bg));
   expect(r).toBeGreaterThanOrEqual(p.min);
 });
 
-test.each(pairings.forbidden)('forbidden: $id never resolves in any semantic mode', (p) => {
+test.each(pairings.forbidden)("forbidden: $id never resolves in any semantic mode", (p) => {
   const fg = resolveColor(p.fg).toLowerCase();
   const bg = resolveColor(p.bg).toLowerCase();
   for (const [modeName, mode] of semanticPairs(colors)) {
     for (const { fgRole, bgRole, fgVal, bgVal } of mode) {
       if (fgVal.toLowerCase() === fg && bgVal.toLowerCase() === bg) {
-        throw new Error(`mode "${modeName}" reaches forbidden pair ${p.id} via ${fgRole} on ${bgRole}`);
+        throw new Error(
+          `mode "${modeName}" reaches forbidden pair ${p.id} via ${fgRole} on ${bgRole}`,
+        );
       }
     }
   }
@@ -60,7 +62,7 @@ artifacts even if jest hasn't run yet.
 
 ```ts
 // tests/helpers/contrast.ts
-export function contrast(fg: string, bg: string): number;            // returns ratio
+export function contrast(fg: string, bg: string): number; // returns ratio
 export function passesAA(fg: string, bg: string, large?: boolean): boolean;
 export function passesAAA(fg: string, bg: string, large?: boolean): boolean;
 ```

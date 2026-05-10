@@ -12,7 +12,13 @@ import {
   themes,
   type Theme,
   type ThemeMode,
-  Button, IconButton, Badge, Avatar, Input, Switch, Icon,
+  Button,
+  IconButton,
+  Badge,
+  Avatar,
+  Input,
+  Switch,
+  Icon,
   PluralscapeLogo,
 } from "@pluralscape/design-system";
 ```

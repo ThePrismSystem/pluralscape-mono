@@ -18,10 +18,7 @@ const LAYOUT = {
 const STROKE_WIDTH = "2";
 const TEXT_FILL = "#0f0f23";
 
-export function WordmarkLight({
-  size,
-  accessibilityLabel,
-}: WordmarkLightProps): ReactElement {
+export function WordmarkLight({ size, accessibilityLabel }: WordmarkLightProps): ReactElement {
   const height = (size * LAYOUT.viewBoxHeight) / LAYOUT.viewBoxWidth;
   return (
     <Svg

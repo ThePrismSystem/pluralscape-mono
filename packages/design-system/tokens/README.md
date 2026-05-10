@@ -19,12 +19,12 @@ tokens/
 
 `colors.json`, `typography.json`, `spacing.json`, `motion.json`, and `elevation.json` each define a default and a set of overrides under `modes.*`. The current modes are:
 
-| Mode | Selector | Purpose |
-| --- | --- | --- |
-| Default | (none) | Inner Horizons aesthetic |
-| `low-sensory` | `[data-mode="low-sensory"]` | Flat fills, no glow, motion clamped |
-| `high-contrast` | `[data-mode="high-contrast"]` | Brighter text, stronger borders, no surface tint |
-| `littles` | `[data-mode="littles"]` | Littles Safe Mode — softer accent, no Crimson, larger targets |
+| Mode            | Selector                      | Purpose                                                       |
+| --------------- | ----------------------------- | ------------------------------------------------------------- |
+| Default         | (none)                        | Inner Horizons aesthetic                                      |
+| `low-sensory`   | `[data-mode="low-sensory"]`   | Flat fills, no glow, motion clamped                           |
+| `high-contrast` | `[data-mode="high-contrast"]` | Brighter text, stronger borders, no surface tint              |
+| `littles`       | `[data-mode="littles"]`       | Littles Safe Mode — softer accent, no Crimson, larger targets |
 
 Each override **merges** onto the default. Anything not listed inherits.
 

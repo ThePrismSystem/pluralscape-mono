@@ -24,13 +24,9 @@ export function PluralscapeLogo({
     case "icon":
       return <IconMark size={size} accessibilityLabel={accessibilityLabel} />;
     case "wordmark":
-      return (
-        <Wordmark size={size} accessibilityLabel={accessibilityLabel} bg="transparent" />
-      );
+      return <Wordmark size={size} accessibilityLabel={accessibilityLabel} bg="transparent" />;
     case "wordmark-dark":
-      return (
-        <Wordmark size={size} accessibilityLabel={accessibilityLabel} bg={DARK_CANVAS_BG} />
-      );
+      return <Wordmark size={size} accessibilityLabel={accessibilityLabel} bg={DARK_CANVAS_BG} />;
     case "wordmark-light":
       return <WordmarkLight size={size} accessibilityLabel={accessibilityLabel} />;
   }

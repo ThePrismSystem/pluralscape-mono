@@ -29,14 +29,7 @@ export interface InputProps extends Omit<TextInputProps, "style"> {
   readonly error?: string;
 }
 
-export function Input({
-  label,
-  hint,
-  error,
-  onFocus,
-  onBlur,
-  ...rest
-}: InputProps): ReactElement {
+export function Input({ label, hint, error, onFocus, onBlur, ...rest }: InputProps): ReactElement {
   const theme = useTheme();
   const [focused, setFocused] = useState(false);
   const styles = makeStyles(theme, focused, error !== undefined);

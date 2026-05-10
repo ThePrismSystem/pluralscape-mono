@@ -47,7 +47,10 @@ interface PressableMockProps {
   readonly [key: string]: unknown;
 }
 
-function flattenStyle(style: PressableStyle | undefined, pressed: boolean): Record<string, unknown> {
+function flattenStyle(
+  style: PressableStyle | undefined,
+  pressed: boolean,
+): Record<string, unknown> {
   if (typeof style === "function") return StyleSheet.flatten(style({ pressed }));
   return StyleSheet.flatten(style);
 }

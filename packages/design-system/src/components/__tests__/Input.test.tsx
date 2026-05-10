@@ -37,9 +37,7 @@ describe("Input", () => {
 
   it("renders hint when provided and no error", () => {
     render(
-      wrap(
-        <Input label="Email" value="" onChangeText={() => {}} hint="we never share this" />,
-      ),
+      wrap(<Input label="Email" value="" onChangeText={() => {}} hint="we never share this" />),
     );
     expect(screen.getByText("we never share this")).toBeDefined();
   });
