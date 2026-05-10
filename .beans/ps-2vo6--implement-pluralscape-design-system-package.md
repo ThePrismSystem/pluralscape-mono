@@ -40,7 +40,7 @@ Sub-tasks (26 from plan):
 - [x] T10 IconButton
 - [x] T11 Badge
 - [x] T12 Avatar
-- [ ] T13 Input
+- [x] T13 Input
 - [ ] T14 Switch
 - [ ] T15 PluralscapeLogo
 
