@@ -50,8 +50,7 @@ overrides:
   better-sqlite3: "npm:better-sqlite3-multiple-ciphers@^12.6.2"
   ioredis: "5.10.1"
   esbuild: ">=0.25.0"
-  fast-xml-parser: ">=5.7.0"
-  "@aws-sdk/xml-builder>fast-xml-parser": "5.5.12"
+  fast-xml-parser: "^5.7.2"
   postcss: ">=8.5.10"
   flatted: ">=3.4.2"
   # brace-expansion override removed: pnpm overrides force a single version
@@ -70,9 +69,5 @@ overrides:
   axios: "^1.16.0"
   "@xmldom/xmldom": ">=0.8.13"
   uuid: ">=14.0.0"
-
-auditConfig:
-  ignoreCves:
-    - "GHSA-gh4j-gqv2-49f6"
 
 verifyDepsBeforeRun: true
