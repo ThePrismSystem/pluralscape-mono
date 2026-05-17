@@ -3,8 +3,9 @@
 title: Design BucketPill primitive
 status: todo
 type: task
+priority: normal
 created_at: 2026-05-17T06:29:14Z
-updated_at: 2026-05-17T06:29:14Z
+updated_at: 2026-05-17T08:50:23Z
 parent: ps-udt1
 ---
 
@@ -25,3 +26,20 @@ Design the BucketPill primitive: small visual privacy-bucket indicator — color
 ## Out of scope
 
 - RN code (M11), screen-level integration (Privacy & Social beans)
+
+## Scope clarification (2026-05-17)
+
+Re-audit (ps-sg8k) found that `PrivacyBucket.jsx` (the bucket editor)
+already exists, but BucketPill is a distinct primitive: the compact
+chip-form representation of a bucket assignment, used in:
+
+- Content metadata rows (e.g., "Visible to: Close friends, Strangers")
+- BucketPicker (ps-s9r6) selection state — picked buckets render as pills
+- KeyValueRow value cells where the value is a list of buckets
+
+BucketPill is NOT the editor and should not be confused with PrivacyBucket.jsx.
+It's a tiny pill with the bucket name, optional audience-count badge, and
+a fail-closed visual treatment for the special "Nobody" bucket.
+
+Bean kept. Design produces `components-bucket-pill.html` with the 8 states
+and 4 mode variants per SKILL.md §7-8.

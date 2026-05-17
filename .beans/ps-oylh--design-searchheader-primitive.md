@@ -3,8 +3,9 @@
 title: Design SearchHeader primitive
 status: todo
 type: task
+priority: normal
 created_at: 2026-05-17T06:28:44Z
-updated_at: 2026-05-17T06:28:44Z
+updated_at: 2026-05-17T08:50:23Z
 parent: ps-udt1
 ---
 
@@ -25,3 +26,16 @@ Design the SearchHeader primitive: inline search bar header used in pickers (Mem
 ## Out of scope
 
 - RN code (M11), screen-level integration (Search beans)
+
+## Re-audit disposition (2026-05-17)
+
+JSX implementation exists in `docs/design-system/ui_kits/mobile/LibraryComponents.jsx`
+and is used in `Screen_Library.jsx`, but no dedicated preview file.
+
+Updated scope: extract the JSX implementation into a dedicated
+`components-search-header.html` preview. Add: focused/blurred states,
+clear-button affordance, voice-search affordance (if applicable),
+recent-searches popover, the 8 acceptance states, 4 mode variants,
+7-section doc.
+
+Extraction task.

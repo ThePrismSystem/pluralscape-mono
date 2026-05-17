@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: high
 created_at: 2026-05-17T05:49:37Z
-updated_at: 2026-05-17T06:31:39Z
+updated_at: 2026-05-17T08:50:23Z
 parent: ps-udt1
 ---
 
@@ -69,3 +69,37 @@ Patterns: RecoveryKey ceremony (ps-472d), WizardStepper (ps-rhno)
 **Audit report**: not written as a separate file — `docs/design-system/audits/` is gitignored. The summary above captures the same gap data inline so the spawned bean IDs are traceable in the committed bean files.
 
 **Blocks-pilot primitives** (Phase 1 Fronting beans should declare blocked_by on these): FrontingChip (ps-458i), FrontingTimelineLane (ps-sal4), AvatarStack already covered, EmptyState (ps-ruwi), DestructiveConfirmDialog (ps-bydy), CheckInPrompt (ps-7to1), BucketPicker (ps-s9r6), MemberPicker+Multi (ps-djqo).
+
+## Re-audit addendum (2026-05-17)
+
+A definitive cross-reference of the 37 spawned beans against every file
+in `docs/design-system/preview/*.html` and `docs/design-system/ui_kits/mobile/*.jsx`
+found that the original audit was too aggressive in declaring primitives
+"missing":
+
+- **20 confirmed missing** — design from scratch via Claude Design
+- **14 already designed** — bean scope changed to "extract to standalone
+  preview + add missing 8 acceptance states + 4 mode variants + 7-section
+  doc contract" (a Claude Code task, not a Claude Design task):
+  EmptyState (ps-ruwi), ErrorState (ps-a5ee), SyncIndicator/SyncState
+  (ps-gnkq), ProgressBar+Ring (ps-3m01), Accordion (ps-ecpl),
+  KeyValueRow (ps-5lr6), DestructiveConfirmDialog/ConfirmDestructive
+  (ps-bydy), ConfirmGesture (ps-00b4), Popover (ps-rgrw),
+  MemberPicker+Multi (ps-djqo), FrontingTimelineLane (ps-sal4),
+  Drawer (ps-217e), SystemSwitcher (ps-a5pt), SearchHeader (ps-oylh)
+- **1 scrapped** — EncryptionTierBadge (ps-gfhz): contradicts existing
+  design policy (no T1/T2 tier labels surface in UI; T3 plaintext
+  indicator already exists)
+- **2 scope-clarified** — BucketPill (ps-i6n1) distinguished from the
+  PrivacyBucket editor; FrontingChip (ps-458i) confirmed as needed for
+  non-timeline surfaces
+
+Naming corrections discovered during re-audit:
+
+- DestructiveConfirmDialog → canonical name is `ConfirmDestructive`
+- SyncIndicator → canonical name is `SyncState`
+
+Empty-state canon clarified: `illustrations.html` is the system's
+Domestic Interiors illustration vocabulary (12 motifs, 3-ink palette,
+6 canonical applied empty states). `components-display.html:378-410`
+shows the structural pattern. The EmptyState primitive composes both.

@@ -3,8 +3,9 @@
 title: Design ConfirmGesture primitive
 status: todo
 type: task
+priority: normal
 created_at: 2026-05-17T06:27:36Z
-updated_at: 2026-05-17T06:27:36Z
+updated_at: 2026-05-17T08:50:23Z
 parent: ps-udt1
 ---
 
@@ -25,3 +26,19 @@ Design the ConfirmGesture primitive: hold-to-confirm circular-progress affordanc
 ## Out of scope
 
 - RN code (M11), screen-level integration (Phase 1 / 2)
+
+## Re-audit disposition (2026-05-17)
+
+Already designed in `components-feedback.html:336-377`. Hold-to-confirm
+with a 1.2s ring fill, 3 states rendered (idle, holding-0.7s, confirmed).
+Used for irreversible actions in distress contexts (panic deletion,
+immediate sign-out everywhere) where a tap could be accidental. Releases
+early → cancels.
+
+Updated scope: extract into `components-confirm-gesture.html`. Add: the
+8 acceptance states (focus-visible matters here for keyboard users — Space
+holds, releasing within 1.2s cancels), 4 mode variants (littles likely
+disables this entirely; high-contrast doubles the ring; low-sensory
+removes the pulse), 7-section doc.
+
+Extraction task.

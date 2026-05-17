@@ -3,8 +3,9 @@
 title: Design Drawer primitive
 status: todo
 type: task
+priority: normal
 created_at: 2026-05-17T06:28:30Z
-updated_at: 2026-05-17T06:28:30Z
+updated_at: 2026-05-17T08:50:23Z
 parent: ps-udt1
 ---
 
@@ -25,3 +26,17 @@ Design the Drawer primitive: side-drawer chrome for web and tablet ≥1024px vie
 ## Out of scope
 
 - RN code (M11), screen-level integration (Home & Nav beans)
+
+## Re-audit disposition (2026-05-17)
+
+Mentioned in `components-nav-chrome.html` but without detailed state or
+mode coverage. Less coverage than the other EXTRACT beans — closer to
+"flesh out + extract" than pure extraction.
+
+Updated scope: read the existing nav-chrome treatment, design the missing
+state coverage (collapsed/expanded, dragging, dismissing), produce
+`components-drawer.html` with the 8 acceptance states and 4 mode variants
+(littles is the key one — drawer may need wider hit targets and simpler
+contents). 7-section doc.
+
+Partial-extraction + light design task.

@@ -3,8 +3,9 @@
 title: Design SystemSwitcher primitive
 status: todo
 type: task
+priority: normal
 created_at: 2026-05-17T06:28:40Z
-updated_at: 2026-05-17T06:28:40Z
+updated_at: 2026-05-17T08:50:23Z
 parent: ps-udt1
 ---
 
@@ -25,3 +26,17 @@ Design the SystemSwitcher primitive: account → system pick surface reachable f
 ## Out of scope
 
 - RN code (M11), screen-level integration (Home & Nav beans)
+
+## Re-audit disposition (2026-05-17)
+
+Dropdown shown in `components-nav-chrome.html` but with limited state
+coverage.
+
+Updated scope: read the existing nav-chrome treatment, design missing
+states (loading systems list, error fetching, system-being-switched
+intermediate), produce `components-system-switcher.html` with full state
+
+- mode coverage. The littles-mode variant should be simpler (system
+  switching is a power-user affordance).
+
+Partial-extraction + light design task.

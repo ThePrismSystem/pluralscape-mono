@@ -3,8 +3,9 @@
 title: Design FrontingChip primitive
 status: todo
 type: task
+priority: normal
 created_at: 2026-05-17T06:28:55Z
-updated_at: 2026-05-17T06:28:55Z
+updated_at: 2026-05-17T08:50:23Z
 parent: ps-udt1
 ---
 
@@ -25,3 +26,24 @@ Design the FrontingChip primitive: per-member or per-custom-front active-fronter
 ## Out of scope
 
 - RN code (M11), screen-level integration (Fronting beans)
+
+## Scope clarification (2026-05-17)
+
+Re-audit (ps-sg8k) noted FrontingTimeline already renders fronting state
+as colored bars (not chips), which raised the question of whether a
+distinct FrontingChip primitive is needed.
+
+It is. FrontingChip is for non-timeline surfaces where a compact
+"this member is fronting" badge is more useful than a timeline bar:
+
+- App header / status bar — "Rowan is fronting" at a glance
+- Quick-switch sheet preview rows
+- Member cards — "currently fronting" inline badge
+- Mention previews — "@Rowan (fronting)"
+- Notification context — "Rowan was fronting when this fired"
+
+These surfaces need a single-pill component, not a timeline lane.
+
+Bean kept. Variants per the original bean body (member / custom-front /
+structure-entity, sm/md/lg, with co-fronting / primary-front /
+ended-recently / live state indicators).
