@@ -3,9 +3,12 @@
 title: "Fronting: Quick switch sheet + co-front variant"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T05:50:12Z
-updated_at: 2026-05-17T05:50:12Z
+updated_at: 2026-05-17T07:42:07Z
 parent: ps-5920
+blocked_by:
+  - ps-udt1
 ---
 
 ## Goal

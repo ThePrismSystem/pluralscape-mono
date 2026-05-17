@@ -3,9 +3,12 @@
 title: "Privacy: Bucket detail (4 tabs — friends / content / rotation / settings)"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T06:40:40Z
-updated_at: 2026-05-17T06:40:40Z
+updated_at: 2026-05-17T07:42:07Z
 parent: ps-9xue
+blocked_by:
+  - ps-5920
 ---
 
 ## Goal

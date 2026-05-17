@@ -3,9 +3,12 @@
 title: "Auth: Forgot password fork + 3 recovery paths"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T06:33:29Z
-updated_at: 2026-05-17T06:33:29Z
+updated_at: 2026-05-17T07:42:05Z
 parent: ps-nwju
+blocked_by:
+  - ps-5920
 ---
 
 ## Goal

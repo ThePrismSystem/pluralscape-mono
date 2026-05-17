@@ -3,9 +3,12 @@
 title: "Members: Photo gallery management"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T06:37:08Z
-updated_at: 2026-05-17T06:37:08Z
+updated_at: 2026-05-17T07:42:08Z
 parent: ps-07l7
+blocked_by:
+  - ps-5920
 ---
 
 ## Goal

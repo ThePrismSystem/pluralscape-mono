@@ -3,9 +3,12 @@
 title: "Structure: Entity hierarchy view"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T06:42:33Z
-updated_at: 2026-05-17T06:42:33Z
+updated_at: 2026-05-17T07:42:03Z
 parent: ps-7wf6
+blocked_by:
+  - ps-5920
 ---
 
 ## Goal

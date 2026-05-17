@@ -3,9 +3,12 @@
 title: "Home: Bottom tab bar + AppHeader chrome"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T06:35:03Z
-updated_at: 2026-05-17T06:35:03Z
+updated_at: 2026-05-17T07:42:05Z
 parent: ps-divy
+blocked_by:
+  - ps-5920
 ---
 
 ## Goal

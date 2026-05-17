@@ -3,9 +3,12 @@
 title: "Auth: Device transfer approve modal"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T06:33:44Z
-updated_at: 2026-05-17T06:33:44Z
+updated_at: 2026-05-17T07:42:05Z
 parent: ps-nwju
+blocked_by:
+  - ps-5920
 ---
 
 ## Goal

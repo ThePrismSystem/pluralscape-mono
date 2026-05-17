@@ -3,9 +3,12 @@
 title: "Communication: Poll vote sheet + results visualization"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T06:39:33Z
-updated_at: 2026-05-17T06:39:33Z
+updated_at: 2026-05-17T07:42:05Z
 parent: ps-5fc5
+blocked_by:
+  - ps-5920
 ---
 
 ## Goal

@@ -3,9 +3,12 @@
 title: "Fronting: Reports — list + config create/edit + generate"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T05:51:00Z
-updated_at: 2026-05-17T05:51:00Z
+updated_at: 2026-05-17T07:42:01Z
 parent: ps-5920
+blocked_by:
+  - ps-udt1
 ---
 
 ## Goal

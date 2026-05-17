@@ -3,9 +3,12 @@
 title: "Auth: Sign-up flow (account-type + password + recovery key)"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T06:33:20Z
-updated_at: 2026-05-17T06:33:20Z
+updated_at: 2026-05-17T07:42:02Z
 parent: ps-nwju
+blocked_by:
+  - ps-5920
 ---
 
 ## Goal

@@ -3,9 +3,12 @@
 title: "Fronting: Timer configs — list + create/edit"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T05:51:05Z
-updated_at: 2026-05-17T05:51:05Z
+updated_at: 2026-05-17T07:42:04Z
 parent: ps-5920
+blocked_by:
+  - ps-udt1
 ---
 
 ## Goal

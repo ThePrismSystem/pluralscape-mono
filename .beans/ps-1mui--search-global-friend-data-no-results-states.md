@@ -3,9 +3,12 @@
 title: "Search: Global + friend-data + no-results states"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T06:45:34Z
-updated_at: 2026-05-17T06:45:34Z
+updated_at: 2026-05-17T07:42:00Z
 parent: ps-6a3x
+blocked_by:
+  - ps-5920
 ---
 
 ## Goal

@@ -3,9 +3,12 @@
 title: "Cross-cutting: PIN / biometric foreground re-auth overlay"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T06:51:15Z
-updated_at: 2026-05-17T06:51:15Z
+updated_at: 2026-05-17T07:42:01Z
 parent: ps-k8mz
+blocked_by:
+  - ps-5920
 ---
 
 ## Goal

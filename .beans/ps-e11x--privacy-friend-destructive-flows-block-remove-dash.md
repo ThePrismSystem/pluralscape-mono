@@ -3,9 +3,12 @@
 title: "Privacy: Friend destructive flows (block / remove + dashboard export)"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T06:41:17Z
-updated_at: 2026-05-17T06:41:17Z
+updated_at: 2026-05-17T07:42:04Z
 parent: ps-9xue
+blocked_by:
+  - ps-5920
 ---
 
 ## Goal

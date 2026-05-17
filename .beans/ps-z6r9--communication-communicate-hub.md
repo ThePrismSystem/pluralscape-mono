@@ -3,9 +3,12 @@
 title: "Communication: Communicate hub"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T06:38:34Z
-updated_at: 2026-05-17T06:38:34Z
+updated_at: 2026-05-17T07:42:09Z
 parent: ps-5fc5
+blocked_by:
+  - ps-5920
 ---
 
 ## Goal

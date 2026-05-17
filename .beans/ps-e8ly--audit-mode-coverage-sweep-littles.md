@@ -3,14 +3,25 @@
 title: "Audit: Mode coverage sweep — littles"
 status: todo
 type: task
+priority: normal
 created_at: 2026-05-17T06:52:03Z
-updated_at: 2026-05-17T06:52:03Z
+updated_at: 2026-05-17T07:42:04Z
 parent: ps-oqs8
+blocked_by:
+  - ps-nwju
+  - ps-divy
+  - ps-07l7
+  - ps-5fc5
+  - ps-9xue
+  - ps-7wf6
+  - ps-djgs
+  - ps-6a3x
+  - ps-k8mz
 ---
 
 ## Goal
 
-Audit every Phase 2 screen for Littles Safe Mode coverage per GOVERNANCE.md §3. Littles mode is a simplified UI for child alters: bigger touch targets, simpler copy register, hidden destructive actions, restricted navigation.
+Audit every Phase 2 screen for Littles Safe Mode coverage per GOVERNANCE.md §3. Littles mode is a simplified UI for littles: bigger touch targets, simpler copy register, hidden destructive actions, restricted navigation.
 
 ## Method
 

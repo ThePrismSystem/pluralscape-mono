@@ -3,9 +3,12 @@
 title: "Auth: PIN setup + unlock + locked state"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T06:33:53Z
-updated_at: 2026-05-17T06:33:53Z
+updated_at: 2026-05-17T07:42:09Z
 parent: ps-nwju
+blocked_by:
+  - ps-5920
 ---
 
 ## Goal

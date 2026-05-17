@@ -3,9 +3,12 @@
 title: "Settings: Webhooks (list + create/edit + secret rotate + delivery log)"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T06:46:41Z
-updated_at: 2026-05-17T06:46:41Z
+updated_at: 2026-05-17T07:42:00Z
 parent: ps-6a3x
+blocked_by:
+  - ps-5920
 ---
 
 ## Goal

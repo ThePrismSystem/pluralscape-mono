@@ -3,9 +3,12 @@
 title: "Structure: Relationship graph + edit modal"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T06:43:03Z
-updated_at: 2026-05-17T06:43:03Z
+updated_at: 2026-05-17T07:42:02Z
 parent: ps-7wf6
+blocked_by:
+  - ps-5920
 ---
 
 ## Goal

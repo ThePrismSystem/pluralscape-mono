@@ -3,9 +3,12 @@
 title: "Journaling: Journal entry editor (with fronting snapshot insert)"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T06:44:28Z
-updated_at: 2026-05-17T06:44:28Z
+updated_at: 2026-05-17T07:42:04Z
 parent: ps-djgs
+blocked_by:
+  - ps-5920
 ---
 
 ## Goal

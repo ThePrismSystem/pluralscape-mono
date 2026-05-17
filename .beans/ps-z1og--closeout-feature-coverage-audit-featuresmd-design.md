@@ -3,8 +3,9 @@
 title: "Closeout: Feature coverage audit — features.md ↔ design coverage"
 status: todo
 type: task
+priority: normal
 created_at: 2026-05-17T06:53:15Z
-updated_at: 2026-05-17T06:53:15Z
+updated_at: 2026-05-17T07:40:55Z
 parent: ps-l9fv
 blocked_by:
   - ps-oqs8
@@ -31,3 +32,4 @@ Verify every entry in docs/planning/features.md has design coverage somewhere in
 
 - Implementation work — gaps spawn beans only.
 - M11 handoff doc (ps-\* sibling bean).
+- `apps/mobile/app/(app)/design-system-smoke.tsx` — dev harness route, not a user-facing feature; ignore if encountered.

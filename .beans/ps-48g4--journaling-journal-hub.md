@@ -3,9 +3,12 @@
 title: "Journaling: Journal hub"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T06:44:09Z
-updated_at: 2026-05-17T06:44:09Z
+updated_at: 2026-05-17T07:42:01Z
 parent: ps-djgs
+blocked_by:
+  - ps-5920
 ---
 
 ## Goal

@@ -3,9 +3,12 @@
 title: "Structure: Structure overview"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T06:42:19Z
-updated_at: 2026-05-17T06:42:19Z
+updated_at: 2026-05-17T07:42:04Z
 parent: ps-7wf6
+blocked_by:
+  - ps-5920
 ---
 
 ## Goal

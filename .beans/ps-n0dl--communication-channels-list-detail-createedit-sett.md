@@ -3,9 +3,12 @@
 title: "Communication: Channels (list + detail + create/edit + settings)"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T06:38:44Z
-updated_at: 2026-05-17T06:38:44Z
+updated_at: 2026-05-17T07:42:06Z
 parent: ps-5fc5
+blocked_by:
+  - ps-5920
 ---
 
 ## Goal

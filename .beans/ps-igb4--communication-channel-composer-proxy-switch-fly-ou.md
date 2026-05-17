@@ -3,9 +3,12 @@
 title: "Communication: Channel composer + proxy switch fly-out + message actions sheet"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T06:38:54Z
-updated_at: 2026-05-17T06:38:54Z
+updated_at: 2026-05-17T07:42:05Z
 parent: ps-5fc5
+blocked_by:
+  - ps-5920
 ---
 
 ## Goal

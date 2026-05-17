@@ -3,9 +3,20 @@
 title: "Audit: Screen → tRPC router parity (41 routers)"
 status: todo
 type: task
+priority: normal
 created_at: 2026-05-17T06:52:27Z
-updated_at: 2026-05-17T06:52:27Z
+updated_at: 2026-05-17T07:42:02Z
 parent: ps-oqs8
+blocked_by:
+  - ps-nwju
+  - ps-divy
+  - ps-07l7
+  - ps-5fc5
+  - ps-9xue
+  - ps-7wf6
+  - ps-djgs
+  - ps-6a3x
+  - ps-k8mz
 ---
 
 ## Goal
@@ -14,7 +25,7 @@ Audit Phase 1 + Phase 2 design coverage against every tRPC router in apps/api/sr
 
 ## Method
 
-1. Enumerate routers: `ls apps/api/src/trpc/routers/*.ts` → 41 entries.
+1. Enumerate routers: `find apps/api/src/trpc/routers -name '*.ts'` → 41 entries (top-level glob misses `account/device-transfer.ts` and `structure/links.ts`).
 2. For each router, list the procedures and classify each:
    - **User-facing** (needs UI design).
    - **Backend-internal** (used by sync, server-to-server — no UI needed).

@@ -3,9 +3,12 @@
 title: "Members: Detail with 6 tabs (overview / photos / relationships / fields / groups / lifecycle)"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T06:36:34Z
-updated_at: 2026-05-17T06:36:34Z
+updated_at: 2026-05-17T07:42:04Z
 parent: ps-07l7
+blocked_by:
+  - ps-5920
 ---
 
 ## Goal

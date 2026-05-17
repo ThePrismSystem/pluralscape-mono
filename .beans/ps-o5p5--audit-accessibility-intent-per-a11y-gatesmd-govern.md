@@ -3,9 +3,20 @@
 title: "Audit: Accessibility intent per A11Y_GATES.md + GOVERNANCE §8"
 status: todo
 type: task
+priority: normal
 created_at: 2026-05-17T06:52:27Z
-updated_at: 2026-05-17T06:52:27Z
+updated_at: 2026-05-17T07:42:07Z
 parent: ps-oqs8
+blocked_by:
+  - ps-nwju
+  - ps-divy
+  - ps-07l7
+  - ps-5fc5
+  - ps-9xue
+  - ps-7wf6
+  - ps-djgs
+  - ps-6a3x
+  - ps-k8mz
 ---
 
 ## Goal

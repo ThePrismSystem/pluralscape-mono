@@ -3,9 +3,12 @@
 title: "Home: Notifications inbox"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T06:35:38Z
-updated_at: 2026-05-17T06:35:38Z
+updated_at: 2026-05-17T07:42:01Z
 parent: ps-divy
+blocked_by:
+  - ps-5920
 ---
 
 ## Goal

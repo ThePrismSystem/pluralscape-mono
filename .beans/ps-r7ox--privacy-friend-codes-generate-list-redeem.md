@@ -3,9 +3,12 @@
 title: "Privacy: Friend codes (generate + list + redeem)"
 status: todo
 type: feature
+priority: normal
 created_at: 2026-05-17T06:41:25Z
-updated_at: 2026-05-17T06:41:25Z
+updated_at: 2026-05-17T07:42:07Z
 parent: ps-9xue
+blocked_by:
+  - ps-5920
 ---
 
 ## Goal
