@@ -3,8 +3,9 @@
 title: Design MemberPicker and MultiMemberPicker primitives
 status: todo
 type: task
+priority: normal
 created_at: 2026-05-17T06:30:18Z
-updated_at: 2026-05-17T06:30:18Z
+updated_at: 2026-05-17T08:50:23Z
 parent: ps-udt1
 ---
 
@@ -25,3 +26,24 @@ Design the MemberPicker (single-pick) and MultiMemberPicker (multi-pick) primiti
 ## Out of scope
 
 - RN code (M11), screen-level integration (Phase 1 / 2)
+
+## Re-audit disposition (2026-05-17)
+
+Already designed in `components-pickers.html:227-300`. Full bottom-sheet
+composite: search input → selected-tokens row → grouped result rows
+(Recently fronted / Everyone else) → footer with named count action
+("Add 2 members"). Composes on BottomSheet, TextField, MemberRow, and
+token chips — already covered primitives.
+
+Updated scope: extract into `components-member-picker.html`. The existing
+preview already shows the multi-select case; add:
+
+- Single-select variant (no tokens row, single-row commit)
+- Zero-results state (composes with EmptyState)
+- Selection-cap-reached state (e.g., "max 8 fronters")
+- `includes-self` toggle for fronting check-in use
+- `data-includes` variant that surfaces custom fronts and structure
+  entities alongside members
+- The 8 acceptance states, 4 mode variants, 7-section doc
+
+Extraction + small additions, not from-scratch.
