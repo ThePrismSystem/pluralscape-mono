@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: high
 created_at: 2026-05-17T05:49:37Z
-updated_at: 2026-05-17T08:50:23Z
+updated_at: 2026-05-17T19:06:46Z
 parent: ps-udt1
 ---
 
@@ -103,3 +103,30 @@ Empty-state canon clarified: `illustrations.html` is the system's
 Domestic Interiors illustration vocabulary (12 motifs, 3-ink palette,
 6 canonical applied empty states). `components-display.html:378-410`
 shows the structural pattern. The EmptyState primitive composes both.
+
+## Re-audit addendum round 2 (2026-05-17)
+
+Second round of corrections after stakeholder review:
+
+- Scrapped 2 additional beans:
+  - `ps-jtvw` ProxyChip — no surface in M10 scope needs a distinct
+    proxy affordance; member identity flows cover the use cases.
+  - `ps-xts0` SaturationPicker — the "saturation" field is not color
+    saturation; no picker needed.
+- Dropped Littles mode coverage from RecoveryKey trio (`ps-o1zp`,
+  `ps-xthc`, `ps-472d`) — those flows run before Littles Mode is
+  configurable.
+- Entity-type variant lists clarified against the canonical types from
+  `packages/types`:
+  - `ps-ywtb` EntityRefPicker now scoped to `BucketContentEntityType`
+    (21 variants) with surface-specific subsets
+  - `ps-gml0` EntityTypePicker corrected — picks from user-defined
+    `system_structure_entity_types`, not a fixed enum
+  - `ps-5iro` InnerworldNode variants corrected to the actual three:
+    member, landmark, structure-entity
+- `ps-i6n1` BucketPill promoted to Wave 1 (composition dep of
+  BucketPicker).
+
+Updated totals: 18 from-scratch design sessions + 2 scope-clarify kept
+in scope + 14 extract tasks + 3 scrapped (`ps-gfhz`, `ps-jtvw`,
+`ps-xts0`) = 37.

@@ -3,8 +3,9 @@
 title: Design RecoveryKey ceremony pattern
 status: todo
 type: task
+priority: normal
 created_at: 2026-05-17T06:30:59Z
-updated_at: 2026-05-17T06:30:59Z
+updated_at: 2026-05-17T19:06:46Z
 parent: ps-udt1
 ---
 
@@ -25,3 +26,10 @@ Design the RecoveryKey ceremony pattern: the three-screen composition (reveal + 
 ## Out of scope
 
 - RN code (M11), screen-level integration (Auth flow beans)
+
+## Mode coverage update (2026-05-17)
+
+Skip the Littles-mode variant for this pattern. Recovery-key ceremony
+happens during account setup and recovery — both predate Littles Mode
+configuration. Drop the earlier "littles skip-verification OR adult
+confirmation" decision; not needed.

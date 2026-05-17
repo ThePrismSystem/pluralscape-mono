@@ -3,8 +3,9 @@
 title: Design InnerworldNode primitive
 status: todo
 type: task
+priority: normal
 created_at: 2026-05-17T06:29:42Z
-updated_at: 2026-05-17T06:29:42Z
+updated_at: 2026-05-17T19:06:46Z
 parent: ps-udt1
 ---
 
@@ -25,3 +26,24 @@ Design the InnerworldNode primitive: canvas node placed on the Innerworld 2D can
 ## Out of scope
 
 - RN code (M11), screen-level integration (System structure beans), the canvas pan/zoom chrome (separate Innerworld canvas screen bean)
+
+## Entity-type variants (2026-05-17)
+
+The audit's variant list (member / region / place / custom) was wrong.
+`InnerWorldEntityType` from
+`packages/types/src/entities/innerworld-entity.ts` has exactly three
+variants:
+
+- `member` — represents a system member's presence in the innerworld
+  (composes the member's avatar + display name)
+- `landmark` — a named location or fixture in the innerworld (a free
+  user-named node with description)
+- `structure-entity` — linked to a system structure entity (composes
+  the structure entity's name + visual properties)
+
+InnerworldRegions are a separate entity — they're containing zones, not
+nodes — and live in their own primitive (out of scope here).
+
+Sizes (sm / md / lg), states (default, selected, dragging, dimmed) and
+mode coverage per SKILL.md. Connection-point hit areas on the node
+boundary feed RelationshipEdge (ps-jtn3) wiring.
