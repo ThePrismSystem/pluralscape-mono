@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-05-17T06:29:14Z
-updated_at: 2026-05-17T08:50:23Z
+updated_at: 2026-05-17T19:06:46Z
 parent: ps-udt1
 ---
 
@@ -43,3 +43,10 @@ a fail-closed visual treatment for the special "Nobody" bucket.
 
 Bean kept. Design produces `components-bucket-pill.html` with the 8 states
 and 4 mode variants per SKILL.md §7-8.
+
+## Wave promotion (2026-05-17)
+
+Moved to Wave 1 from Wave 2 Domain chips. Reason: BucketPicker (ps-s9r6,
+Wave 1) composes on BucketPill in its selected-buckets row. BucketPill
+should be designed before or in parallel with BucketPicker so the
+picker can reference the canonical chip form rather than a placeholder.

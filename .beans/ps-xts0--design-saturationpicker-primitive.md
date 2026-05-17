@@ -1,10 +1,11 @@
 ---
 # ps-xts0
 title: Design SaturationPicker primitive
-status: todo
+status: scrapped
 type: task
+priority: normal
 created_at: 2026-05-17T06:30:44Z
-updated_at: 2026-05-17T06:30:44Z
+updated_at: 2026-05-17T19:06:45Z
 parent: ps-udt1
 ---
 
@@ -25,3 +26,9 @@ Design the SaturationPicker primitive: pick a member's saturation (elaboration) 
 ## Out of scope
 
 - RN code (M11), screen-level integration (Member management beans)
+
+## Reasons for Scrapping
+
+Re-audit round 2 (2026-05-17): the audit misread the requirement. The
+"saturation" field is not color saturation — it does not need its own
+picker. No new design work is required.

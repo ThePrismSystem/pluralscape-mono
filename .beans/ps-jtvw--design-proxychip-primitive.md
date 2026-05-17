@@ -1,10 +1,11 @@
 ---
 # ps-jtvw
 title: Design ProxyChip primitive
-status: todo
+status: scrapped
 type: task
+priority: normal
 created_at: 2026-05-17T06:29:24Z
-updated_at: 2026-05-17T06:29:24Z
+updated_at: 2026-05-17T19:06:45Z
 parent: ps-udt1
 ---
 
@@ -25,3 +26,13 @@ Design the ProxyChip primitive: currently-selected proxy member shown in the cha
 ## Out of scope
 
 - RN code (M11), screen-level integration (Communication beans)
+
+## Reasons for Scrapping
+
+Re-audit round 2 (2026-05-17): ProxyChip is not needed. The PluralKit /
+SimplyPlural proxy concept is data-import-time only — system members and
+their identifying patterns surface in the existing MemberPicker and
+mention flows. There is no surface in the M10 design scope where a
+distinct "proxy" affordance is meaningful.
+
+If a proxy-specific UI is ever required, the bean can be re-opened then.
