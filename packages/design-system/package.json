@@ -35,7 +35,7 @@
     "eslint": "catalog:",
     "react": "^19.2.6",
     "react-native": "*",
-    "style-dictionary": "^4.0.0",
+    "style-dictionary": "^5.0.0",
     "typescript": "catalog:"
   }
 }
