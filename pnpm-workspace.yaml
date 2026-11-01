@@ -34,7 +34,7 @@ catalog:
   better-sqlite3-multiple-ciphers: ^12.9.0
   drizzle-orm: ^0.45.2
   eslint: ^10.3.0
-  happy-dom: ^20.9.0
+  happy-dom: ^21.0.0
   jszip: ^3.10.1
   lucide-react-native: ^1.14.0
   postgres: ^3.4.9
