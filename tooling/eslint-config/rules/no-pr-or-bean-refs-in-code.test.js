@@ -15,6 +15,11 @@ describe("no-pr-or-bean-refs-in-code", () => {
         { code: "/** Reference: ADR-023 */" },
         { code: "const x = 'PR review';" },
         { code: "// types-related work" },
+        { code: "const url = `/v1/systems/${id}/api-keys`;" },
+        { code: "const project = 'api-slow';" },
+        { code: "// client-side crypto, mobile-side cache" },
+        { code: "// sync-push and sync-pull over the crypto-keys path" },
+        { code: "// crypto-test helpers, api-core, api-bulk" },
       ],
       invalid: [
         {
@@ -31,6 +36,14 @@ describe("no-pr-or-bean-refs-in-code", () => {
         },
         {
           code: "// types-emid spec follow-up",
+          errors: [{ messageId: "noRef" }],
+        },
+        {
+          code: "const url = '/v1/api-keyz';",
+          errors: [{ messageId: "noRef" }],
+        },
+        {
+          code: "// see client-a0gf",
           errors: [{ messageId: "noRef" }],
         },
       ],

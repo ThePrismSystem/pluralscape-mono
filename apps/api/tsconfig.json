@@ -4,5 +4,5 @@
     "outDir": "dist",
     "types": ["bun"]
   },
-  "include": ["src", "../../types"]
+  "include": ["src", "scripts", "../../types"]
 }

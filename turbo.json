@@ -15,8 +15,17 @@
     "lint:fix": {
       "dependsOn": ["^build"]
     },
+    "//#lint:root": {
+      "cache": false
+    },
+    "//#lint:fix:root": {
+      "cache": false
+    },
     "typecheck": {
       "dependsOn": ["^build"]
+    },
+    "//#typecheck:root": {
+      "cache": false
     },
     "test": {
       "cache": false

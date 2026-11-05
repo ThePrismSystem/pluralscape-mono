@@ -6,17 +6,21 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "playwright test",
-    "test:report": "playwright show-report"
+    "test:report": "playwright show-report",
+    "lint": "eslint --max-warnings 0 .",
+    "lint:fix": "eslint --fix --max-warnings 0 ."
   },
   "devDependencies": {
     "@playwright/test": "catalog:",
     "@pluralscape/crypto": "workspace:*",
+    "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/mobile": "workspace:*",
     "@pluralscape/sync": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
     "@pluralscape/types": "workspace:*",
     "@types/node": "^24.12.3",
     "esbuild": "^0.28.0",
+    "eslint": "catalog:",
     "typescript": "catalog:"
   }
 }
