@@ -1,6 +1,6 @@
 # Mobile Developer Guide
 
-This guide covers the Pluralscape mobile app (`apps/mobile/`), built with Expo (SDK 55) and React Native, with `expo-router` for file-based routing. It serves two audiences: contributors working on the mobile codebase, and API consumers or self-hosters who want to understand how the client operates.
+This guide covers the Pluralscape mobile app (`apps/mobile/`), built with Expo (SDK 56) and React Native, with `expo-router` for file-based routing. It serves two audiences: contributors working on the mobile codebase, and API consumers or self-hosters who want to understand how the client operates.
 
 For overall system architecture, see [`../architecture.md`](../architecture.md). For the sync protocol, see [`sync-protocol.md`](sync-protocol.md).
 

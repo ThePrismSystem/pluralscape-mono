@@ -38,14 +38,19 @@ catalog:
   jszip: ^3.10.1
   lucide-react-native: ^1.14.0
   postgres: ^3.4.9
-  react-dom: ^19.2.6
-  react-native-svg: ^15.15.4
+  react: 19.2.3
+  react-dom: 19.2.3
+  react-native-svg: 15.15.4
   typescript: ^6.0.3
   zod: ^4.4.3
 
 # Transitive-dependency overrides. Moved here from package.json `pnpm.overrides`
 # because pnpm v11 in a workspace silently ignores the package.json variant.
 overrides:
+  # One React in the tree. Optional peers would otherwise auto-install the latest
+  # release beside it, and react-native's renderer requires this exact version.
+  react: "catalog:"
+  react-dom: "catalog:"
   "@trpc/server": "11.17.0"
   better-sqlite3: "npm:better-sqlite3-multiple-ciphers@^12.6.2"
   ioredis: "5.10.1"
