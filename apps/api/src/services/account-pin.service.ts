@@ -9,7 +9,7 @@ import { hashPinOffload, verifyPinOffload } from "../lib/kdf-offload.js";
 import { withAccountTransaction } from "../lib/rls-context.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
-import type { AccountId, PinHash, SystemId } from "@pluralscape/types";
+import type { AccountId, PinHash, ServerInternal, SystemId } from "@pluralscape/types";
 import type {
   RemovePinBodySchema,
   SetPinBodySchema,
@@ -53,7 +53,7 @@ export async function setAccountPin(
   body: z.infer<typeof SetPinBodySchema>,
   audit: AuditWriter,
 ): Promise<void> {
-  const pinHash = (await hashPinOffload(body.pin)) as PinHash;
+  const pinHash = (await hashPinOffload(body.pin)) as ServerInternal<PinHash>;
 
   await withAccountTransaction(db, accountId, async (tx) => {
     const systemId = await resolveSystemId(tx, accountId);

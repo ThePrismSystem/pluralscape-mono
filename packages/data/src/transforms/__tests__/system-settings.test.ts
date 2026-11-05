@@ -114,12 +114,11 @@ function makeRawSystemSettings(encryptedData: string, version = 1): SystemSettin
     id: brandId<SystemSettingsId>("sys-settings-1"),
     systemId: brandId<SystemId>("system-1"),
     locale: null,
-    pinHash: null,
     biometricEnabled: false,
     encryptedData,
     version,
-    createdAt: 0 as UnixMillis,
-    updatedAt: 0 as UnixMillis,
+    createdAt: 0,
+    updatedAt: 0,
   };
 }
 

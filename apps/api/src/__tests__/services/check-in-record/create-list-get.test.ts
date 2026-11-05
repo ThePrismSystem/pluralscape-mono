@@ -68,7 +68,8 @@ describe("createCheckInRecord", () => {
     );
 
     expect(result.id).toBe(RECORD_ID);
-    expect(result.status).toBe("pending");
+    expect(result.respondedAt).toBeNull();
+    expect(result.dismissed).toBe(false);
     expect(result.respondedByMemberId).toBeNull();
     expect(result.respondedAt).toBeNull();
     expect(result.dismissed).toBe(false);
@@ -218,7 +219,8 @@ describe("listCheckInRecords", () => {
 
     expect(result.data).toHaveLength(1);
     expect(result.data[0]?.id).toBe(RECORD_ID);
-    expect(result.data[0]?.status).toBe("pending");
+    expect(result.data[0]?.respondedAt).toBeNull();
+    expect(result.data[0]?.dismissed).toBe(false);
   });
 
   it("returns responded records with correct status", async () => {
@@ -228,7 +230,8 @@ describe("listCheckInRecords", () => {
     const result = await listCheckInRecords(db, SYSTEM_ID, AUTH);
 
     expect(result.data).toHaveLength(1);
-    expect(result.data[0]?.status).toBe("responded");
+    expect(result.data[0]?.respondedAt).not.toBeNull();
+    expect(result.data[0]?.respondedByMemberId).not.toBeNull();
     expect(result.data[0]?.respondedByMemberId).toBe(MEMBER_ID);
   });
 
@@ -239,7 +242,7 @@ describe("listCheckInRecords", () => {
     const result = await listCheckInRecords(db, SYSTEM_ID, AUTH);
 
     expect(result.data).toHaveLength(1);
-    expect(result.data[0]?.status).toBe("dismissed");
+    expect(result.data[0]?.dismissed).toBe(true);
     expect(result.data[0]?.dismissed).toBe(true);
   });
 
@@ -336,7 +339,8 @@ describe("getCheckInRecord", () => {
     const result = await getCheckInRecord(db, SYSTEM_ID, RECORD_ID, AUTH);
 
     expect(result.id).toBe(RECORD_ID);
-    expect(result.status).toBe("pending");
+    expect(result.respondedAt).toBeNull();
+    expect(result.dismissed).toBe(false);
   });
 
   it("returns a responded check-in record", async () => {
@@ -345,7 +349,9 @@ describe("getCheckInRecord", () => {
 
     const result = await getCheckInRecord(db, SYSTEM_ID, RECORD_ID, AUTH);
 
-    expect(result.status).toBe("responded");
+    expect(result.respondedAt).not.toBeNull();
+
+    expect(result.respondedByMemberId).not.toBeNull();
     expect(result.respondedByMemberId).toBe(MEMBER_ID);
   });
 
@@ -355,7 +361,7 @@ describe("getCheckInRecord", () => {
 
     const result = await getCheckInRecord(db, SYSTEM_ID, RECORD_ID, AUTH);
 
-    expect(result.status).toBe("dismissed");
+    expect(result.dismissed).toBe(true);
     expect(result.dismissed).toBe(true);
   });
 

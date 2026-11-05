@@ -7,33 +7,13 @@ import { env } from "../../env.js";
 import { encryptedBlobToBase64 } from "../../lib/encrypted-blob.js";
 
 import type {
+  ApiKeyServerVisible,
   ApiKeyId,
   ApiKeyScope,
-  EncryptedBase64,
   EncryptedBlob,
   SystemId,
-  UnixMillis,
 } from "@pluralscape/types";
-
-// ── Types ──────────────────────────────────────────────────────────
-
-export interface ApiKeyResult {
-  readonly id: ApiKeyId;
-  readonly systemId: SystemId;
-  readonly keyType: "metadata" | "crypto";
-  readonly scopes: readonly ApiKeyScope[];
-  readonly createdAt: UnixMillis;
-  readonly lastUsedAt: UnixMillis | null;
-  readonly revokedAt: UnixMillis | null;
-  readonly expiresAt: UnixMillis | null;
-  readonly scopedBucketIds: readonly string[] | null;
-  /**
-   * Base64-encoded T1 ciphertext blob carrying the `ApiKeyEncryptedPayload`
-   * (name plus, for crypto variants, the X25519 publicKey). Decrypted
-   * client-side via `decryptApiKeyPayload` from `@pluralscape/data`.
-   */
-  readonly encryptedData: EncryptedBase64;
-}
+import type { BucketId } from "@pluralscape/types";
 
 // ── Shared select columns ──────────────────────────────────────────
 
@@ -61,9 +41,9 @@ export function toApiKeyResult(row: {
   lastUsedAt: number | null;
   revokedAt: number | null;
   expiresAt: number | null;
-  scopedBucketIds: readonly string[] | null;
+  scopedBucketIds: readonly BucketId[] | null;
   encryptedData: EncryptedBlob;
-}): ApiKeyResult {
+}): ApiKeyServerVisible {
   return {
     id: brandId<ApiKeyId>(row.id),
     systemId: brandId<SystemId>(row.systemId),

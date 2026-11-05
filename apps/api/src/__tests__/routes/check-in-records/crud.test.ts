@@ -67,7 +67,6 @@ const MOCK_RECORD = {
   systemId: MOCK_SYSTEM_ID,
   timerConfigId: brandId<TimerId>("tmr_770e8400-e29b-41d4-a716-446655440000"),
   scheduledAt: toUnixMillis(1000),
-  status: "pending" as const,
   respondedByMemberId: null,
   respondedAt: null,
   dismissed: false as const,
@@ -175,7 +174,6 @@ describe("POST /systems/:id/check-in-records/:recordId/respond", () => {
   it("returns 200 with responded record", async () => {
     vi.mocked(respondCheckInRecord).mockResolvedValueOnce({
       ...MOCK_RECORD,
-      status: "responded" as const,
       respondedByMemberId: brandId<MemberId>("mem_880e8400-e29b-41d4-a716-446655440000"),
       respondedAt: toUnixMillis(2000),
     });
@@ -252,7 +250,6 @@ describe("POST /systems/:id/check-in-records/:recordId/dismiss", () => {
       encryptedData: MOCK_RECORD.encryptedData,
       archived: MOCK_RECORD.archived,
       archivedAt: MOCK_RECORD.archivedAt,
-      status: "dismissed" as const,
       respondedByMemberId: null,
       respondedAt: null,
       dismissed: true as const,

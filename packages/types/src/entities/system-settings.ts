@@ -4,6 +4,7 @@ import type { Locale } from "../i18n.js";
 import type { Brand, BucketId, SystemSettingsId, SystemId } from "../ids.js";
 import type { LittlesSafeModeConfig } from "../littles-safe-mode.js";
 import type { NomenclatureSettings } from "../nomenclature.js";
+import type { ServerInternal } from "../server-internal.js";
 import type { Serialize } from "../type-assertions.js";
 import type { AuditMetadata } from "../utility.js";
 import type { SnapshotSchedule } from "./system-snapshot.js";
@@ -128,7 +129,7 @@ export type SystemSettingsServerMetadata = Omit<
   SystemSettings,
   SystemSettingsEncryptedFields | "defaultBucketId" | "nomenclature"
 > & {
-  readonly pinHash: PinHash | null;
+  readonly pinHash: ServerInternal<PinHash> | null;
   readonly biometricEnabled: boolean;
   readonly encryptedData: EncryptedBlob;
 };

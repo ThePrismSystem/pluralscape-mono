@@ -10,7 +10,7 @@ import { tenantCtx } from "../lib/tenant-context.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
-import type { PinHash, SystemId } from "@pluralscape/types";
+import type { PinHash, ServerInternal, SystemId } from "@pluralscape/types";
 import type {
   RemovePinBodySchema,
   SetPinBodySchema,
@@ -38,7 +38,7 @@ export async function setPin(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  const pinHash = (await hashPinOffload(body.pin)) as PinHash;
+  const pinHash = (await hashPinOffload(body.pin)) as ServerInternal<PinHash>;
 
   await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx

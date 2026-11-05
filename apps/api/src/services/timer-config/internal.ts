@@ -2,36 +2,11 @@ import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 
 import { encryptedBlobToBase64 } from "../../lib/encrypted-blob.js";
 
-import type { EncryptedBlob, SystemId, TimerId, UnixMillis } from "@pluralscape/types";
+import type { TimerConfigResult, EncryptedBlob, SystemId, TimerId } from "@pluralscape/types";
 
 // ── Types ───────────────────────────────────────────────────────
 
-interface TimerConfigBase {
-  readonly id: TimerId;
-  readonly systemId: SystemId;
-  readonly enabled: boolean;
-  readonly intervalMinutes: number | null;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export type TimerConfigResult = TimerConfigBase &
-  (
-    | {
-        readonly wakingHoursOnly: true;
-        readonly wakingStart: string;
-        readonly wakingEnd: string;
-      }
-    | {
-        readonly wakingHoursOnly: false | null;
-        readonly wakingStart: string | null;
-        readonly wakingEnd: string | null;
-      }
-  );
+type TimerConfigBase = Omit<TimerConfigResult, "wakingHoursOnly" | "wakingStart" | "wakingEnd">;
 
 export interface TimerConfigListOptions {
   readonly cursor?: string;
@@ -49,6 +24,7 @@ export function toTimerConfigResult(row: {
   wakingHoursOnly: boolean | null;
   wakingStart: string | null;
   wakingEnd: string | null;
+  nextCheckInAt: number | null;
   encryptedData: EncryptedBlob;
   version: number;
   archived: boolean;
@@ -61,6 +37,7 @@ export function toTimerConfigResult(row: {
     systemId: brandId<SystemId>(row.systemId),
     enabled: row.enabled,
     intervalMinutes: row.intervalMinutes,
+    nextCheckInAt: toUnixMillisOrNull(row.nextCheckInAt),
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
     archived: row.archived,

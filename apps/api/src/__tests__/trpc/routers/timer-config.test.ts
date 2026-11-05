@@ -9,6 +9,7 @@ import {
   assertProcedureRateLimited,
 } from "../test-helpers.js";
 
+import type { EncryptedBase64 } from "@pluralscape/types";
 import type { TimerId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
@@ -60,7 +61,8 @@ const MOCK_TIMER_RESULT = {
   wakingHoursOnly: false as const,
   wakingStart: null,
   wakingEnd: null,
-  encryptedData: VALID_ENCRYPTED_DATA,
+  nextCheckInAt: null,
+  encryptedData: VALID_ENCRYPTED_DATA as EncryptedBase64,
   version: 1,
   archived: false,
   archivedAt: null,

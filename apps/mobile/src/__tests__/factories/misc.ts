@@ -270,7 +270,6 @@ export function makeRawSystemSettings(overrides?: Partial<SystemSettingsWire>): 
     id: FACTORY_SETTINGS_ID,
     systemId: TEST_SYSTEM_ID,
     locale: null,
-    pinHash: null,
     biometricEnabled: false,
     createdAt: NOW,
     updatedAt: NOW,

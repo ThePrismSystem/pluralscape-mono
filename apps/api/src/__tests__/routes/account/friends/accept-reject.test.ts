@@ -58,6 +58,8 @@ const MOCK_ACCEPTED_CONNECTION = {
   status: "accepted" as const,
   encryptedData: null,
   version: 2,
+  archived: false,
+  archivedAt: null,
   createdAt: toUnixMillis(1000),
   updatedAt: toUnixMillis(2000),
 };
@@ -69,6 +71,8 @@ const MOCK_REJECTED_CONNECTION = {
   status: "removed" as const,
   encryptedData: null,
   version: 2,
+  archived: false,
+  archivedAt: null,
   createdAt: toUnixMillis(1000),
   updatedAt: toUnixMillis(2000),
 };

@@ -13,8 +13,7 @@ import {
 import { createRouteApp, postJSON } from "../../helpers/route-test-setup.js";
 
 import type { ApiKeyCreateResult } from "../../../services/api-key/create.js";
-import type { ApiKeyResult } from "../../../services/api-key/internal.js";
-import type { EncryptedBase64, PaginatedResult } from "@pluralscape/types";
+import type { ApiKeyServerVisible, EncryptedBase64, PaginatedResult } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -41,9 +40,9 @@ const AK_ID = "ak_550e8400-e29b-41d4-a716-446655440001";
 
 const createApp = () => createRouteApp("/systems", systemRoutes);
 
-const MOCK_API_KEY_RESULT: ApiKeyResult = {
-  id: AK_ID as ApiKeyResult["id"],
-  systemId: SYS_ID as ApiKeyResult["systemId"],
+const MOCK_API_KEY_RESULT: ApiKeyServerVisible = {
+  id: AK_ID as ApiKeyServerVisible["id"],
+  systemId: SYS_ID as ApiKeyServerVisible["systemId"],
   keyType: "metadata",
   scopes: ["read:members"],
   createdAt: toUnixMillis(1000),
@@ -59,7 +58,7 @@ const MOCK_CREATE_RESULT: ApiKeyCreateResult = {
   token: "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
 };
 
-const MOCK_PAGINATED_RESULT: PaginatedResult<ApiKeyResult> = {
+const MOCK_PAGINATED_RESULT: PaginatedResult<ApiKeyServerVisible> = {
   data: [MOCK_API_KEY_RESULT],
   nextCursor: null,
   hasMore: false,
@@ -137,7 +136,7 @@ describe("GET /systems/:systemId/api-keys", () => {
     const res = await app.request(`/systems/${SYS_ID}/api-keys`);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as PaginatedResult<ApiKeyResult>;
+    const body = (await res.json()) as PaginatedResult<ApiKeyServerVisible>;
     expect(body.data).toHaveLength(1);
     expect(body.data[0]?.id).toBe(AK_ID);
     expect(body.hasMore).toBe(false);
@@ -169,7 +168,7 @@ describe("GET /systems/:systemId/api-keys/:apiKeyId", () => {
     const res = await app.request(`/systems/${SYS_ID}/api-keys/${AK_ID}`);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { data: ApiKeyResult };
+    const body = (await res.json()) as { data: ApiKeyServerVisible };
     expect(body.data.id).toBe(AK_ID);
     expect(body.data).not.toHaveProperty("token");
     expect(body.data).not.toHaveProperty("tokenHash");

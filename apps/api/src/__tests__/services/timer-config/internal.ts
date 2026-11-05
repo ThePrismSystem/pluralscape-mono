@@ -26,6 +26,7 @@ export function makeTimerRow(overrides: Record<string, unknown> = {}): Record<st
     wakingHoursOnly: false,
     wakingStart: null,
     wakingEnd: null,
+    nextCheckInAt: null,
     encryptedData: new Uint8Array([1, 2, 3]),
     version: 1,
     archived: false,

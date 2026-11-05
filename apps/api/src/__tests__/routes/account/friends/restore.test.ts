@@ -58,6 +58,8 @@ const MOCK_CONNECTION = {
   status: "accepted" as const,
   encryptedData: null,
   version: 3,
+  archived: false,
+  archivedAt: null,
   createdAt: toUnixMillis(1000),
   updatedAt: toUnixMillis(3000),
 };

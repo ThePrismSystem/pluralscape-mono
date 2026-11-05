@@ -30,6 +30,7 @@ test.describe("Timer Config and Check-In Records", () => {
       const body = (await res.json()) as { data: { id: string; enabled: boolean } };
       expect(body.data).toHaveProperty("id");
       expect(body.data.enabled).toBe(true);
+      expect(body.data).toHaveProperty("nextCheckInAt");
       timerId = body.data.id;
     });
 
@@ -57,6 +58,7 @@ test.describe("Timer Config and Check-In Records", () => {
       expect(body.data).toHaveProperty("id");
       expect(body.data.dismissed).toBe(false);
       expect(body.data.respondedAt).toBeNull();
+      expect(body.data).not.toHaveProperty("status");
       recordId = body.data.id;
     });
 

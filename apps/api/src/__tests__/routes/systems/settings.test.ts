@@ -54,7 +54,7 @@ const SYS_ID = "sys_550e8400-e29b-41d4-a716-446655440000";
 const MOCK_SETTINGS = {
   id: brandId<SystemSettingsId>("sset_abc"),
   systemId: brandId<SystemId>(SYS_ID),
-  locale: "en-US",
+  locale: "en" as const,
   biometricEnabled: false,
   encryptedData: "base64data" as EncryptedBase64,
   version: 1,
@@ -82,7 +82,7 @@ describe("GET /:id/settings", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { data: typeof MOCK_SETTINGS };
     expect(body.data.id).toBe("sset_abc");
-    expect(body.data.locale).toBe("en-US");
+    expect(body.data.locale).toBe("en");
   });
 
   it("applies the readDefault rate limit category", () => {

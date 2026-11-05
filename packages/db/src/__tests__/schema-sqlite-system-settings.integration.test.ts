@@ -16,7 +16,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
-import type { PinHash, SystemId, SystemSettingsId } from "@pluralscape/types";
+import type { PinHash, ServerInternal, SystemId, SystemSettingsId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, systemSettings };
@@ -49,7 +49,7 @@ describe("SQLite system_settings schema", () => {
         id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
         systemId,
         locale: "en",
-        pinHash: brandId<PinHash>("$argon2id$test-hash"),
+        pinHash: "$argon2id$test-hash" as ServerInternal<PinHash>,
         biometricEnabled: true,
         encryptedData: data,
         createdAt: now,
