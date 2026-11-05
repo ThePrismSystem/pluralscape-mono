@@ -237,8 +237,8 @@ export async function applyContexts(
   }
   if (errors.length > 0) {
     throw new AggregateError(
-      errors.map((e) => new Error(`${e.id}: ${e.error}`)),
-      `applyContexts: ${errors.length} update(s) failed`,
+      errors.map((e) => new Error(`${String(e.id)}: ${e.error}`)),
+      `applyContexts: ${String(errors.length)} update(s) failed`,
     );
   }
   return {

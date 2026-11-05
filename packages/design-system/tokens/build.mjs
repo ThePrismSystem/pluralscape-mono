@@ -25,13 +25,35 @@
  *   node tokens/build.mjs --check    # validation only; exits non-zero on failure
  */
 
-import StyleDictionary from "style-dictionary";
-import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join, resolve } from "node:path";
 import { execSync } from "node:child_process";
+import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import StyleDictionary from "style-dictionary";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+function print(line) {
+  process.stdout.write(`${line}\n`);
+}
+function printError(line) {
+  process.stderr.write(`${line}\n`);
+}
+
+// WCAG 2.x relative-luminance and contrast-ratio coefficients.
+const HEX_GREEN_OFFSET = 2;
+const HEX_BLUE_OFFSET = 4;
+const CHANNEL_MAX = 255;
+const SRGB_LINEAR_THRESHOLD = 0.03928;
+const SRGB_LINEAR_DIVISOR = 12.92;
+const SRGB_GAMMA_OFFSET = 0.055;
+const SRGB_GAMMA_DIVISOR = 1.055;
+const SRGB_GAMMA_EXPONENT = 2.4;
+const LUMINANCE_RED = 0.2126;
+const LUMINANCE_GREEN = 0.7152;
+const LUMINANCE_BLUE = 0.0722;
+const CONTRAST_FLARE = 0.05;
 const ROOT = resolve(__dirname, "..");
 const CHECK_ONLY = process.argv.includes("--check");
 
@@ -44,14 +66,18 @@ const pairings = readJSON("tokens/pairings.json");
 // entries must NOT appear as a resolved fg+bg in semantic.default.
 function ratio(hex1, hex2) {
   const lum = (h) => {
-    const v = [0, 2, 4]
-      .map((i) => parseInt(h.replace("#", "").substr(i, 2), 16) / 255)
-      .map((c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)));
-    return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+    const v = [0, HEX_GREEN_OFFSET, HEX_BLUE_OFFSET]
+      .map((i) => parseInt(h.replace("#", "").substr(i, 2), 16) / CHANNEL_MAX)
+      .map((c) =>
+        c <= SRGB_LINEAR_THRESHOLD
+          ? c / SRGB_LINEAR_DIVISOR
+          : Math.pow((c + SRGB_GAMMA_OFFSET) / SRGB_GAMMA_DIVISOR, SRGB_GAMMA_EXPONENT),
+      );
+    return LUMINANCE_RED * v[0] + LUMINANCE_GREEN * v[1] + LUMINANCE_BLUE * v[2];
   };
   const l1 = lum(hex1),
     l2 = lum(hex2);
-  return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+  return (Math.max(l1, l2) + CONTRAST_FLARE) / (Math.min(l1, l2) + CONTRAST_FLARE);
 }
 function lookup(name) {
   return colors.primary[name]?.value ?? colors.extended[name]?.value ?? null;
@@ -135,13 +161,13 @@ function validatePairings() {
 
 const errs = validatePairings();
 if (errs.length) {
-  console.error("Token validation errors:");
-  for (const e of errs) console.error("  - " + e);
+  printError("Token validation errors:");
+  for (const e of errs) printError("  - " + e);
   process.exit(1);
 }
-console.log("✓ tokens validated:");
-console.log(`  ${pairings.allowed.length} allowed pairs clear AA`);
-console.log(`  ${pairings.forbidden.length} forbidden pairs absent from semantic mappings`);
+print("✓ tokens validated:");
+print(`  ${pairings.allowed.length} allowed pairs clear AA`);
+print(`  ${pairings.forbidden.length} forbidden pairs absent from semantic mappings`);
 
 if (CHECK_ONLY) process.exit(0);
 
@@ -238,7 +264,7 @@ const sd = new StyleDictionary({
 });
 
 await sd.buildAllPlatforms();
-console.log("✓ Style Dictionary preview build complete.");
+print("✓ Style Dictionary preview build complete.");
 
 // ---------- Production TS build (tokens.generated.ts + themes.generated.ts) ----------
 // We read the raw JSON files directly — not through SD — because the token
@@ -587,8 +613,8 @@ const srcDir = resolve(ROOT, "src");
 mkdirSync(srcDir, { recursive: true });
 writeFileSync(join(srcDir, "tokens.generated.ts"), tokensTs, "utf8");
 writeFileSync(join(srcDir, "themes.generated.ts"), themesTs, "utf8");
-console.log("✓ src/tokens.generated.ts written");
-console.log("✓ src/themes.generated.ts written");
+print("✓ src/tokens.generated.ts written");
+print("✓ src/themes.generated.ts written");
 
 // Run prettier on the generated files to ensure pre-commit hook stability
 try {
@@ -596,7 +622,7 @@ try {
     cwd: __dirname,
     stdio: "inherit",
   });
-  console.log("✓ Prettier pass complete");
+  print("✓ Prettier pass complete");
 } catch {
   // Prettier unavailable in local node_modules; try workspace prettier
   try {
@@ -604,13 +630,13 @@ try {
       cwd: ROOT,
       stdio: "inherit",
     });
-    console.log("✓ Prettier pass complete (workspace)");
+    print("✓ Prettier pass complete (workspace)");
   } catch {
-    console.warn("⚠ Prettier not available — generated files may need formatting");
+    printError("⚠ Prettier not available — generated files may need formatting");
   }
 }
 
-console.log("✓ Build complete.");
+print("✓ Build complete.");
 
 // ---------- helpers ----------
 function kebab(s) {

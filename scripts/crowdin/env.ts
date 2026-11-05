@@ -4,6 +4,9 @@ import { z } from "zod";
 
 import { getErrorMessage } from "./errors.js";
 
+const MISSING_GOOGLE_CREDENTIALS =
+  "Either GOOGLE_TRANSLATE_SERVICE_ACCOUNT_JSON or GOOGLE_APPLICATION_CREDENTIALS must be set";
+
 const RawEnvSchema = z
   .object({
     CROWDIN_PROJECT_ID: z.string().regex(/^\d+$/, "CROWDIN_PROJECT_ID must be a positive integer"),
@@ -13,8 +16,7 @@ const RawEnvSchema = z
     GOOGLE_APPLICATION_CREDENTIALS: z.string().min(1).optional(),
   })
   .refine((e) => e.GOOGLE_TRANSLATE_SERVICE_ACCOUNT_JSON ?? e.GOOGLE_APPLICATION_CREDENTIALS, {
-    message:
-      "Either GOOGLE_TRANSLATE_SERVICE_ACCOUNT_JSON or GOOGLE_APPLICATION_CREDENTIALS must be set",
+    message: MISSING_GOOGLE_CREDENTIALS,
   });
 
 // client_email is asserted present + non-empty, not format-checked — Google
@@ -27,7 +29,7 @@ const ServiceAccountSchema = z
     private_key: z.string(),
     client_email: z.string().min(1),
   })
-  .passthrough();
+  .loose();
 
 export type GoogleServiceAccount = z.infer<typeof ServiceAccountSchema>;
 
@@ -43,10 +45,14 @@ export function loadCrowdinEnv(env: Record<string, string | undefined>): Crowdin
   const parsed = RawEnvSchema.parse(env);
 
   let rawJson: string;
+  let credentialsSource: string;
   if (parsed.GOOGLE_TRANSLATE_SERVICE_ACCOUNT_JSON) {
     rawJson = parsed.GOOGLE_TRANSLATE_SERVICE_ACCOUNT_JSON;
+    credentialsSource = "GOOGLE_TRANSLATE_SERVICE_ACCOUNT_JSON";
   } else {
-    const credsPath = parsed.GOOGLE_APPLICATION_CREDENTIALS!;
+    const credsPath = parsed.GOOGLE_APPLICATION_CREDENTIALS;
+    if (!credsPath) throw new Error(MISSING_GOOGLE_CREDENTIALS);
+    credentialsSource = `GOOGLE_APPLICATION_CREDENTIALS file at "${credsPath}"`;
     try {
       rawJson = readFileSync(credsPath, "utf8");
     } catch (err) {
@@ -60,10 +66,9 @@ export function loadCrowdinEnv(env: Record<string, string | undefined>): Crowdin
   try {
     parsedBlob = JSON.parse(rawJson);
   } catch (err) {
-    const source = parsed.GOOGLE_TRANSLATE_SERVICE_ACCOUNT_JSON
-      ? "GOOGLE_TRANSLATE_SERVICE_ACCOUNT_JSON"
-      : `GOOGLE_APPLICATION_CREDENTIALS file at "${parsed.GOOGLE_APPLICATION_CREDENTIALS!}"`;
-    throw new Error(`Failed to parse service-account JSON from ${source}: ${getErrorMessage(err)}`);
+    throw new Error(
+      `Failed to parse service-account JSON from ${credentialsSource}: ${getErrorMessage(err)}`,
+    );
   }
   const googleCredentials = ServiceAccountSchema.parse(parsedBlob);
 

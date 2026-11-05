@@ -4,6 +4,12 @@ import { createCrowdinClient } from "./crowdin/client.js";
 import { applyContexts, loadAllContexts } from "./crowdin/context.js";
 import { loadCrowdinEnv } from "./crowdin/env.js";
 
+/** Unmatched sidecar keys to list in an error message. */
+const UNMATCHED_KEY_SAMPLE_SIZE = 5;
+/** Unmatched share of sidecar entries above which the upload fails. */
+const MAX_UNMATCHED_FRACTION = 0.5;
+const PERCENT = 100;
+
 function totalEntries(contexts: ReadonlyMap<string, ReadonlyMap<string, string>>): number {
   let n = 0;
   for (const inner of contexts.values()) n += inner.size;
@@ -55,14 +61,14 @@ async function main(): Promise<void> {
       console.error(
         `error: ${String(totalDesired)} sidecar entries were loaded but NONE matched a Crowdin source-string identifier. ` +
           `Crowdin returned ${String(result.remoteIdentifiersChecked)} source strings. ` +
-          `First 5 unmatched sidecar keys: ${result.unmatchedDesiredKeys.slice(0, 5).join(", ")}`,
+          `First 5 unmatched sidecar keys: ${result.unmatchedDesiredKeys.slice(0, UNMATCHED_KEY_SAMPLE_SIZE).join(", ")}`,
       );
       process.exit(2);
     }
-    if (unmatchedFraction > 0.5) {
+    if (unmatchedFraction > MAX_UNMATCHED_FRACTION) {
       console.error(
-        `error: ${String(unmatched)}/${String(totalDesired)} sidecar entries (${String(Math.round(unmatchedFraction * 100))}%) did not match any Crowdin source string. ` +
-          `First 5 unmatched: ${result.unmatchedDesiredKeys.slice(0, 5).join(", ")}`,
+        `error: ${String(unmatched)}/${String(totalDesired)} sidecar entries (${String(Math.round(unmatchedFraction * PERCENT))}%) did not match any Crowdin source string. ` +
+          `First 5 unmatched: ${result.unmatchedDesiredKeys.slice(0, UNMATCHED_KEY_SAMPLE_SIZE).join(", ")}`,
       );
       process.exit(2);
     }

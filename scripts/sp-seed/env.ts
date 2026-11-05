@@ -1,5 +1,6 @@
-import { readFileSync, existsSync, writeFileSync, renameSync } from "node:fs";
 import { execSync } from "node:child_process";
+import { readFileSync, existsSync, writeFileSync, renameSync } from "node:fs";
+
 import { PATHS } from "./constants.js";
 
 export type { SpMode } from "./constants.js";
@@ -59,6 +60,7 @@ function assignKey(env: SpTestEnv, key: string, value: string): void {
   if (!match) return;
   const mode = match[1] === "MINIMAL" ? "minimal" : "adversarial";
   const suffix = match[2];
+  if (suffix === undefined) return;
   const target = env[mode];
   switch (suffix) {
     case "EMAIL":

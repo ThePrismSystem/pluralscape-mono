@@ -1,10 +1,12 @@
 // scripts/sp-seed/__tests__/manifest.test.ts
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { emptyManifest, loadManifest, planSeed, writeManifestAtomic } from "../manifest.js";
+
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
 import { LegacyManifestError, SpApiError } from "../client.js";
+import { emptyManifest, loadManifest, planSeed, writeManifestAtomic } from "../manifest.js";
 
 describe("manifest read/write round-trip", () => {
   let tmpDir: string;
@@ -75,13 +77,13 @@ describe("planSeed", () => {
     calls: string[];
   } {
     const calls: string[] = [];
-    const requestFn = vi.fn(async (path: string) => {
+    const requestFn = vi.fn((path: string) => {
       calls.push(path);
       const r = probeResponses[path];
-      if (r instanceof Error) throw r;
-      if (!r) throw new SpApiError(404, "GET", path, "not found");
-      if (r.status === 200) return { exists: true };
-      throw new SpApiError(r.status, "GET", path, "err");
+      if (r instanceof Error) return Promise.reject(r);
+      if (!r) return Promise.reject(new SpApiError(404, "GET", path, "not found"));
+      if (r.status === 200) return Promise.resolve({ exists: true });
+      return Promise.reject(new SpApiError(r.status, "GET", path, "err"));
     });
     const client = {
       request: requestFn as (path: string, opts?: { method?: string }) => Promise<unknown>,
@@ -116,7 +118,7 @@ describe("planSeed", () => {
     const plan = await planSeed(client, "sys1", fixtures, undefined);
     expect(plan.reuse).toHaveLength(0);
     expect(plan.create).toHaveLength(1);
-    expect(plan.create[0]!.ref).toBe("member.alice");
+    expect(plan.create[0]?.ref).toBe("member.alice");
   });
 
   test("with existing manifest + 200 probe, entry goes to `reuse`", async () => {

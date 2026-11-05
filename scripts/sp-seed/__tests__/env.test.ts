@@ -1,7 +1,10 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { execSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
 import { emptyEnv, readEnvFile, writeEnvFile } from "../env.js";
 
 describe("readEnvFile", () => {
@@ -93,7 +96,7 @@ describe("writeEnvFile", () => {
     // Create a .gitignore that ignores the target file so the safety check passes.
     writeFileSync(join(tmpDir, ".gitignore"), ".env.sp-test\n", "utf-8");
     // Initialize a git repo so git check-ignore works.
-    require("node:child_process").execSync("git init -q", { cwd: tmpDir });
+    execSync("git init -q", { cwd: tmpDir });
     envPath = join(tmpDir, ".env.sp-test");
   });
 
@@ -129,7 +132,9 @@ describe("writeEnvFile", () => {
 
   test("refuses to write when .env.sp-test is not gitignored", () => {
     writeFileSync(join(tmpDir, ".gitignore"), "# nothing ignored\n", "utf-8");
-    expect(() => writeEnvFile(emptyEnv())).toThrow(/refusing to write.*not gitignored/);
+    expect(() => {
+      writeEnvFile(emptyEnv());
+    }).toThrow(/refusing to write.*not gitignored/);
   });
 
   test("omits undefined fields from the written output", () => {

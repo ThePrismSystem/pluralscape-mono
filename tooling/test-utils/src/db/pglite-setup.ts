@@ -20,7 +20,7 @@ export async function createTestDatabase<
   const client = await PGlite.create();
   let db: PgliteDatabase<TSchema>;
   try {
-    db = (schema ? drizzle(client, { schema }) : drizzle(client)) as PgliteDatabase<TSchema>;
+    db = schema ? drizzle(client, { schema }) : drizzle(client);
   } catch (error: unknown) {
     await client.close();
     throw error;

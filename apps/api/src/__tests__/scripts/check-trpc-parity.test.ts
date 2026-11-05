@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import type {
-  ParityFailure,
-  RESTRouteInfo,
-  TRPCProcedureInfo,
-} from "../../../scripts/trpc-parity-lib.js";
 import {
   deriveRouterPrefix,
   extractBalancedBlock,
@@ -13,6 +8,12 @@ import {
   resolveMapping,
   runParityChecks,
   walkRouteTree,
+} from "../../../scripts/trpc-parity-lib.js";
+
+import type {
+  ParityFailure,
+  RESTRouteInfo,
+  TRPCProcedureInfo,
 } from "../../../scripts/trpc-parity-lib.js";
 
 describe("extractBalancedBlock", () => {

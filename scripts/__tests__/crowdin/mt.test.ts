@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { CrowdinEnv } from "../../crowdin/env.js";
 import { TARGET_LANGUAGE_IDS, type TargetLanguageId } from "../../crowdin/languages.js";
 import {
   ENGINE_ROUTING,
@@ -9,6 +8,8 @@ import {
   type MtClient,
   MtCreationForbiddenError,
 } from "../../crowdin/mt.js";
+
+import type { CrowdinEnv } from "../../crowdin/env.js";
 
 const DEEPL_MT_NAME = "deepl";
 const GOOGLE_MT_NAME = "google";
@@ -41,21 +42,21 @@ function makeEnv(): CrowdinEnv {
   };
 }
 
-function makeMtClient(
-  list: Array<{ id: number; name: string }>,
-  overrides: Partial<MtClient["machineTranslationApi"]> = {},
-): { client: MtClient; api: MtClient["machineTranslationApi"] } {
-  const api: MtClient["machineTranslationApi"] = {
-    listMts: vi.fn().mockResolvedValue({ data: list.map((e) => ({ data: e })) }),
-    createMt: vi
-      .fn()
-      .mockImplementation(async (req: { name: string }) =>
-        Promise.resolve({ data: { id: 999, name: req.name } }),
-      ),
-    updateMt: vi.fn().mockResolvedValue({}),
-    ...overrides,
+function makeMtClient(list: Array<{ id: number; name: string }>) {
+  const createMt = vi
+    .fn()
+    .mockImplementation(async (req: { name: string }) =>
+      Promise.resolve({ data: { id: 999, name: req.name } }),
+    );
+  const updateMt = vi.fn().mockResolvedValue({});
+  const client: MtClient = {
+    machineTranslationApi: {
+      listMts: vi.fn().mockResolvedValue({ data: list.map((e) => ({ data: e })) }),
+      createMt,
+      updateMt,
+    },
   };
-  return { client: { machineTranslationApi: api }, api };
+  return { client, createMt, updateMt };
 }
 
 describe("ENGINE_ROUTING", () => {
@@ -136,25 +137,23 @@ describe("findMtEngineIds", () => {
 
 describe("applyMtEngines", () => {
   it("creates both engines when neither exists", async () => {
-    const { client, api } = makeMtClient([]);
-    const create = api.createMt as ReturnType<typeof vi.fn>;
-    create.mockResolvedValueOnce({ data: { id: 10, name: DEEPL_MT_NAME } });
-    create.mockResolvedValueOnce({ data: { id: 11, name: GOOGLE_MT_NAME } });
+    const { client, createMt, updateMt } = makeMtClient([]);
+    createMt.mockResolvedValueOnce({ data: { id: 10, name: DEEPL_MT_NAME } });
+    createMt.mockResolvedValueOnce({ data: { id: 11, name: GOOGLE_MT_NAME } });
     const result = await applyMtEngines(client, 100, makeEnv());
     expect(result).toEqual({ deeplId: 10, googleId: 11 });
-    expect(create).toHaveBeenCalledTimes(2);
-    expect(api.updateMt).not.toHaveBeenCalled();
+    expect(createMt).toHaveBeenCalledTimes(2);
+    expect(updateMt).not.toHaveBeenCalled();
   });
 
   it("reuses existing engines and PATCHes credentials + enabledProjectIds", async () => {
-    const { client, api } = makeMtClient([
+    const { client, createMt, updateMt } = makeMtClient([
       { id: 42, name: DEEPL_MT_NAME },
       { id: 43, name: GOOGLE_MT_NAME },
     ]);
     const result = await applyMtEngines(client, 100, makeEnv());
     expect(result).toEqual({ deeplId: 42, googleId: 43 });
-    expect(api.createMt).not.toHaveBeenCalled();
-    const updateMt = api.updateMt as ReturnType<typeof vi.fn>;
+    expect(createMt).not.toHaveBeenCalled();
     expect(updateMt).toHaveBeenCalledTimes(2);
     const [deeplCall, googleCall] = updateMt.mock.calls;
     expect(deeplCall?.[0]).toBe(42);
@@ -173,20 +172,19 @@ describe("applyMtEngines", () => {
   });
 
   it("throws MtCreationForbiddenError when createMt returns HTTP 405 (account tier blocks POST /mts)", async () => {
-    const { client, api } = makeMtClient([]);
-    const create = api.createMt as ReturnType<typeof vi.fn>;
-    create.mockRejectedValueOnce(new MethodNotAllowedError());
+    const { client, createMt } = makeMtClient([]);
+    createMt.mockRejectedValueOnce(new MethodNotAllowedError());
     await expect(applyMtEngines(client, 100, makeEnv())).rejects.toBeInstanceOf(
       MtCreationForbiddenError,
     );
   });
 
   it("tolerates HTTP 405 on updateMt (PATCH /mts/{id}) and reuses the existing engine", async () => {
-    const { client, api } = makeMtClient([
+    const { client, updateMt } = makeMtClient([
       { id: 42, name: DEEPL_MT_NAME },
       { id: 43, name: GOOGLE_MT_NAME },
     ]);
-    (api.updateMt as ReturnType<typeof vi.fn>).mockRejectedValue(new MethodNotAllowedError());
+    updateMt.mockRejectedValue(new MethodNotAllowedError());
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       const result = await applyMtEngines(client, 100, makeEnv());
@@ -201,11 +199,11 @@ describe("applyMtEngines", () => {
   });
 
   it("rethrows non-405 errors from updateMt (no silent fallthrough on real failures)", async () => {
-    const { client, api } = makeMtClient([
+    const { client, updateMt } = makeMtClient([
       { id: 42, name: DEEPL_MT_NAME },
       { id: 43, name: GOOGLE_MT_NAME },
     ]);
-    (api.updateMt as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("500 server error"));
+    updateMt.mockRejectedValue(new Error("500 server error"));
     await expect(applyMtEngines(client, 100, makeEnv())).rejects.toThrow(/500 server error/);
   });
 });

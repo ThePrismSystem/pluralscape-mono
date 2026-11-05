@@ -18,6 +18,15 @@ import { fileURLToPath } from "node:url";
 
 import { REST_ONLY_SET } from "./trpc-parity.config.js";
 
+/** Source characters scanned after a route for a handler reference. */
+const ROUTE_HANDLER_SNIPPET_CHARS = 200;
+/** Source characters scanned after a route for an inline handler. */
+const INLINE_HANDLER_SNIPPET_CHARS = 500;
+/** Source characters scanned before a match for its surrounding context. */
+const PRECEDING_CONTEXT_CHARS = 200;
+/** Source characters scanned on each side of a route for its registration line. */
+const ROUTE_LINE_WINDOW_CHARS = 500;
+
 // ── Terminal colors ─────────────────────────────────────────────────────────
 
 const isCI = Boolean(process.env.CI);
@@ -275,7 +284,7 @@ export function extractBalancedBlock(source: string, openIdx: number): string | 
   const len = source.length;
 
   while (i < len && depth > 0) {
-    const ch = source[i]!;
+    const ch = source.charAt(i);
 
     // Skip double-quoted strings
     if (ch === '"') {
@@ -481,7 +490,7 @@ function findNearestMiddleware(
   const routeVarMatch = /(\w+)\s*$/.exec(beforeRoute);
   const routeVar = routeVarMatch?.[1];
 
-  const routeHandlerSnippet = source.slice(routeIndex, routeIndex + 200);
+  const routeHandlerSnippet = source.slice(routeIndex, routeIndex + ROUTE_HANDLER_SNIPPET_CHARS);
   const routePathMatch = /^\.\s*(?:get|post|put|delete|patch)\(\s*["'](\/[^"']*?)["']/.exec(
     routeHandlerSnippet,
   );
@@ -496,7 +505,7 @@ function findNearestMiddleware(
   }
 
   // Check for inline middleware on the route handler itself
-  const inlineSnippet = source.slice(routeIndex, routeIndex + 500);
+  const inlineSnippet = source.slice(routeIndex, routeIndex + INLINE_HANDLER_SNIPPET_CHARS);
   const inlineMatch = inlinePattern.exec(inlineSnippet);
   if (inlineMatch?.[1]) return inlineMatch[1];
 
@@ -520,7 +529,7 @@ function findNearestMiddleware(
 
   // Fall back: find middleware on the same Hono variable
   for (const pos of positions) {
-    const context = source.slice(Math.max(0, pos.index - 200), pos.index);
+    const context = source.slice(Math.max(0, pos.index - PRECEDING_CONTEXT_CHARS), pos.index);
     if (context.includes(routeVar)) {
       return pos.value;
     }
@@ -561,7 +570,10 @@ function hasNearbyIdempotency(routeIndex: number, positions: number[], source: s
 
   // Check if any idempotency middleware is in the same file and applies
   // (either file-level via .use() or inline on the route handler)
-  const routeLine = source.slice(Math.max(0, routeIndex - 500), routeIndex + 500);
+  const routeLine = source.slice(
+    Math.max(0, routeIndex - ROUTE_LINE_WINDOW_CHARS),
+    routeIndex + ROUTE_LINE_WINDOW_CHARS,
+  );
   return IDEMPOTENCY_PATTERN.test(routeLine);
 }
 

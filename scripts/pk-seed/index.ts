@@ -15,15 +15,17 @@
  */
 
 import process from "node:process";
+
 import { PkClient } from "./client.js";
-import type { Manifest } from "./manifest.js";
+import { PK_API_BASE_URL_DEFAULT } from "./constants.js";
+import { ADVERSARIAL_FIXTURES } from "./fixtures/adversarial.js";
+import { MINIMAL_FIXTURES } from "./fixtures/minimal.js";
 import { loadManifest, emptyManifest, writeManifestAtomic, planSeed } from "./manifest.js";
 import { executePlan } from "./seed.js";
-import { MINIMAL_FIXTURES } from "./fixtures/minimal.js";
-import { ADVERSARIAL_FIXTURES } from "./fixtures/adversarial.js";
+
 import type { PkMode } from "./constants.js";
-import { PK_API_BASE_URL_DEFAULT } from "./constants.js";
 import type { EntityFixtures } from "./fixtures/types.js";
+import type { Manifest } from "./manifest.js";
 
 const FIXTURES: Record<PkMode, EntityFixtures> = {
   minimal: MINIMAL_FIXTURES,
@@ -71,7 +73,9 @@ async function seedMode(mode: PkMode, baseUrl: string): Promise<void> {
 
   // Step 3: Plan seed
   const plan = await planSeed(client, fixtures, existing);
-  console.log(`  Plan: ${plan.reuse.length} reused, ${plan.create.length} to create`);
+  console.log(
+    `  Plan: ${String(plan.reuse.length)} reused, ${String(plan.create.length)} to create`,
+  );
 
   // Step 4: Execute
   const refMap = new Map<string, string>();

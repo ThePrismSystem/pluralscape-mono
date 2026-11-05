@@ -30,7 +30,7 @@ export const GlossarySchema = z
       const key = entry.term.toLowerCase();
       if (seen.has(key)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           path: ["terms", index, "term"],
           message: `duplicate term: ${entry.term}`,
         });

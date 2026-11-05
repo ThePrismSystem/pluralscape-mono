@@ -25,8 +25,13 @@ export const SP_TEST_PASSWORD_FALLBACK = "TestImport1!sp";
 /** Environment variable name read for the test account password when the env file omits it. */
 export const SP_TEST_PASSWORD_ENV_KEY = "SP_TEST_PASSWORD";
 
+const API_PERMISSION_READ = 0x01;
+const API_PERMISSION_WRITE = 0x02;
+const API_PERMISSION_DELETE = 0x04;
+
 /** Full read+write+delete bitmask per src/modules/api/keys.ts:5-11. */
-export const FULL_API_ACCESS_PERMISSION = 0x01 | 0x02 | 0x04; // = 7
+export const FULL_API_ACCESS_PERMISSION =
+  API_PERMISSION_READ | API_PERMISSION_WRITE | API_PERMISSION_DELETE; // = 7
 
 /** Dummy ObjectId satisfying validateId on POST /v1/token/:id. */
 export const DUMMY_OBJECT_ID = "000000000000000000000000";
@@ -95,3 +100,51 @@ export const ENTITY_PROBE_PATHS: Record<EntityTypeKey, ProbePathFn> = {
   chatMessages: (_sys, id) => `/v1/chat/message/${id}`,
   boardMessages: (_sys, id) => `/v1/board/${id}`,
 };
+
+// ── Fixture timing and sizing ───────────────────────────────────────
+//
+// Ages are milliseconds before the seed run. Their exact values only need to
+// keep events in a stable order and inside the window SP accepts.
+
+/** Age of the end of the zero-length front-history entry. */
+export const FRONT_BOUNDARY_END_AGE_MS = 5_000_000;
+/** Age of the end of the long-running front-history entry. */
+export const FRONT_OLD_END_AGE_MS = 2_591_000_000;
+/** Age of the start of the ended custom-front entry. */
+export const FRONT_ENDED_START_AGE_MS = 4_000_000;
+/** Age of the end of the ended custom-front entry. */
+export const FRONT_ENDED_END_AGE_MS = 3_500_000;
+
+/** Age of the first comment. */
+export const COMMENT_FIRST_AGE_MS = 3_500_000;
+/** Age of the second comment. */
+export const COMMENT_SECOND_AGE_MS = 3_400_000;
+/** Age of the oversized comment, on the long-running front. */
+export const COMMENT_LONG_AGE_MS = 2_590_000_000;
+/** Age of the Unicode comment, on the long-running front. */
+export const COMMENT_UNICODE_AGE_MS = 2_589_000_000;
+
+/** Age of the first chat message. */
+export const CHAT_FIRST_AGE_MS = 7_000_000;
+/** Age of the second chat message. */
+export const CHAT_SECOND_AGE_MS = 6_900_000;
+/** Age of the third chat message. */
+export const CHAT_THIRD_AGE_MS = 6_800_000;
+/** Age of the fourth chat message. */
+export const CHAT_FOURTH_AGE_MS = 5_000_000;
+/** Age of the fifth chat message. */
+export const CHAT_FIFTH_AGE_MS = 4_900_000;
+
+/** Age of the first board message. */
+export const BOARD_FIRST_AGE_MS = 5_000_000;
+/** Age of the second board message. */
+export const BOARD_SECOND_AGE_MS = 4_000_000;
+/** Age of the third board message. */
+export const BOARD_THIRD_AGE_MS = 3_000_000;
+
+/** Length of the oversized comment text. */
+export const COMMENT_LONG_TEXT_CHARS = 500;
+/** Repeats of the filler phrase in the oversized note. */
+export const NOTE_LONG_REPEATS = 200;
+/** Length of the oversized board message title. */
+export const BOARD_LONG_TITLE_CHARS = 70;

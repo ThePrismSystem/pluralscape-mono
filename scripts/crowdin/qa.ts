@@ -37,7 +37,7 @@ const QaReadbackSchema = z
   .object({
     qaChecksIgnorableCategories: z.record(z.string(), z.boolean()).nullish(),
   })
-  .passthrough();
+  .loose();
 
 export async function applyQaChecks(
   client: QaClient,

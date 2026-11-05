@@ -14,7 +14,8 @@
  */
 import type { EntityFixtures } from "./types.js";
 
-const LONG_DESCRIPTION = "A".repeat(1000);
+const LONG_DESCRIPTION_CHARS = 1000;
+const LONG_DESCRIPTION = "A".repeat(LONG_DESCRIPTION_CHARS);
 
 export const ADVERSARIAL_FIXTURES: EntityFixtures = {
   members: [

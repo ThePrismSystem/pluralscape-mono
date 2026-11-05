@@ -17,18 +17,18 @@ function mockClient(plan: {
 }): MockedClient {
   let applyIdx = 0;
   const statusIdx: Record<string, number> = {};
-  const apply = vi.fn(async () => {
+  const apply = vi.fn(() => {
     const r = plan.applyResults[applyIdx++];
-    if (!r) throw new Error("mockClient: applyResults exhausted");
-    return { data: { identifier: r.identifier } };
+    if (!r) return Promise.reject(new Error("mockClient: applyResults exhausted"));
+    return Promise.resolve({ data: { identifier: r.identifier } });
   });
-  const status = vi.fn(async (_projectId: number, identifier: string) => {
+  const status = vi.fn((_projectId: number, identifier: string) => {
     const seq = plan.statusSequences[identifier] ?? [{ status: "finished" }];
     const i = statusIdx[identifier] ?? 0;
     statusIdx[identifier] = i + 1;
     const entry = seq[Math.min(i, seq.length - 1)];
-    if (!entry) throw new Error(`mockClient: empty sequence for ${identifier}`);
-    return { data: { status: entry.status } };
+    if (!entry) return Promise.reject(new Error(`mockClient: empty sequence for ${identifier}`));
+    return Promise.resolve({ data: { status: entry.status } });
   });
   return {
     translationsApi: {
