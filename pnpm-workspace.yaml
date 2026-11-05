@@ -34,7 +34,7 @@ catalog:
   better-sqlite3-multiple-ciphers: ^12.9.0
   drizzle-orm: ^0.45.2
   eslint: ^10.3.0
-  happy-dom: ^20.9.0
+  happy-dom: ^21.0.0
   jszip: ^3.10.1
   lucide-react-native: ^1.14.0
   postgres: ^3.4.9
@@ -61,13 +61,37 @@ overrides:
   "yaml": ">=2.8.3"
   node-forge: ">=1.4.0"
   handlebars: ">=4.7.9"
-  vite: "8.0.11"
-  "@tanstack/query-core": "5.100.9"
+  vite: "8.1.6"
+  "@tanstack/query-core": "5.105.3"
   follow-redirects: ">=1.16.0"
   dompurify: ">=3.4.0"
   protobufjs: ">=7.5.5"
   axios: "^1.16.0"
   "@xmldom/xmldom": ">=0.8.13"
   uuid: ">=14.0.0"
+
+# Advisories with no patched version reachable inside current dependency
+# ranges. Each is pinned by a parent we can't move without a larger upgrade;
+# forcing the patched major via `overrides` breaks the consumer. Remove an
+# entry as soon as its parent ships a compatible fix.
+auditConfig:
+  ignoreGhsas:
+    # decode-uri-component 0.2.2 via expo-router 55 → query-string 7. The fix
+    # (0.5.1) is ESM-only and query-string 7 require()s it as a function.
+    # Cleared by the Expo SDK upgrade (expo-router 58 drops query-string 7).
+    - GHSA-qr28-fpjm-wq7f
+    - GHSA-vcc3-ghjq-m6fr
+    # image-size 1.2.1 via metro (bundler, build-time only). Latest metro still
+    # depends on image-size ^1, and v2 removed the default export metro uses.
+    - GHSA-5p2g-fcmc-qvqq
+    - GHSA-w3rx-r6r6-pgpr
+    # zod 3.25.76 via @expo/cli (dev tooling). No patched 3.x release; the
+    # app's own zod is 4.6.7 (patched).
+    - GHSA-mrhx-c7xc-m3w5
+    # glob 13.0.6 via @expo/config and friends (build-time). Fix is glob 14.
+    - GHSA-3g3m-2fjr-6pw4
+    # minimatch 10.2.6 via eslint (dev-only). Latest eslint pins ^10.2.6; fix
+    # is minimatch 11.
+    - GHSA-g3hv-75wg-m249
 
 verifyDepsBeforeRun: true

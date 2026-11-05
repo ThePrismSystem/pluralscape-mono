@@ -11,14 +11,13 @@
     "./templates": "./src/templates/index.ts"
   },
   "dependencies": {
-    "nodemailer": "^8.0.7",
+    "nodemailer": "^10.0.0",
     "resend": "^6.12.3"
   },
   "devDependencies": {
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
     "@types/bun": "catalog:",
-    "@types/nodemailer": "^8.0.0",
     "eslint": "catalog:",
     "typescript": "catalog:"
   },
