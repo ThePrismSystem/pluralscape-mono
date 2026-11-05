@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -82,6 +82,14 @@ describe("writeEnvFile", () => {
   beforeEach(() => {
     tmpDir = mkdtempSync(join(tmpdir(), "sp-seed-env-write-"));
     process.chdir(tmpDir);
+    // Git exports GIT_DIR and related variables to hooks; a pre-push hook run from
+    // a linked worktree gets GIT_DIR pointing at that worktree's gitdir. Inherited
+    // by the `git init` below and the `git check-ignore` in writeEnvFile, they
+    // target the host repository instead of tmpDir, and `git init` rewrites the
+    // host's config to core.bare=true.
+    for (const key of Object.keys(process.env)) {
+      if (key.startsWith("GIT_")) vi.stubEnv(key, undefined);
+    }
     // Create a .gitignore that ignores the target file so the safety check passes.
     writeFileSync(join(tmpDir, ".gitignore"), ".env.sp-test\n", "utf-8");
     // Initialize a git repo so git check-ignore works.
@@ -90,6 +98,7 @@ describe("writeEnvFile", () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     process.chdir(originalCwd);
     rmSync(tmpDir, { recursive: true, force: true });
   });
