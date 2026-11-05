@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-11-05T13:40:41Z
-updated_at: 2026-11-05T13:46:10Z
+updated_at: 2026-11-05T14:38:44Z
 ---
 
 Apply all open Renovate and Dependabot dependency PRs in one branch, fix the resulting lint/type/test/audit fallout, and merge so the bot PRs close.
@@ -30,3 +30,8 @@ Fallout fixed:
   - no-generated-empty-object-type: the `RelationshipEncryptedInput` standard arm is now `Readonly<Record<string, never>>`, matching what Zod and the OpenAPI generator already produce; both parity checks assert against the canonical type.
 - Prettier 3.9 reformat (layout only).
 - pnpm audit: bumped vulnerable transitives within range (axios, ws, shell-quote, qs, follow-redirects, form-data, node-forge, @xmldom/xmldom, compression, js-yaml via @redocly/openapi-core, react-navigation 7.24). Seven advisories with no in-range fix are ignored with rationale in pnpm-workspace.yaml; removal tracked in infra-vs92.
+
+## CI Environment Fixes
+
+- Playwright 1.59 cannot install Chromium on the ubuntu-latest runner (now Ubuntu 26.04); bumped to 1.64.1, which supports it.
+- Every official MinIO image (minio/minio on Docker Hub and quay.io, including the digest-pinned RELEASE tag) has been removed upstream. The storage integration, API E2E and test-utils E2E helpers now run pgsty/minio, the community-maintained fork, pinned by RELEASE tag and digest.
