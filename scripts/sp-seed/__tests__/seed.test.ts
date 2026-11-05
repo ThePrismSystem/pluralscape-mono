@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
-import { resolveRefs, triggerExportWith429Handling } from "../seed.js";
+
 import { UnresolvedRefError, SpApiError } from "../client.js";
+import { resolveRefs, triggerExportWith429Handling } from "../seed.js";
 
 describe("resolveRefs", () => {
   test("replaces top-level ref strings using the map", () => {
@@ -66,7 +67,7 @@ describe("resolveRefs", () => {
 describe("triggerExportWith429Handling", () => {
   test("resolves normally when the call succeeds", async () => {
     const client = {
-      request: vi.fn(async () => ({})),
+      request: vi.fn(() => Promise.resolve({})),
     };
     await expect(triggerExportWith429Handling(client, "sys1")).resolves.toBeUndefined();
     expect(client.request).toHaveBeenCalledWith("/v1/user/sys1/export", {
@@ -77,18 +78,18 @@ describe("triggerExportWith429Handling", () => {
 
   test("swallows SpApiError with status 429", async () => {
     const client = {
-      request: vi.fn(async () => {
-        throw new SpApiError(429, "POST", "/v1/user/sys1/export", "wait 3 min");
-      }),
+      request: vi.fn(() =>
+        Promise.reject(new SpApiError(429, "POST", "/v1/user/sys1/export", "wait 3 min")),
+      ),
     };
     await expect(triggerExportWith429Handling(client, "sys1")).resolves.toBeUndefined();
   });
 
   test("rethrows SpApiError with non-429 status", async () => {
     const client = {
-      request: vi.fn(async () => {
-        throw new SpApiError(500, "POST", "/v1/user/sys1/export", "oops");
-      }),
+      request: vi.fn(() =>
+        Promise.reject(new SpApiError(500, "POST", "/v1/user/sys1/export", "oops")),
+      ),
     };
     await expect(triggerExportWith429Handling(client, "sys1")).rejects.toMatchObject({
       status: 500,

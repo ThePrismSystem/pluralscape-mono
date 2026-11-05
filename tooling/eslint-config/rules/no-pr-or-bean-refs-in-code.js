@@ -9,11 +9,14 @@
  * These references rot at closeout. Move context to a spec/plan file
  * (in docs/superpowers/, gitignored).
  *
- * The rule has no allow-list. Exceptions require modifying this file
- * directly, which is reviewed at the same level as a feature change.
+ * Ordinary words that fit the ID shape (`api-keys`, `client-side`) are not
+ * references, so BEAN_RE excludes them by name. There is no other allow-list:
+ * exceptions require modifying this file directly, which is reviewed at the
+ * same level as a feature change.
  */
 const PR_RE = /\bPR\s*#?\d+\b/i;
-const BEAN_RE = /\b(?:ps|api|db|types|crypto|sync|client|mobile|infra)-[a-z0-9]{4}\b/;
+const BEAN_RE =
+  /\b(?:ps|api|db|types|crypto|sync|client|mobile|infra)-(?!(?:keys|slow|side|push|pull|test|core|bulk)\b)[a-z0-9]{4}\b/;
 
 function hasRef(text) {
   return PR_RE.test(text) || BEAN_RE.test(text);

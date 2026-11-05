@@ -6,7 +6,7 @@
  * from the AEAD cipher is `unknown`; calling `Schema.parse` here turns it
  * into a typed, validated record before any consumer reads it.
  *
- * Matches the post-types-emid fleet pattern: every decrypt site validates
+ * Matches the fleet pattern: every decrypt site validates
  * with Zod, no hand-rolled `assertObjectBlob` / `assertStringField` helpers.
  */
 import { z } from "zod/v4";

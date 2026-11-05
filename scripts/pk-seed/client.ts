@@ -1,3 +1,10 @@
+import {
+  ERROR_BODY_PREVIEW_CHARS,
+  HTTP_NO_CONTENT,
+  HTTP_NOT_FOUND,
+  HTTP_SERVER_ERROR_MIN,
+  HTTP_UNAUTHORIZED,
+} from "../http.constants.js";
 /**
  * PK API client for seed script mutations.
  *
@@ -16,7 +23,9 @@ export class PkApiError extends Error {
     readonly path: string,
     readonly body: string,
   ) {
-    super(`PK API ${method} ${path} failed (${status}): ${body.slice(0, 200)}`);
+    super(
+      `PK API ${method} ${path} failed (${String(status)}): ${body.slice(0, ERROR_BODY_PREVIEW_CHARS)}`,
+    );
     this.name = "PkApiError";
   }
 }
@@ -63,7 +72,7 @@ export class PkClient {
       const data = await this.request<{ id: string }>("/v2/systems/@me", {});
       return data.id;
     } catch (err) {
-      if (err instanceof PkApiError && err.status === 401) {
+      if (err instanceof PkApiError && err.status === HTTP_UNAUTHORIZED) {
         return undefined;
       }
       throw err;
@@ -100,7 +109,7 @@ export class PkClient {
       await this.request(path, {});
       return true;
     } catch (err) {
-      if (err instanceof PkApiError && err.status === 404) {
+      if (err instanceof PkApiError && err.status === HTTP_NOT_FOUND) {
         return false;
       }
       throw err;
@@ -146,7 +155,7 @@ export class PkClient {
       init.body = JSON.stringify(opts.body);
     }
     const response = await fetch(url, init);
-    if (response.status >= 500 && retryOn5xx) {
+    if (response.status >= HTTP_SERVER_ERROR_MIN && retryOn5xx) {
       await delay(RETRY_BACKOFF_MS);
       return this.executeOnce(path, opts, false);
     }
@@ -155,7 +164,7 @@ export class PkClient {
       throw new PkApiError(response.status, method, path, text);
     }
     if (!text) {
-      if (response.status === 204) {
+      if (response.status === HTTP_NO_CONTENT) {
         return undefined as T;
       }
       throw new Error(
@@ -164,7 +173,7 @@ export class PkClient {
     }
     try {
       return JSON.parse(text) as T;
-    } catch (parseError: unknown) {
+    } catch {
       // Non-JSON response body — return raw text.
       // This is expected for some PK API endpoints that return plain strings.
       return text as T;

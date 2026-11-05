@@ -3,5 +3,5 @@
   "compilerOptions": {
     "outDir": "dist"
   },
-  "include": ["src", "scripts", "../../types"]
+  "include": ["src", "scripts", "drizzle.config.*.ts", "../../types"]
 }

@@ -7,34 +7,13 @@ import { resolveAndValidateUrl } from "../../lib/ip-validation.js";
 import { WEBHOOK_REQUIRED_PROTOCOL } from "../../service.constants.js";
 
 import type {
+  WebhookConfigResult,
   ApiKeyId,
   ServerSecret,
   SystemId,
-  UnixMillis,
   WebhookEventType,
   WebhookId,
 } from "@pluralscape/types";
-
-// ── Types ───────────────────────────────────────────────────────────
-
-export interface WebhookConfigResult {
-  readonly id: WebhookId;
-  readonly systemId: SystemId;
-  readonly url: string;
-  readonly eventTypes: readonly WebhookEventType[];
-  readonly enabled: boolean;
-  /**
-   * API key that encrypts delivery payloads at rest in the database. Null
-   * when the webhook emits plaintext payloads. Matches the canonical
-   * `WebhookConfig.cryptoKeyId` brand in @pluralscape/types.
-   */
-  readonly cryptoKeyId: ApiKeyId | null;
-  readonly version: number;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
 
 /**
  * Returned from create/rotate only — includes the raw secret for the caller

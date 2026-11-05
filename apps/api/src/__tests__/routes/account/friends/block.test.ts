@@ -58,6 +58,8 @@ const MOCK_CONNECTION = {
   status: "blocked" as const,
   encryptedData: null,
   version: 2,
+  archived: false,
+  archivedAt: null,
   createdAt: toUnixMillis(1000),
   updatedAt: toUnixMillis(2000),
   pendingRotations: [],

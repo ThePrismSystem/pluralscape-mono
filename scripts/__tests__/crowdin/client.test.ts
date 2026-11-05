@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createCrowdinClient } from "../../crowdin/client.js";
+
 import type { CrowdinEnv } from "../../crowdin/env.js";
 
 // Regression test for: the Crowdin SDK ships as CJS with both

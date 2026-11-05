@@ -441,7 +441,7 @@ describe("encryptStreamAsync", () => {
   });
 });
 
-describe("decryptStream output pre-allocation (crypto-tirn)", () => {
+describe("decryptStream output pre-allocation", () => {
   it(
     "round-trips a multi-MiB payload without intermediate parts[] allocation",
     { timeout: 60_000 },

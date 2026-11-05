@@ -1,5 +1,6 @@
 // scripts/sp-seed/__tests__/client.test.ts
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
 import {
   extractObjectIdFromText,
   InvalidObjectIdError,
@@ -8,6 +9,8 @@ import {
   SpClient,
   uidFromJwt,
 } from "../client.js";
+
+import type { Mock } from "vitest";
 
 describe("extractObjectIdFromText", () => {
   test("returns the string when it is a valid 24-char hex", () => {
@@ -93,13 +96,13 @@ describe("uidFromJwt", () => {
 });
 
 describe("SpClient.requestRaw", () => {
-  let mockFetch: ReturnType<typeof vi.fn>;
+  let mockFetch: Mock<typeof fetch>;
   let originalFetch: typeof global.fetch;
 
   beforeEach(() => {
     originalFetch = global.fetch;
-    mockFetch = vi.fn();
-    global.fetch = mockFetch as unknown as typeof fetch;
+    mockFetch = vi.fn<typeof fetch>();
+    global.fetch = mockFetch;
   });
 
   afterEach(() => {
@@ -113,7 +116,7 @@ describe("SpClient.requestRaw", () => {
     const firstCall = mockFetch.mock.calls[0];
     if (!firstCall) throw new Error("fetch was not called");
     const [, init] = firstCall;
-    const headers = init.headers as Record<string, string>;
+    const headers = init?.headers as Record<string, string>;
     expect(headers["Authorization"]).toBe("raw-api-key-xyz");
     expect(headers["Authorization"]).not.toMatch(/^Bearer /);
   });
@@ -159,18 +162,18 @@ describe("SpClient.requestRaw", () => {
     const firstCall = mockFetch.mock.calls[0];
     if (!firstCall) throw new Error("fetch was not called");
     const [, init] = firstCall;
-    const headers = init.headers as Record<string, string>;
+    const headers = init?.headers as Record<string, string>;
     expect(headers["Authorization"]).toBeUndefined();
   });
 });
 
 describe("SpClient.request", () => {
-  let mockFetch: ReturnType<typeof vi.fn>;
+  let mockFetch: Mock<typeof fetch>;
   let originalFetch: typeof global.fetch;
   beforeEach(() => {
     originalFetch = global.fetch;
-    mockFetch = vi.fn();
-    global.fetch = mockFetch as unknown as typeof fetch;
+    mockFetch = vi.fn<typeof fetch>();
+    global.fetch = mockFetch;
   });
   afterEach(() => {
     global.fetch = originalFetch;
@@ -191,12 +194,12 @@ describe("SpClient.request", () => {
 });
 
 describe("SpClient.bootstrap", () => {
-  let mockFetch: ReturnType<typeof vi.fn>;
+  let mockFetch: Mock<typeof fetch>;
   let originalFetch: typeof global.fetch;
   beforeEach(() => {
     originalFetch = global.fetch;
-    mockFetch = vi.fn();
-    global.fetch = mockFetch as unknown as typeof fetch;
+    mockFetch = vi.fn<typeof fetch>();
+    global.fetch = mockFetch;
   });
   afterEach(() => {
     global.fetch = originalFetch;

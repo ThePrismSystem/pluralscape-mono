@@ -15332,6 +15332,8 @@ components:
         - status
         - encryptedData
         - version
+        - archived
+        - archivedAt
         - createdAt
         - updatedAt
       properties:
@@ -15365,6 +15367,14 @@ components:
           minimum: 1
           description: Optimistic concurrency version for updates
           example: 1
+        archived:
+          type: boolean
+          description: Whether the connection is archived
+        archivedAt:
+          type: integer
+          format: int64
+          nullable: true
+          description: Unix timestamp in milliseconds when archived, null otherwise
         createdAt:
           type: integer
           format: int64

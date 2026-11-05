@@ -25,6 +25,7 @@ import {
   createBaseE2EPersister,
   getSystemId,
   registerTestAccount,
+  pluralscapeAuthHeaders,
 } from "@pluralscape/test-utils/e2e";
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import { z } from "zod/v4";
@@ -69,7 +70,7 @@ export function makeTrpcClient(token: string): TRPCClient {
         url: TRPC_URL,
         maxURLLength: MAX_URL_LENGTH,
         maxItems: MAX_BATCH_ITEMS,
-        headers: () => ({ Authorization: `Bearer ${token}` }),
+        headers: () => pluralscapeAuthHeaders(token),
       }),
     ],
   });

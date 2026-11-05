@@ -13,9 +13,13 @@ import {
 
 import { toDeviceTokenResult } from "./internal.js";
 
-import type { DeviceTokenResult } from "./internal.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { DeviceTokenId, PaginatedResult, SystemId } from "@pluralscape/types";
+import type {
+  DeviceTokenResult,
+  DeviceTokenId,
+  PaginatedResult,
+  SystemId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** List all non-revoked device tokens for a system, newest first. */

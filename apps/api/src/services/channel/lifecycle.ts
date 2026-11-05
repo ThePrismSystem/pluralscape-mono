@@ -4,10 +4,9 @@ import { archiveEntity, restoreEntity } from "../../lib/entity-lifecycle.js";
 
 import { CHANNEL_LIFECYCLE, toChannelResult } from "./internal.js";
 
-import type { ChannelResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { ChannelId, SystemId } from "@pluralscape/types";
+import type { ChannelResult, ChannelId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function archiveChannel(

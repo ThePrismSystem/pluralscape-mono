@@ -63,7 +63,9 @@ describe("respondCheckInRecord", () => {
       mockAudit,
     );
 
-    expect(result.status).toBe("responded");
+    expect(result.respondedAt).not.toBeNull();
+
+    expect(result.respondedByMemberId).not.toBeNull();
     expect(result.respondedByMemberId).toBe(MEMBER_ID);
     expect(mockAudit).toHaveBeenCalledWith(
       chain,
@@ -224,7 +226,7 @@ describe("dismissCheckInRecord", () => {
 
     const result = await dismissCheckInRecord(db, SYSTEM_ID, RECORD_ID, AUTH, mockAudit);
 
-    expect(result.status).toBe("dismissed");
+    expect(result.dismissed).toBe(true);
     expect(result.dismissed).toBe(true);
     expect(mockAudit).toHaveBeenCalledWith(
       chain,

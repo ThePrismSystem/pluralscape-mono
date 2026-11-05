@@ -89,7 +89,8 @@ describe("check-in-record.service (PGlite integration)", () => {
       );
       expect(result.id).toMatch(/^cir_/);
       expect(result.timerConfigId).toBe(timerId);
-      expect(result.status).toBe("pending");
+      expect(result.respondedAt).toBeNull();
+      expect(result.dismissed).toBe(false);
       expect(audit.calls).toHaveLength(1);
       expect(audit.calls[0]?.eventType).toBe("check-in-record.created");
       expect(audit.calls[0]?.actor).toEqual({ kind: "account", id: auth.accountId });
@@ -151,7 +152,8 @@ describe("check-in-record.service (PGlite integration)", () => {
         auth,
         noopAudit,
       );
-      expect(result.status).toBe("responded");
+      expect(result.respondedAt).not.toBeNull();
+      expect(result.respondedByMemberId).not.toBeNull();
       expect(result.respondedByMemberId).toBe(memberId);
       expect(result.respondedAt).toEqual(expect.any(Number));
     });
@@ -245,7 +247,7 @@ describe("check-in-record.service (PGlite integration)", () => {
       );
 
       const result = await dismissCheckInRecord(asDb(db), systemId, record.id, auth, noopAudit);
-      expect(result.status).toBe("dismissed");
+      expect(result.dismissed).toBe(true);
       expect(result.dismissed).toBe(true);
     });
 

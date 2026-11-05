@@ -9,9 +9,8 @@ import { tenantCtx } from "../../lib/tenant-context.js";
 
 import { toFieldDefinitionResult } from "./internal.js";
 
-import type { FieldDefinitionResult } from "./internal.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { FieldDefinitionId, SystemId } from "@pluralscape/types";
+import type { FieldDefinitionResult, FieldDefinitionId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function getFieldDefinition(

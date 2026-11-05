@@ -10,10 +10,11 @@ import { dispatchWebhookEvent } from "../../webhook-dispatcher.js";
 
 import { toFriendConnectionResult } from "./internal.js";
 
-import type { FriendConnectionResult, FriendConnectionWithRotations } from "./internal.js";
+import type { FriendConnectionWithRotations } from "./internal.js";
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type {
+  FriendConnectionResult,
   AccountId,
   AuditEventType,
   BucketId,

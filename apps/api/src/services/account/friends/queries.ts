@@ -11,9 +11,9 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../../service.constants.j
 
 import { toFriendConnectionResult } from "./internal.js";
 
-import type { FriendConnectionResult } from "./internal.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type {
+  FriendConnectionResult,
   AccountId,
   FriendConnectionId,
   FriendConnectionStatus,

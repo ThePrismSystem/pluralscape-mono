@@ -14,11 +14,10 @@ import {
 import { MAX_ENCRYPTED_FIELD_VALUE_BYTES } from "../field-value.constants.js";
 
 import type {
+  FieldValueResult,
   EncryptedBlob,
-  EncryptedWire,
   FieldDefinitionId,
   FieldValueId,
-  FieldValueServerMetadata,
   GroupId,
   MemberId,
   SystemId,
@@ -32,10 +31,6 @@ export type FieldValueOwner =
   | { readonly kind: "member"; readonly id: MemberId }
   | { readonly kind: "group"; readonly id: GroupId }
   | { readonly kind: "structureEntity"; readonly id: SystemStructureEntityId };
-
-// ── Types ───────────────────────────────────────────────────────────
-
-export type FieldValueResult = EncryptedWire<FieldValueServerMetadata>;
 
 // ── Internal helpers ───────────────────────────────────────────────
 

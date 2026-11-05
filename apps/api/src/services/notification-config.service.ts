@@ -13,6 +13,7 @@ import { invalidateSwitchAlertConfigCache } from "./switch-alert-dispatcher.js";
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
+  NotificationConfigResult,
   Archivable,
   AuditEventType,
   FriendNotificationEventType,
@@ -20,7 +21,6 @@ import type {
   NotificationConfigId,
   NotificationEventType,
   SystemId,
-  UnixMillis,
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
@@ -42,18 +42,6 @@ function isFriendNotificationEventType(
   eventType: NotificationEventType,
 ): eventType is FriendNotificationEventType {
   return (FRIEND_NOTIFICATION_EVENT_TYPES as readonly NotificationEventType[]).includes(eventType);
-}
-
-// ── Types ────────────────────────────────────────────────────────────
-
-export interface NotificationConfigResult {
-  readonly id: NotificationConfigId;
-  readonly systemId: SystemId;
-  readonly eventType: NotificationEventType;
-  readonly enabled: boolean;
-  readonly pushEnabled: boolean;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────

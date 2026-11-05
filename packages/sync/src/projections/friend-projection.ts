@@ -4,10 +4,12 @@ import type {
   CrdtFriendCode,
   CrdtFriendConnection,
   CrdtKeyGrant,
+  PrivacyConfigDocument,
 } from "../schemas/privacy-config.js";
-import type { PrivacyConfigDocument } from "../schemas/privacy-config.js";
 import type {
-  AccountId,
+  KeyGrantProjectionSource,
+  FriendConnectionProjectionSource,
+  FriendCodeProjectionSource,
   BucketId,
   FriendCodeId,
   FriendConnectionId,
@@ -15,41 +17,6 @@ import type {
   KeyGrantId,
   Logger,
 } from "@pluralscape/types";
-
-// ── input types ──────────────────────────────────────────────────────
-
-/** Service-layer input for projecting a friend code into CRDT format. */
-export interface FriendCodeInput {
-  readonly id: FriendCodeId;
-  readonly accountId: AccountId;
-  readonly code: string;
-  readonly createdAt: number;
-  readonly expiresAt: number | null;
-}
-
-/** Service-layer input for projecting a friend connection into CRDT format. */
-export interface FriendConnectionInput {
-  readonly id: FriendConnectionId;
-  readonly accountId: AccountId;
-  readonly friendAccountId: AccountId;
-  readonly status: FriendConnectionStatus;
-  /** JSON-serialized FriendVisibilitySettings. */
-  readonly visibility: string;
-  readonly assignedBucketIds: readonly BucketId[];
-  readonly createdAt: number;
-  readonly updatedAt: number;
-}
-
-/** Service-layer input for projecting a key grant into CRDT format. */
-export interface KeyGrantInput {
-  readonly id: KeyGrantId;
-  readonly bucketId: BucketId;
-  readonly friendAccountId: AccountId;
-  /** Base64-encoded encrypted bucket key. */
-  readonly encryptedBucketKey: string;
-  readonly keyVersion: number;
-  readonly createdAt: number;
-}
 
 // ── helpers ──────────────────────────────────────────────────────────
 
@@ -69,7 +36,7 @@ function bucketArrayToMap(bucketIds: readonly BucketId[]): Record<BucketId, true
 // ── pure projection functions ────────────────────────────────────────
 
 /** Project a friend code into the CRDT document format. */
-export function projectFriendCode(code: FriendCodeInput): CrdtFriendCode {
+export function projectFriendCode(code: FriendCodeProjectionSource): CrdtFriendCode {
   return {
     id: immStr(code.id),
     accountId: immStr(code.accountId),
@@ -81,7 +48,9 @@ export function projectFriendCode(code: FriendCodeInput): CrdtFriendCode {
 }
 
 /** Project a friend connection into the CRDT document format. */
-export function projectFriendConnection(connection: FriendConnectionInput): CrdtFriendConnection {
+export function projectFriendConnection(
+  connection: FriendConnectionProjectionSource,
+): CrdtFriendConnection {
   return {
     id: immStr(connection.id),
     accountId: immStr(connection.accountId),
@@ -96,7 +65,7 @@ export function projectFriendConnection(connection: FriendConnectionInput): Crdt
 }
 
 /** Project a key grant into the CRDT document format. */
-export function projectKeyGrant(grant: KeyGrantInput): CrdtKeyGrant {
+export function projectKeyGrant(grant: KeyGrantProjectionSource): CrdtKeyGrant {
   return {
     id: immStr(grant.id),
     bucketId: immStr(grant.bucketId),
@@ -111,20 +80,26 @@ export function projectKeyGrant(grant: KeyGrantInput): CrdtKeyGrant {
 // ── document mutation projections ────────────────────────────────────
 
 /** Apply a friend code projection to a PrivacyConfigDocument. */
-export function applyFriendCodeProjection(doc: PrivacyConfigDocument, code: FriendCodeInput): void {
+export function applyFriendCodeProjection(
+  doc: PrivacyConfigDocument,
+  code: FriendCodeProjectionSource,
+): void {
   doc.friendCodes[code.id] = projectFriendCode(code);
 }
 
 /** Apply a friend connection projection to a PrivacyConfigDocument. */
 export function applyFriendConnectionProjection(
   doc: PrivacyConfigDocument,
-  connection: FriendConnectionInput,
+  connection: FriendConnectionProjectionSource,
 ): void {
   doc.friendConnections[connection.id] = projectFriendConnection(connection);
 }
 
 /** Apply a key grant projection to a PrivacyConfigDocument. */
-export function applyKeyGrantProjection(doc: PrivacyConfigDocument, grant: KeyGrantInput): void {
+export function applyKeyGrantProjection(
+  doc: PrivacyConfigDocument,
+  grant: KeyGrantProjectionSource,
+): void {
   doc.keyGrants[grant.id] = projectKeyGrant(grant);
 }
 

@@ -1,14 +1,7 @@
 import { importEntityRefs } from "@pluralscape/db/pg";
 import { brandId, assertBrandedTargetId, toUnixMillis } from "@pluralscape/types";
 
-import type { AccountId, ImportEntityRef, ImportEntityRefId, SystemId } from "@pluralscape/types";
-
-/**
- * Canonical service result type — delegates to the discriminated union
- * in @pluralscape/types. Consumers narrow via sourceEntityType to get
- * the correct branded target ID without manual casting.
- */
-export type ImportEntityRefResult = ImportEntityRef;
+import type { ImportEntityRef, AccountId, ImportEntityRefId, SystemId } from "@pluralscape/types";
 
 export function toResult(row: typeof importEntityRefs.$inferSelect): ImportEntityRef {
   const base = {

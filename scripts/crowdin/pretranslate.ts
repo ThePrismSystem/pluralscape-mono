@@ -75,7 +75,7 @@ export function planPretranslatePasses(opts: PretranslateOptions): PretranslateP
   const targets = opts.languageIds ?? TARGET_LANGUAGE_IDS;
   const byEngine: Record<Engine, string[]> = { deepl: [], google: [] };
   for (const id of targets) {
-    const engine = ENGINE_ROUTING[id as TargetLanguageId];
+    const engine = ENGINE_ROUTING[id];
     // `null`-routed languages (e.g., es-419) participate in the TM pass but are
     // excluded from every MT pass — no configured engine accepts them.
     if (engine === null) continue;
@@ -169,11 +169,13 @@ async function pollJob(
     try {
       await sleep(POLL_INTERVAL_MS, undefined, { signal });
     } catch (err) {
-      if (signal.aborted) throw new Error(`${label} pretranslate ${id} aborted`);
+      if (err instanceof Error && err.name === "AbortError") {
+        throw new Error(`${label} pretranslate ${id} aborted`);
+      }
       throw err;
     }
   }
-  throw new Error(`${label} pretranslate ${id} timed out after ${POLL_TIMEOUT_MS}ms`);
+  throw new Error(`${label} pretranslate ${id} timed out after ${String(POLL_TIMEOUT_MS)}ms`);
 }
 
 export async function runPretranslate(

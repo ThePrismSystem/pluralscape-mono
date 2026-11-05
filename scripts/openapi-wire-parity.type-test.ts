@@ -33,6 +33,8 @@
  * — see `pnpm types:check-sot`.
  */
 
+import { expectTypeOf } from "vitest";
+
 import type { components } from "../packages/api-client/src/generated/api-types.js";
 import type {
   AcknowledgementRequestWire,
@@ -108,7 +110,6 @@ import type {
   SystemStructureEntityWire,
   TimerConfigWire,
 } from "../packages/types/src/index.js";
-import { expectTypeOf } from "vitest";
 
 // ── Wire helpers self-consistency ────────────────────────────────────
 //
@@ -252,7 +253,7 @@ expectTypeOf<Equal<components["schemas"]["ApiKeyResponse"], ApiKeyWire>>().toEqu
 
 // JournalEntryResponse and WikiPageResponse: canonical wire types exist
 // (`JournalEntryWire`, `WikiPageWire`) but no OpenAPI route schema is
-// authored yet. G7 deferred until the routes are added — see types-iupb.
+// authored yet. G7 deferred until the routes are added.
 
 // ── G7 fleet expansion: plaintext-link entities ─────────────────────
 //

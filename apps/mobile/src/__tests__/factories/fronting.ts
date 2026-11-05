@@ -100,6 +100,8 @@ export function makeRawFrontingReport(
     version: 1,
     archived: false,
     archivedAt: null,
+    createdAt: NOW,
+    updatedAt: NOW,
     ...encrypted,
     ...overrides,
   };

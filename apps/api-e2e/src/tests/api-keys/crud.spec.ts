@@ -46,9 +46,8 @@ test.describe("API keys CRUD", () => {
       expect(body.data.keyType).toBe("metadata");
       // Fail-closed allowlist guard (ADR-023 Class C): the wire surface must
       // never include sensitive server-only columns. encryptedData is the
-      // client-encrypted Class C payload — it MUST be exposed (surfaced in
-      // api-bqu4 / client-a0gf) so clients can decrypt it; it is not in this
-      // exclusion list.
+      // client-encrypted Class C payload — it MUST be exposed so clients can
+      // decrypt it; it is not in this exclusion list.
       expect(body.data).not.toHaveProperty("tokenHash");
       expect(body.data).not.toHaveProperty("encryptedKeyMaterial");
       expect(body.data).not.toHaveProperty("accountId");

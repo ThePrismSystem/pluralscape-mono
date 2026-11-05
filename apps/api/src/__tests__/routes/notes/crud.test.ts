@@ -16,8 +16,7 @@ import {
   putJSON,
 } from "../../helpers/route-test-setup.js";
 
-import type { NoteResult } from "../../../services/note/internal.js";
-import type { EncryptedBase64, NoteId } from "@pluralscape/types";
+import type { NoteResult, EncryptedBase64, NoteId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -71,7 +70,7 @@ const MOCK_RESULT: NoteResult = {
   systemId: MOCK_SYSTEM_ID,
   authorEntityType: null,
   authorEntityId: null,
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
   createdAt: toUnixMillis(1000),
   updatedAt: toUnixMillis(1000),

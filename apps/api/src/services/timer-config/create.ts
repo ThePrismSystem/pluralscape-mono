@@ -10,10 +10,9 @@ import { MAX_ENCRYPTED_DATA_BYTES } from "../../service.constants.js";
 
 import { toTimerConfigResult } from "./internal.js";
 
-import type { TimerConfigResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { SystemId, TimerId } from "@pluralscape/types";
+import type { TimerConfigResult, SystemId, TimerId } from "@pluralscape/types";
 import type { CreateTimerConfigBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { z } from "zod/v4";

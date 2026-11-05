@@ -147,12 +147,17 @@ interface SystemListResponse {
   data: SystemListItem[];
 }
 
+/** Authorization header for the Pluralscape API (not Simply Plural, which takes a raw token). */
+export function pluralscapeAuthHeaders(sessionToken: string): { Authorization: string } {
+  return { Authorization: `Bearer ${sessionToken}` };
+}
+
 /**
  * Fetch the first system ID for the authenticated account via REST.
  */
 export async function getSystemId(sessionToken: string): Promise<SystemId> {
   const res = await fetch(`${API_BASE_URL}/v1/systems`, {
-    headers: { Authorization: `Bearer ${sessionToken}` },
+    headers: pluralscapeAuthHeaders(sessionToken),
   });
 
   if (!res.ok) {

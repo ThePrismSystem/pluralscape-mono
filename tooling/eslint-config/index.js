@@ -23,6 +23,13 @@ import noServicesBarrel from "./rules/no-services-barrel.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+/**
+ * Anchors path-scoped blocks to the repo root. ESLint resolves `files` globs
+ * against the directory of the config file in use, so a repo-relative glob
+ * would match nothing in any package that has its own eslint.config.js.
+ */
+const REPO_ROOT = path.resolve(__dirname, "../..");
 const MANIFEST_PATH = path.resolve(__dirname, "../../packages/types/src/__sot-manifest__.ts");
 const MANIFEST_ENTITIES = loadManifestEntities(MANIFEST_PATH);
 
@@ -52,13 +59,7 @@ export default tseslint.config(
       "**/node_modules/**",
       "**/.turbo/**",
       "**/.expo/**",
-      "**/vitest.config.ts",
-      "**/vitest.*.config.ts",
-      "**/playwright.config.ts",
-      "**/drizzle.config.*.ts",
       "**/generated/**",
-      "**/__sot-manifest__.ts",
-      "**/scripts/**",
     ],
   },
   ...tseslint.configs.strictTypeChecked,
@@ -184,12 +185,14 @@ export default tseslint.config(
     },
   },
   {
+    basePath: REPO_ROOT,
     files: ["apps/api/src/services/**"],
     rules: {
       "pluralscape/no-services-barrel": "error",
     },
   },
   {
+    basePath: REPO_ROOT,
     files: ["packages/import-sp/src/**"],
     rules: {
       "pluralscape/no-bearer-prefix-on-sp-auth": "error",
@@ -203,19 +206,21 @@ export default tseslint.config(
     },
   },
   {
+    basePath: REPO_ROOT,
     files: ["apps/**/*.{ts,tsx}", "packages/!(types)/**/*.{ts,tsx}"],
     rules: {
       "pluralscape/no-hand-rolled-domain-types": ["error", { manifestEntities: MANIFEST_ENTITIES }],
     },
   },
   {
+    basePath: REPO_ROOT,
     files: ["packages/data/src/transforms/**", "packages/sync/src/**"],
     rules: {
       "pluralscape/no-local-encrypted-fields": "error",
     },
   },
   {
-    files: ["apps/**/*.{ts,tsx}", "packages/**/*.{ts,tsx}"],
+    files: ["**/*.{ts,tsx}"],
     rules: {
       "pluralscape/no-pr-or-bean-refs-in-code": "error",
     },
@@ -284,7 +289,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["**/*.js", "**/*.cjs"],
+    files: ["**/*.js", "**/*.cjs", "**/*.mjs"],
     ...tseslint.configs.disableTypeChecked,
     rules: {
       ...tseslint.configs.disableTypeChecked.rules,

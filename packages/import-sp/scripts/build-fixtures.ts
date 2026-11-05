@@ -12,6 +12,9 @@ import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+const PUBLIC_MEMBER_SEQ = 3;
+const DEFAULT_MEMBER_SEQ = 4;
+
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const FIXTURE_DIR = join(SCRIPT_DIR, "..", "test-fixtures");
 
@@ -64,8 +67,8 @@ function buildLegacyNoBuckets(): unknown {
     members: [
       { _id: id("m", 1), name: "Private Member", private: true },
       { _id: id("m", 2), name: "Prevented Member", preventTrusted: true },
-      { _id: id("m", 3), name: "Public Member", private: false },
-      { _id: id("m", 4), name: "Default Member" },
+      { _id: id("m", PUBLIC_MEMBER_SEQ), name: "Public Member", private: false },
+      { _id: id("m", DEFAULT_MEMBER_SEQ), name: "Default Member" },
     ],
     frontHistory: [
       {

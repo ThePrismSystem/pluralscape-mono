@@ -13,10 +13,9 @@ import { dispatchWebhookEvent } from "../webhook-dispatcher.js";
 
 import { toFrontingSessionResult } from "./internal.js";
 
-import type { FrontingSessionResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { FrontingSessionId, SystemId } from "@pluralscape/types";
+import type { FrontingSessionResult, FrontingSessionId, SystemId } from "@pluralscape/types";
 import type { CreateFrontingSessionBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { z } from "zod/v4";

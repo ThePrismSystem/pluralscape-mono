@@ -1,13 +1,14 @@
 // scripts/sp-seed/index.ts
 import process from "node:process";
+
 import {
   SP_API_BASE_URL_DEFAULT,
   SP_TEST_PASSWORD_ENV_KEY,
   SP_TEST_PASSWORD_FALLBACK,
 } from "./constants.js";
 import { readEnvFile, type SpMode, type SpTestEnv } from "./env.js";
-import { MINIMAL_FIXTURES } from "./fixtures/minimal.js";
 import { ADVERSARIAL_FIXTURES } from "./fixtures/adversarial.js";
+import { MINIMAL_FIXTURES } from "./fixtures/minimal.js";
 import { seedMode, type ModeCreds } from "./seed.js";
 
 function resolveCreds(mode: SpMode, cliEmail: string | undefined, env: SpTestEnv): ModeCreds {

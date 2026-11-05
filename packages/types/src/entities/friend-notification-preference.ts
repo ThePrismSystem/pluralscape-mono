@@ -49,3 +49,13 @@ export type FriendNotificationPreferenceServerMetadata = Omit<
  * literal that callers see.
  */
 export type FriendNotificationPreferenceWire = Serialize<FriendNotificationPreference>;
+
+/** Service-layer read shape for a friend notification preference. */
+export interface FriendNotificationPreferenceResult {
+  readonly id: FriendNotificationPreferenceId;
+  readonly accountId: AccountId;
+  readonly friendConnectionId: FriendConnectionId;
+  readonly enabledEventTypes: readonly FriendNotificationEventType[];
+  readonly createdAt: UnixMillis;
+  readonly updatedAt: UnixMillis;
+}

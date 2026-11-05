@@ -19,8 +19,7 @@ export type RlsScopeType =
    * systems table: combine the PK id check with account_id ownership so a
    * compromised `app.current_system_id` alone cannot unlock another account's
    * system row. Named `systems-pk-with-account` (not `systems-pk`) to avoid
-   * confusion with the pre-existing generic `system-pk` scope. See audit
-   * finding db-zy79.
+   * confusion with the pre-existing generic `system-pk` scope.
    */
   | "systems-pk-with-account"
   /**
@@ -30,8 +29,7 @@ export type RlsScopeType =
    * context. Regular tenant rows still match `account_id =
    * current_account_id() AND system_id = current_system_id()`. WITH CHECK
    * mirrors USING (plus IS NOT NULL) so any future regression that attempts
-   * to write NULL tenant columns is rejected up-front. See audit finding
-   * db-dpp7.
+   * to write NULL tenant columns is rejected up-front.
    */
   | "audit-log-null-aware"
   /**
@@ -40,7 +38,7 @@ export type RlsScopeType =
    * read via `friend_account_id = current_account_id()` — they may not know
    * or be allowed to set the originating system's ID as their session
    * context. Writes remain restricted to the originating system.
-   * See audit finding db-eigy.
+   *
    */
   | "key-grants";
 
@@ -104,7 +102,7 @@ export function dualTenantRlsPolicy(tableName: string): string {
  * Creates the systems PK policy combining `id = current_system_id()` with
  * `account_id = current_account_id()`. A session whose system GUC is set to
  * another tenant's system must NOT be able to read or write that system row
- * just because it happens to know the UUID. See audit finding db-zy79.
+ * just because it happens to know the UUID.
  */
 export function systemsPkRlsPolicy(): string {
   const systemSetting = currentSettingSql("app.current_system_id");
@@ -137,7 +135,7 @@ export function systemsPkRlsPolicy(): string {
  * symmetric WITH CHECK will reject it up-front instead of producing a row
  * that is permanently invisible through tenant context.
  *
- * See audit finding db-dpp7.
+ *
  */
 export function auditLogRlsPolicy(): string {
   const systemSetting = currentSettingSql("app.current_system_id");
@@ -163,7 +161,7 @@ export function auditLogRlsPolicy(): string {
  *    friend typically cannot set the originating system's ID as their
  *    session context, so the owner-read policy would otherwise block them.
  *
- * See audit finding db-eigy.
+ *
  */
 export function keyGrantsRlsPolicy(): string[] {
   const systemSetting = currentSettingSql("app.current_system_id");

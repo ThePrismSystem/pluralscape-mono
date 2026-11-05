@@ -1,3 +1,10 @@
+import {
+  ERROR_BODY_PREVIEW_CHARS,
+  HTTP_CONFLICT,
+  HTTP_SERVER_ERROR_MIN,
+  HTTP_UNAUTHORIZED,
+} from "../http.constants.js";
+
 // scripts/sp-seed/client.ts
 import {
   DUMMY_OBJECT_ID,
@@ -6,6 +13,9 @@ import {
   REQUEST_DELAY_MS,
 } from "./constants.js";
 
+/** Characters of a rejected ObjectId to keep in the error message. */
+const INVALID_OBJECT_ID_PREVIEW_CHARS = 80;
+
 export class SpApiError extends Error {
   constructor(
     readonly status: number,
@@ -13,7 +23,9 @@ export class SpApiError extends Error {
     readonly path: string,
     readonly body: string,
   ) {
-    super(`SP API ${method} ${path} failed (${status}): ${body.slice(0, 200)}`);
+    super(
+      `SP API ${method} ${path} failed (${String(status)}): ${body.slice(0, ERROR_BODY_PREVIEW_CHARS)}`,
+    );
     this.name = "SpApiError";
   }
 }
@@ -24,14 +36,18 @@ export class NonJsonResponseError extends Error {
     readonly path: string,
     readonly rawBody: string,
   ) {
-    super(`SP API ${method} ${path} returned non-JSON body: ${rawBody.slice(0, 200)}`);
+    super(
+      `SP API ${method} ${path} returned non-JSON body: ${rawBody.slice(0, ERROR_BODY_PREVIEW_CHARS)}`,
+    );
     this.name = "NonJsonResponseError";
   }
 }
 
 export class InvalidObjectIdError extends Error {
   constructor(readonly received: string) {
-    super(`Expected a 24-char hex ObjectId, got: ${received.slice(0, 80)}`);
+    super(
+      `Expected a 24-char hex ObjectId, got: ${received.slice(0, INVALID_OBJECT_ID_PREVIEW_CHARS)}`,
+    );
     this.name = "InvalidObjectIdError";
   }
 }
@@ -186,7 +202,7 @@ export class SpClient {
           };
         }
       } catch (err) {
-        if (!(err instanceof SpApiError) || err.status !== 401) throw err;
+        if (!(err instanceof SpApiError) || err.status !== HTTP_UNAUTHORIZED) throw err;
         // 401 → fall through to fresh bootstrap
       }
     }
@@ -200,7 +216,7 @@ export class SpClient {
   ): Promise<string> {
     const method = opts.method ?? "GET";
     const url = `${this.baseUrl}${path}`;
-    const authValue = opts.authOverride !== undefined ? opts.authOverride : this.apiKey;
+    const authValue = opts.authOverride ?? this.apiKey;
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -216,7 +232,7 @@ export class SpClient {
       init.body = JSON.stringify(opts.body);
     }
     const response = await fetch(url, init);
-    if (response.status >= 500 && retryOn5xx) {
+    if (response.status >= HTTP_SERVER_ERROR_MIN && retryOn5xx) {
       await delay(RETRY_BACKOFF_MS);
       return this.executeOnce(path, opts, /* retryOn5xx */ false);
     }
@@ -242,7 +258,7 @@ async function freshBootstrap(
       authOverride: "",
     });
   } catch (err) {
-    if (!(err instanceof SpApiError) || err.status !== 409) throw err;
+    if (!(err instanceof SpApiError) || err.status !== HTTP_CONFLICT) throw err;
     jwt = await transport.requestRaw("/v1/auth/login", {
       method: "POST",
       body: { email, password },

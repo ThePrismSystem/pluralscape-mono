@@ -14,9 +14,14 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
 
 import { toVoteResult } from "./internal.js";
 
-import type { PollVoteResult } from "./internal.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { PaginatedResult, PollId, SystemId, PollVoteId } from "@pluralscape/types";
+import type {
+  PollVoteResult,
+  PaginatedResult,
+  PollId,
+  SystemId,
+  PollVoteId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 interface ListVoteOpts {

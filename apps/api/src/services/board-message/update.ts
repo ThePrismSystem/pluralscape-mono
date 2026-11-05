@@ -12,10 +12,9 @@ import { dispatchWebhookEvent } from "../webhook-dispatcher.js";
 
 import { toBoardMessageResult } from "./internal.js";
 
-import type { BoardMessageResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { BoardMessageId, SystemId } from "@pluralscape/types";
+import type { BoardMessageResult, BoardMessageId, SystemId } from "@pluralscape/types";
 import type { UpdateBoardMessageBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { z } from "zod/v4";

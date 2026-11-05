@@ -170,7 +170,7 @@ describe("blob-codec", () => {
       expect(deserialized.nonce).toEqual(blob.nonce);
     });
 
-    // ── Nonce and keyVersion wire-format verification (db-kveq, db-0d2a) ──
+    // ── Nonce and keyVersion wire-format verification ──
 
     it("distinct nonces survive round-trip", () => {
       const nonceA = makeNonce(0x11);

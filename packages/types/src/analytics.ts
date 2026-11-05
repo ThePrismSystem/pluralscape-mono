@@ -98,12 +98,14 @@ export type FrontingReportEncryptedInput = Pick<FrontingReport, FrontingReportEn
 /**
  * Server-visible FrontingReport metadata — raw Drizzle row shape. Strips
  * the encrypted fields (bundled inside `encryptedData`) and adds
- * `archived`/`archivedAt`/`version` plus the encrypted blob.
+ * `archived`/`archivedAt`/`version`/timestamps plus the encrypted blob.
  */
 export type FrontingReportServerMetadata = Omit<FrontingReport, FrontingReportEncryptedFields> & {
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
   readonly version: number;
+  readonly createdAt: UnixMillis;
+  readonly updatedAt: UnixMillis;
   readonly encryptedData: EncryptedBlob;
 };
 

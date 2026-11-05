@@ -10,10 +10,14 @@ import { MAX_ENCRYPTED_DATA_BYTES } from "../../../service.constants.js";
 
 import { toFriendConnectionResult } from "./internal.js";
 
-import type { FriendConnectionResult } from "./internal.js";
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { AccountId, AuditEventType, FriendConnectionId } from "@pluralscape/types";
+import type {
+  FriendConnectionResult,
+  AccountId,
+  AuditEventType,
+  FriendConnectionId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 interface UpdateFriendVisibilityParams {

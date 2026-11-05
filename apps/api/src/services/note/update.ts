@@ -12,10 +12,9 @@ import { dispatchWebhookEvent } from "../webhook-dispatcher.js";
 
 import { toNoteResult } from "./internal.js";
 
-import type { NoteResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { NoteId, SystemId } from "@pluralscape/types";
+import type { NoteResult, NoteId, SystemId } from "@pluralscape/types";
 import type { UpdateNoteBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { z } from "zod/v4";

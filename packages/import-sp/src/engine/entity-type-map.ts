@@ -5,8 +5,8 @@ import type { ImportCollectionType } from "@pluralscape/types";
  * Canonical mapping from each SP collection to the Pluralscape
  * `ImportCollectionType` recorded on `import_entity_refs.source_entity_type`.
  *
- * No collisions exist (friends and friend requests were dropped from import
- * — see PR #402 review), so a literal record is exhaustive and trivially
+ * No collisions exist (friends and friend requests were dropped from import),
+ * so a literal record is exhaustive and trivially
  * invertible.
  */
 const TO_ENTITY_TYPE: Readonly<Record<SpCollectionName, ImportCollectionType>> = {

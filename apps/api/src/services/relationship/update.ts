@@ -11,10 +11,9 @@ import { MAX_ENCRYPTED_DATA_BYTES } from "../../service.constants.js";
 
 import { toRelationshipResult } from "./internal.js";
 
-import type { RelationshipResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { RelationshipId, SystemId } from "@pluralscape/types";
+import type { RelationshipResult, RelationshipId, SystemId } from "@pluralscape/types";
 import type { UpdateRelationshipBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { z } from "zod/v4";

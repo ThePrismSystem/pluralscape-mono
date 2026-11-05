@@ -405,7 +405,7 @@ describe("switch-alert-dispatcher multi-friend and cache (PGlite integration)", 
     expect(enqueuedJobs.every((j) => j.type === "notification-send")).toBe(true);
   });
 
-  // api-uo21: subsequent dispatches within the TTL must not re-read the
+  // Subsequent dispatches within the TTL must not re-read the
   // notificationConfigs row. We delete the row after the first dispatch;
   // if the cache is working the second dispatch still sees enabled=true
   // and proceeds. (When the cache is absent this scenario fails closed.)
@@ -426,7 +426,7 @@ describe("switch-alert-dispatcher multi-friend and cache (PGlite integration)", 
     expect(enqueuedJobs).toHaveLength(2);
   });
 
-  // api-uo21: cache invalidation path — a fresh call after clearing the
+  // Cache invalidation path — a fresh call after clearing the
   // cache reads the (now-deleted) row and fails closed. Without the
   // invalidation hook in updateNotificationConfig, operator-initiated
   // disables could linger for up to TTL.

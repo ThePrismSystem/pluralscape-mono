@@ -71,6 +71,8 @@ const MOCK_CONNECTION = {
   status: "accepted" as const,
   encryptedData: VALID_BODY.encryptedData,
   version: 2,
+  archived: false,
+  archivedAt: null,
   createdAt: toUnixMillis(1000),
   updatedAt: toUnixMillis(2000),
 };

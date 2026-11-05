@@ -1,5 +1,4 @@
 // scripts/sp-seed/fixtures/minimal.ts
-import type { EntityFixtures } from "./types.js";
 import {
   FIVE_MINUTES_MS,
   ONE_DAY_MS,
@@ -9,7 +8,16 @@ import {
   TWO_HOURS_MS,
   NINETY_MINUTES_MS,
   EIGHTY_MINUTES_MS,
+  BOARD_FIRST_AGE_MS,
+  BOARD_SECOND_AGE_MS,
+  CHAT_FIRST_AGE_MS,
+  CHAT_SECOND_AGE_MS,
+  CHAT_THIRD_AGE_MS,
+  COMMENT_FIRST_AGE_MS,
+  COMMENT_SECOND_AGE_MS,
 } from "../constants.js";
+
+import type { EntityFixtures } from "./types.js";
 
 /**
  * Minimal mode fixtures. Every ref must be unique and declared before it's
@@ -135,7 +143,7 @@ export const MINIMAL_FIXTURES: EntityFixtures = {
     {
       ref: "comment.grounded",
       body: {
-        time: now - 3_500_000,
+        time: now - COMMENT_FIRST_AGE_MS,
         text: "Felt grounded during this front",
         documentId: "front-history.alice-ended",
         collection: "frontHistory",
@@ -144,7 +152,7 @@ export const MINIMAL_FIXTURES: EntityFixtures = {
     {
       ref: "comment.moderate",
       body: {
-        time: now - 3_400_000,
+        time: now - COMMENT_SECOND_AGE_MS,
         text: "Energy was moderate",
         documentId: "front-history.alice-ended",
         collection: "frontHistory",
@@ -229,7 +237,7 @@ export const MINIMAL_FIXTURES: EntityFixtures = {
         message: "Good morning everyone",
         channel: "channel.dailycheckin",
         writer: "member.alice",
-        writtenAt: now - 7_000_000,
+        writtenAt: now - CHAT_FIRST_AGE_MS,
       },
     },
     {
@@ -238,7 +246,7 @@ export const MINIMAL_FIXTURES: EntityFixtures = {
         message: "Hi Alice!",
         channel: "channel.dailycheckin",
         writer: "member.bob",
-        writtenAt: now - 6_900_000,
+        writtenAt: now - CHAT_SECOND_AGE_MS,
       },
     },
     {
@@ -247,7 +255,7 @@ export const MINIMAL_FIXTURES: EntityFixtures = {
         message: "How is everyone feeling?",
         channel: "channel.dailycheckin",
         writer: "member.alice",
-        writtenAt: now - 6_800_000,
+        writtenAt: now - CHAT_THIRD_AGE_MS,
       },
     },
   ],
@@ -261,7 +269,7 @@ export const MINIMAL_FIXTURES: EntityFixtures = {
         writtenBy: "member.alice",
         writtenFor: "member.bob",
         read: false,
-        writtenAt: now - 5_000_000,
+        writtenAt: now - BOARD_FIRST_AGE_MS,
         supportMarkdown: false,
       },
     },
@@ -273,7 +281,7 @@ export const MINIMAL_FIXTURES: EntityFixtures = {
         writtenBy: "member.bob",
         writtenFor: "member.alice",
         read: false,
-        writtenAt: now - 4_000_000,
+        writtenAt: now - BOARD_SECOND_AGE_MS,
         supportMarkdown: true,
       },
     },

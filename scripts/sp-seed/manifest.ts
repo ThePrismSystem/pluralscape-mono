@@ -1,11 +1,15 @@
-// scripts/sp-seed/manifest.ts
 import { existsSync, readFileSync, writeFileSync, renameSync } from "node:fs";
-import type { SpMode } from "./constants.js";
+
+import { HTTP_FORBIDDEN, HTTP_NOT_FOUND, HTTP_UNAUTHORIZED } from "../http.constants.js";
+// scripts/sp-seed/manifest.ts
+
+import { LegacyManifestError, SpApiError } from "./client.js";
 import { ENTITY_PROBE_PATHS, PATHS } from "./constants.js";
+import { ENTITY_TYPES_IN_ORDER } from "./fixtures/types.js";
+
+import type { SpMode } from "./constants.js";
 import type { EntityFixtures, FixtureDef } from "./fixtures/types.js";
 import type { EntityTypeKey } from "./fixtures/types.js";
-import { ENTITY_TYPES_IN_ORDER } from "./fixtures/types.js";
-import { LegacyManifestError, SpApiError } from "./client.js";
 
 export interface ManifestEntry {
   readonly ref: string;
@@ -48,7 +52,7 @@ export function loadManifest(mode: SpMode): Manifest | undefined {
   // Validate — every entry in every array must have a `ref` field.
   for (const entityType of ENTITY_TYPES_IN_ORDER) {
     for (const entry of parsed[entityType]) {
-      if (typeof (entry as ManifestEntry).ref !== "string") {
+      if (typeof entry.ref !== "string") {
         throw new LegacyManifestError(path);
       }
     }
@@ -99,7 +103,7 @@ export async function planSeed(
     const fixtureArray = fixtures[entityType] as readonly FixtureDef<unknown>[];
     for (const entry of fixtureArray) {
       const existingEntry = existingByRef.get(entry.ref);
-      if (!existingEntry || existingEntry.entityType !== entityType) {
+      if (existingEntry?.entityType !== entityType) {
         create.push({ entityType, ref: entry.ref, body: entry.body });
         continue;
       }
@@ -113,10 +117,13 @@ export async function planSeed(
           fields: existingEntry.entry.fields,
         });
       } catch (err) {
-        if (err instanceof SpApiError && err.status === 401) {
+        if (err instanceof SpApiError && err.status === HTTP_UNAUTHORIZED) {
           throw err;
         }
-        if (err instanceof SpApiError && (err.status === 404 || err.status === 403)) {
+        if (
+          err instanceof SpApiError &&
+          (err.status === HTTP_NOT_FOUND || err.status === HTTP_FORBIDDEN)
+        ) {
           create.push({ entityType, ref: entry.ref, body: entry.body });
           continue;
         }

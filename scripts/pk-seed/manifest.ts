@@ -1,3 +1,6 @@
+import { existsSync, readFileSync, writeFileSync, renameSync } from "node:fs";
+
+import { HTTP_UNAUTHORIZED } from "../http.constants.js";
 /**
  * Manifest persistence for PK seed idempotency.
  *
@@ -7,11 +10,11 @@
  * - planSeed: compare fixtures against manifest, probe API, return reuse/create
  */
 
-import { existsSync, readFileSync, writeFileSync, renameSync } from "node:fs";
-import type { PkMode, EntityTypeKey } from "./constants.js";
-import { ENTITY_TYPES_IN_ORDER, PATHS } from "./constants.js";
 import { LegacyManifestError, PkApiError } from "./client.js";
+import { ENTITY_TYPES_IN_ORDER, PATHS } from "./constants.js";
+
 import type { PkClient } from "./client.js";
+import type { PkMode, EntityTypeKey } from "./constants.js";
 import type {
   EntityFixtures,
   MemberFixtureDef,
@@ -47,7 +50,7 @@ export function loadManifest(mode: PkMode): Manifest | undefined {
   // Validate — every entry in every array must have a `ref` field.
   for (const entityType of ENTITY_TYPES_IN_ORDER) {
     for (const entry of parsed[entityType]) {
-      if (typeof (entry as ManifestEntry).ref !== "string") {
+      if (typeof entry.ref !== "string") {
         throw new LegacyManifestError(path);
       }
     }
@@ -113,7 +116,7 @@ export async function planSeed(
       const ref = getRef(entry);
       const existingEntry = existingByRef.get(ref);
 
-      if (!existingEntry || existingEntry.entityType !== entityType) {
+      if (existingEntry?.entityType !== entityType) {
         create.push({ entityType, ref });
         continue;
       }
@@ -143,7 +146,7 @@ export async function planSeed(
           create.push({ entityType, ref });
         }
       } catch (err) {
-        if (err instanceof PkApiError && err.status === 401) {
+        if (err instanceof PkApiError && err.status === HTTP_UNAUTHORIZED) {
           throw err;
         }
         create.push({ entityType, ref });

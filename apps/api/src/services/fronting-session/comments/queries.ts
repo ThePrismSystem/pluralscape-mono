@@ -12,9 +12,9 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../../service.constants.j
 
 import { toFrontingCommentResult } from "./internal.js";
 
-import type { FrontingCommentResult } from "./internal.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type {
+  FrontingCommentResult,
   FrontingCommentId,
   FrontingSessionId,
   PaginatedResult,

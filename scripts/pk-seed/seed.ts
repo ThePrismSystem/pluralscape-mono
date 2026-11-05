@@ -6,11 +6,12 @@
  */
 
 import { UnresolvedRefError, PkClient } from "./client.js";
-import type { Manifest, ManifestEntry, SeedPlan } from "./manifest.js";
-import { writeManifestAtomic } from "./manifest.js";
-import type { PkMode, EntityTypeKey } from "./constants.js";
 import { ENTITY_TYPES_IN_ORDER, ONE_DAY_MS } from "./constants.js";
+import { writeManifestAtomic } from "./manifest.js";
+
+import type { PkMode, EntityTypeKey } from "./constants.js";
 import type { EntityFixtures } from "./fixtures/types.js";
+import type { Manifest, ManifestEntry, SeedPlan } from "./manifest.js";
 
 /**
  * Walk a value and replace any ref-shaped string with its resolved server-side ID.
@@ -79,7 +80,7 @@ export async function executePlan(
   refMap: Map<string, string>,
 ): Promise<Manifest> {
   const working = buildWorkingManifest(token, systemId, mode, plan.reuse, fixtures);
-  writeManifestAtomic(mode, working as Manifest);
+  writeManifestAtomic(mode, working);
 
   for (const entry of plan.create) {
     const created = await createEntity(client, fixtures, entry, refMap);
@@ -91,15 +92,15 @@ export async function executePlan(
       fields: created.fields,
     };
     working[entry.entityType].push(manifestEntry);
-    writeManifestAtomic(mode, working as Manifest);
+    writeManifestAtomic(mode, working);
   }
 
   // Compute expected session count by running the same mapper the import
   // engine uses, so the manifest stays accurate if fixtures change.
   working.expectedSessionCount = computeExpectedSessionCount(fixtures, refMap);
-  writeManifestAtomic(mode, working as Manifest);
+  writeManifestAtomic(mode, working);
 
-  return working as Manifest;
+  return working;
 }
 
 /**
@@ -272,7 +273,7 @@ function buildWorkingManifest(
     const fixtureArray = fixtures[entityType];
     for (const fixture of fixtureArray) {
       const r = reuseIndex.get(fixture.ref);
-      if (r && r.entityType === entityType) {
+      if (r?.entityType === entityType) {
         working[entityType].push({
           ref: r.ref,
           sourceId: r.sourceId,

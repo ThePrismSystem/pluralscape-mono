@@ -25,18 +25,17 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { PollResult } from "../../services/poll/internal.js";
-import type { AccountId, SystemId } from "@pluralscape/types";
+import type { PollResult, AccountId, SystemId } from "@pluralscape/types";
 import type { CastVoteBodySchema, CreatePollBodySchema } from "@pluralscape/validation";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { z } from "zod/v4";
 
 const { polls, pollVotes } = schema;
 
-type PollBody = z.infer<typeof CreatePollBodySchema>;
+type CreatePollBody = z.infer<typeof CreatePollBodySchema>;
 type VoteBody = z.infer<typeof CastVoteBodySchema>;
 
-function makePollParams(overrides: Partial<PollBody> = {}): PollBody {
+function makePollParams(overrides: Partial<CreatePollBody> = {}): CreatePollBody {
   return {
     encryptedData: testEncryptedDataBase64(),
     kind: "standard",

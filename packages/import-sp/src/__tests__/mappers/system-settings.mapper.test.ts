@@ -8,7 +8,7 @@ import type { SPPrivate } from "../../sources/sp-types.js";
 describe("mapSystemSettings", () => {
   it("maps a minimal SPPrivate with defaulted booleans", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
-    const sp: SPPrivate = { _id: "pr1" };
+    const sp: SPPrivate = { _id: "private-1" };
     const result = mapSystemSettings(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
@@ -20,7 +20,7 @@ describe("mapSystemSettings", () => {
 
   it("preserves the locale string", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
-    const sp: SPPrivate = { _id: "pr2", locale: "en-GB" };
+    const sp: SPPrivate = { _id: "private-2", locale: "en-GB" };
     const result = mapSystemSettings(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
@@ -31,7 +31,7 @@ describe("mapSystemSettings", () => {
   it("maps SP notification booleans to renamed fields", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     const sp: SPPrivate = {
-      _id: "pr3",
+      _id: "private-3",
       locale: "en-US",
       frontNotifs: true,
       messageBoardNotifs: true,
@@ -46,7 +46,7 @@ describe("mapSystemSettings", () => {
 
   it("treats a null locale as null (no default)", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
-    const sp: SPPrivate = { _id: "pr4", locale: null };
+    const sp: SPPrivate = { _id: "private-4", locale: null };
     const result = mapSystemSettings(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {

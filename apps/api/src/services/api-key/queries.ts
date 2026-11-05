@@ -10,10 +10,10 @@ import { assertSystemOwnership } from "../../lib/system-ownership.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
 
-import { API_KEY_SELECT_COLUMNS, toApiKeyResult, type ApiKeyResult } from "./internal.js";
+import { API_KEY_SELECT_COLUMNS, toApiKeyResult } from "./internal.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { ApiKeyId, PaginatedResult, SystemId } from "@pluralscape/types";
+import type { ApiKeyServerVisible, ApiKeyId, PaginatedResult, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -32,7 +32,7 @@ export async function listApiKeys(
   systemId: SystemId,
   auth: AuthContext,
   opts: ApiKeyListOptions = {},
-): Promise<PaginatedResult<ApiKeyResult>> {
+): Promise<PaginatedResult<ApiKeyServerVisible>> {
   assertSystemOwnership(systemId, auth);
 
   return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
@@ -66,7 +66,7 @@ export async function getApiKey(
   systemId: SystemId,
   apiKeyId: ApiKeyId,
   auth: AuthContext,
-): Promise<ApiKeyResult> {
+): Promise<ApiKeyServerVisible> {
   assertSystemOwnership(systemId, auth);
 
   return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {

@@ -11,7 +11,7 @@ function makeRaw(overrides?: Partial<DeviceTokenWire>): DeviceTokenWire {
     id: "dt_test0001",
     accountId: "acc_test001",
     systemId: "sys_test001",
-    platform: "ios" as DeviceTokenPlatform,
+    platform: "ios",
     token: "device-push-token-abc123",
     lastActiveAt: NOW,
     version: 1,

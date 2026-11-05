@@ -17,9 +17,9 @@ import {
 
 import { toFrontingSessionResult } from "./internal.js";
 
-import type { FrontingSessionResult } from "./internal.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type {
+  FrontingSessionResult,
   CustomFrontId,
   FrontingSessionId,
   MemberId,

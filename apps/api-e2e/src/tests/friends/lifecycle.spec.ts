@@ -19,6 +19,8 @@ interface FriendConnectionResponse {
   readonly status: string;
   readonly encryptedData: string | null;
   readonly version: number;
+  readonly archived: boolean;
+  readonly archivedAt: number | null;
   readonly createdAt: number;
   readonly updatedAt: number;
 }
@@ -85,6 +87,8 @@ test.describe("Friend lifecycle", () => {
     expect(body.data.id).toBe(connectionIdA);
     expect(body.data.status).toBe("accepted");
     expect(body.data.version).toBeGreaterThanOrEqual(1);
+    expect(body.data.archived).toBe(false);
+    expect(body.data.archivedAt).toBeNull();
   });
 
   test("bucket assignment: assign, list, unassign", async ({

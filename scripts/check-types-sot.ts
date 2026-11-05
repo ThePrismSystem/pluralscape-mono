@@ -15,7 +15,9 @@ function runShell(cmd: string, args: string[]): Promise<{ ok: boolean; output: s
     proc.stderr.on("data", (d: Buffer) => {
       out += d.toString();
     });
-    proc.on("close", (code) => resolve({ ok: code === 0, output: out }));
+    proc.on("close", (code) => {
+      resolve({ ok: code === 0, output: out });
+    });
   });
 }
 
@@ -26,9 +28,9 @@ export async function runChecks(steps: CheckStep[]): Promise<number> {
     const { ok, output } = await step.run();
     const ms = Date.now() - startedAt;
     if (ok) {
-      process.stderr.write(`[types:check-sot] ${step.name} ok (${ms}ms)\n`);
+      process.stderr.write(`[types:check-sot] ${step.name} ok (${String(ms)}ms)\n`);
     } else {
-      process.stderr.write(`[types:check-sot] ${step.name} FAIL (${ms}ms)\n${output}\n`);
+      process.stderr.write(`[types:check-sot] ${step.name} FAIL (${String(ms)}ms)\n${output}\n`);
       return 1;
     }
   }
@@ -50,13 +52,12 @@ const PHASE_1_STEPS: CheckStep[] = [
   },
   {
     name: "typecheck OpenAPI-Wire parity",
-    run: () =>
-      runShell("pnpm", ["exec", "tsc", "--noEmit", "scripts/openapi-wire-parity.type-test.ts"]),
+    run: () => runShell("pnpm", ["exec", "tsc", "-p", "tsconfig.json"]),
   },
 ];
 
 /* c8 ignore start */
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === `file://${String(process.argv[1])}`) {
   void runChecks(PHASE_1_STEPS).then((code) => process.exit(code));
 }
 /* c8 ignore stop */

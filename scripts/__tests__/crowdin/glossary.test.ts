@@ -1,9 +1,9 @@
-import type { GlossariesModel } from "@crowdin/crowdin-api-client";
 import { describe, expect, it, vi } from "vitest";
 
-import type { CrowdinClient } from "../../crowdin/client.js";
-import type { GlossaryTerm } from "../../crowdin/glossary-schema.js";
 import { applyGlossary, diffGlossaryTerms, termToCrowdinPayload } from "../../crowdin/glossary.js";
+
+import type { GlossaryTerm } from "../../crowdin/glossary-schema.js";
+import type { GlossariesModel } from "@crowdin/crowdin-api-client";
 
 const local: GlossaryTerm[] = [
   { term: "system", type: "translatable", notes: "A collective." },
@@ -251,13 +251,7 @@ describe("applyGlossary — error aggregation", () => {
       { term: "c", type: "translatable", notes: "n" },
     ];
 
-    // CrowdinClient's full SDK types pull in ~50 transitive types that are
-    // awkward to mock. The structural shape we actually use (listGlossaries,
-    // listTerms, addTerm, editTerm, deleteTerm, projectsGroupsApi.editProject)
-    // is fully exercised by the stub above; the cast is test-only and safe.
-    await expect(
-      applyGlossary(client as unknown as CrowdinClient, 100, localTerms),
-    ).rejects.toThrow(AggregateError);
+    await expect(applyGlossary(client, 100, localTerms)).rejects.toThrow(AggregateError);
     expect(addTerm).toHaveBeenCalledTimes(3);
   });
 
@@ -308,13 +302,7 @@ describe("applyGlossary — error aggregation", () => {
       { term: "b", type: "translatable", pos: "noun", notes: "new description" },
     ];
 
-    // CrowdinClient's full SDK types pull in ~50 transitive types that are
-    // awkward to mock. The structural shape we actually use (listGlossaries,
-    // listTerms, addTerm, editTerm, deleteTerm, projectsGroupsApi.editProject)
-    // is fully exercised by the stub above; the cast is test-only and safe.
-    await expect(
-      applyGlossary(client as unknown as CrowdinClient, 100, localTerms),
-    ).rejects.toThrow(AggregateError);
+    await expect(applyGlossary(client, 100, localTerms)).rejects.toThrow(AggregateError);
     expect(editTerm).toHaveBeenCalledTimes(2);
   });
 });

@@ -10,10 +10,9 @@ import { dispatchWebhookEvent } from "../webhook-dispatcher.js";
 
 import { toPollResult } from "./internal.js";
 
-import type { PollResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { SystemId, PollId } from "@pluralscape/types";
+import type { PollResult, SystemId, PollId } from "@pluralscape/types";
 import type { CreatePollBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { z } from "zod/v4";

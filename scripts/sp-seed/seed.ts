@@ -1,12 +1,15 @@
+import { HTTP_TOO_MANY_REQUESTS } from "../http.constants.js";
+
 import { UnresolvedRefError, SpApiError, extractObjectIdFromText, SpClient } from "./client.js";
-import type { Manifest, ManifestEntry, SeedPlan } from "./manifest.js";
-import { writeManifestAtomic, loadManifest, emptyManifest, planSeed } from "./manifest.js";
-import type { EntityFixtures, EntityTypeKey, FixtureDef } from "./fixtures/types.js";
-import { ENTITY_TYPES_IN_ORDER } from "./fixtures/types.js";
 import { ENTITY_CREATION_DELAY_MS, ENTITY_POST_PATHS, PATHS } from "./constants.js";
-import type { SpMode } from "./constants.js";
 import { writeEnvFile } from "./env.js";
+import { ENTITY_TYPES_IN_ORDER } from "./fixtures/types.js";
+import { writeManifestAtomic, loadManifest, emptyManifest, planSeed } from "./manifest.js";
+
+import type { SpMode } from "./constants.js";
 import type { SpTestEnv, SpModeEnv } from "./env.js";
+import type { EntityFixtures, EntityTypeKey, FixtureDef } from "./fixtures/types.js";
+import type { Manifest, ManifestEntry, SeedPlan } from "./manifest.js";
 
 /**
  * Walk a POST body object and replace any `FixtureRef`-shaped string values
@@ -80,7 +83,7 @@ export async function triggerExportWith429Handling(
         "scripts/.sp-test-<mode>-export.json",
     );
   } catch (err) {
-    if (err instanceof SpApiError && err.status === 429) {
+    if (err instanceof SpApiError && err.status === HTTP_TOO_MANY_REQUESTS) {
       console.warn(
         `  Export skipped — rate-limited by SP (${err.body}). ` +
           `Re-run after the 5-minute cooldown if you need a fresh export.`,
@@ -113,7 +116,7 @@ export async function executePlan(
   refMap: Map<string, string>,
 ): Promise<Manifest> {
   const working = buildWorkingManifest(systemId, mode, plan.reuse, fixtures);
-  writeManifestAtomic(mode, working as Manifest);
+  writeManifestAtomic(mode, working);
 
   for (const entry of plan.create) {
     const fixtureEntry = findFixtureEntry(fixtures, entry.entityType, entry.ref);
@@ -131,11 +134,11 @@ export async function executePlan(
       fields: resolvedBody as Record<string, unknown>,
     };
     working[entry.entityType].push(manifestEntry);
-    writeManifestAtomic(mode, working as Manifest);
+    writeManifestAtomic(mode, working);
     await sleep(ENTITY_CREATION_DELAY_MS);
   }
 
-  return working as Manifest;
+  return working;
 }
 
 function buildWorkingManifest(
@@ -167,7 +170,7 @@ function buildWorkingManifest(
   for (const entityType of ENTITY_TYPES_IN_ORDER) {
     for (const fixture of fixtures[entityType]) {
       const r = reuseIndex.get(fixture.ref);
-      if (r && r.entityType === entityType) {
+      if (r?.entityType === entityType) {
         working[entityType].push({
           ref: r.ref,
           sourceId: r.sourceId,
@@ -220,7 +223,9 @@ export async function seedMode(
   writeManifestAtomic(mode, existing ?? emptyManifest(systemId, mode));
 
   const plan = await planSeed(client, systemId, fixtures, existing);
-  console.log(`  Plan: ${plan.reuse.length} reused, ${plan.create.length} to create`);
+  console.log(
+    `  Plan: ${String(plan.reuse.length)} reused, ${String(plan.create.length)} to create`,
+  );
 
   const refMap = new Map<string, string>();
   for (const r of plan.reuse) refMap.set(r.ref, r.sourceId);

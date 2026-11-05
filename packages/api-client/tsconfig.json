@@ -6,5 +6,5 @@
     "declaration": false,
     "declarationMap": false
   },
-  "include": ["src", "../../types"]
+  "include": ["src", "scripts", "../../types"]
 }

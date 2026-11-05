@@ -1,5 +1,5 @@
 /**
- * Verification test for api-jx0c: confirm that biometric auth uses
+ * Confirms that biometric auth uses
  * hash-then-DB-lookup pattern, making constant-time comparison unnecessary.
  *
  * The biometric verification flow:

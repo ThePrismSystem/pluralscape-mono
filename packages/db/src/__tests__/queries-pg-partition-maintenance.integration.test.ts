@@ -13,7 +13,7 @@ import type { PgliteDatabase } from "drizzle-orm/pglite";
  * Focus: verify that pgDetachOldPartitions does NOT pass the raw `partition_name`
  * string returned by pg_inherits into sql.raw. Instead it reconstructs the
  * identifier via formatPartitionName so a compromised catalog cannot smuggle
- * arbitrary SQL through the DETACH/DROP statements (audit finding db-3a27).
+ * arbitrary SQL through the DETACH/DROP statements.
  */
 
 describe("pgDetachOldPartitions partition name sanitation", () => {

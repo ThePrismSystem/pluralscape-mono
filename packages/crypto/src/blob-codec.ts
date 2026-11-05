@@ -17,8 +17,7 @@ import type {
  * Every `pgEncryptedBlob` / `sqliteEncryptedBlob` column stores a single blob
  * encoded with this codec. The format is self-describing — **nonces and
  * keyVersions are embedded per-blob**, so no separate DB columns are needed
- * for either field. This resolves db-kveq (nonce storage) and db-0d2a
- * (keyVersion on content tables).
+ * for either field.
  *
  * Layout:
  *   [1B version=0x01]

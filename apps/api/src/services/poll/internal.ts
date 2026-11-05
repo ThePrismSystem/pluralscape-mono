@@ -9,19 +9,8 @@ import { POLL_STATUS_CLOSED } from "../../service.constants.js";
 import { dispatchWebhookEvent } from "../webhook-dispatcher.js";
 
 import type { ArchivableEntityConfig } from "../../lib/entity-lifecycle.js";
-import type {
-  EncryptedWire,
-  MemberId,
-  PollId,
-  PollServerMetadata,
-  PollStatus,
-  SystemId,
-} from "@pluralscape/types";
+import type { PollResult, MemberId, PollId, PollStatus, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-
-// ── Types ───────────────────────────────────────────────────────────
-
-export type PollResult = EncryptedWire<PollServerMetadata>;
 
 export interface ListPollOpts {
   readonly cursor?: string;

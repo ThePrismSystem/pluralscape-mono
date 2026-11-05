@@ -371,7 +371,7 @@ describe("friend-dashboard.service (PGlite integration)", () => {
     expect(result.visibleMembers[0]?.id).toBe(visibleMemberId);
   });
 
-  // Regression for api-5y16: prior to the fix, queryVisibleEntities hard-capped
+  // Regression: prior to the fix, queryVisibleEntities hard-capped
   // at MAX_PAGE_LIMIT=100 so systems with more than 100 visible members silently
   // truncated the friend's dashboard. Cap is now MAX_MEMBERS_PER_SYSTEM (5 000),
   // so a realistic "many members visible" scenario returns every visible row.
@@ -398,7 +398,7 @@ describe("friend-dashboard.service (PGlite integration)", () => {
     }
   }, 30_000);
 
-  // Regression for api-5y16: queryVisibleCustomFronts was capped at
+  // Regression: queryVisibleCustomFronts was capped at
   // MAX_PAGE_LIMIT (100). Cap is now MAX_CUSTOM_FRONTS_PER_SYSTEM (200),
   // so seeding 150 visible custom fronts should round-trip every row.
   it("returns more than the legacy cap of 100 visible custom fronts", async () => {
@@ -423,7 +423,7 @@ describe("friend-dashboard.service (PGlite integration)", () => {
     }
   }, 30_000);
 
-  // Regression for api-5y16: queryVisibleStructureEntities was also capped at
+  // Regression: queryVisibleStructureEntities was also capped at
   // MAX_PAGE_LIMIT (100). Cap is now MAX_INNERWORLD_ENTITIES_PER_SYSTEM (500),
   // so seeding 150 entities should round-trip every row.
   it("returns more than the legacy cap of 100 visible structure entities", async () => {

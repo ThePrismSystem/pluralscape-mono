@@ -10,9 +10,13 @@ import { DEFAULT_FIELD_LIMIT, MAX_FIELD_LIMIT } from "../../routes/fields/fields
 
 import { fieldDefCache, listCacheKey, toFieldDefinitionResult } from "./internal.js";
 
-import type { FieldDefinitionResult } from "./internal.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { FieldDefinitionId, PaginatedResult, SystemId } from "@pluralscape/types";
+import type {
+  FieldDefinitionResult,
+  FieldDefinitionId,
+  PaginatedResult,
+  SystemId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function listFieldDefinitions(

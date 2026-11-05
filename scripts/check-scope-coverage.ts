@@ -12,8 +12,9 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { buildInventory } from "./audit-routes.js";
 import { SCOPE_REGISTRY } from "../apps/api/src/lib/scope-registry.js";
+
+import { buildInventory } from "./audit-routes.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, "..");
@@ -73,6 +74,15 @@ for (const key of SCOPE_REGISTRY.rest.keys()) {
 // tRPC coverage — parse root.ts + each router file
 // ---------------------------------------------------------------------------
 
+/** Reads a capture group its pattern always sets. */
+function capture(match: RegExpExecArray, group: number): string {
+  const value = match[group];
+  if (value === undefined) {
+    throw new Error(`Pattern match "${match[0]}" has no capture group ${String(group)}`);
+  }
+  return value;
+}
+
 /**
  * Map from router variable name to the file stem it's imported from.
  * root.ts imports from `./routers/<stem>.js`.
@@ -82,11 +92,11 @@ function parseRootRouterMap(rootSource: string): Map<string, string> {
   const routerToFile = new Map<string, string>();
   let m: RegExpExecArray | null;
   while ((m = importPattern.exec(rootSource)) !== null) {
-    const names = m[1]!
+    const names = capture(m, 1)
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
-    const fileStem = m[2]!.replace(/\.js$/, "");
+    const fileStem = capture(m, 2).replace(/\.js$/, "");
     for (const name of names) {
       routerToFile.set(name, fileStem);
     }
@@ -101,12 +111,12 @@ function parseRootRouterMap(rootSource: string): Map<string, string> {
 function parseAppRouterKeys(rootSource: string): Map<string, string> {
   const routerBlockMatch = /export const appRouter\s*=\s*router\(\{([\s\S]*?)\}\)/.exec(rootSource);
   if (!routerBlockMatch) return new Map();
-  const block = routerBlockMatch[1]!;
+  const block = capture(routerBlockMatch, 1);
   const entryPattern = /^\s*(\w+)\s*:\s*(\w+)\s*,?\s*$/gm;
   const result = new Map<string, string>();
   let m: RegExpExecArray | null;
   while ((m = entryPattern.exec(block)) !== null) {
-    result.set(m[1]!, m[2]!);
+    result.set(capture(m, 1), capture(m, 2));
   }
   return result;
 }
@@ -126,7 +136,7 @@ function extractProcedureKeys(source: string, prefix: string, filePath: string):
   let i = startIdx;
   let content = "";
   while (i < source.length && depth > 0) {
-    const ch = source[i]!;
+    const ch = source.charAt(i);
     if (ch === "{") depth++;
     else if (ch === "}") {
       depth--;
@@ -157,7 +167,7 @@ function resolveSpreadBody(
   const importMatch = importPattern.exec(parentSource);
   if (!importMatch) return null;
 
-  const importPath = importMatch[1]!.replace(/\.js$/, ".ts");
+  const importPath = capture(importMatch, 1).replace(/\.js$/, ".ts");
   const parentDir = dirname(parentFilePath);
   const resolvedPath = resolve(parentDir, importPath);
 
@@ -178,7 +188,7 @@ function resolveSpreadBody(
   let j = startIdx;
   let body = "";
   while (j < spreadSource.length && blockDepth > 0) {
-    const ch = spreadSource[j]!;
+    const ch = spreadSource.charAt(j);
     if (ch === "{") blockDepth++;
     else if (ch === "}") {
       blockDepth--;
@@ -206,7 +216,7 @@ function extractKeysFromBlock(
   let i = 0;
   while (i < block.length) {
     // Skip whitespace and commas
-    if (/[\s,]/.test(block[i]!)) {
+    if (/[\s,]/.test(block.charAt(i))) {
       i++;
       continue;
     }
@@ -214,7 +224,7 @@ function extractKeysFromBlock(
     // Handle spread syntax: ...someProcedures
     const spreadMatch = /^\.\.\.(\w+)\s*,?/.exec(block.slice(i));
     if (spreadMatch) {
-      const spreadName = spreadMatch[1]!;
+      const spreadName = capture(spreadMatch, 1);
       i += spreadMatch[0].length;
       const spreadBody = resolveSpreadBody(spreadName, parentSource, parentFilePath);
       if (spreadBody !== null) {
@@ -230,12 +240,12 @@ function extractKeysFromBlock(
       continue;
     }
 
-    const key = keyMatch[1]!;
+    const key = capture(keyMatch, 1);
     const fullKey = prefix ? `${prefix}.${key}` : key;
     i += keyMatch[0].length;
 
     // Skip whitespace after colon
-    while (i < block.length && /\s/.test(block[i]!)) i++;
+    while (i < block.length && /\s/.test(block.charAt(i))) i++;
 
     // Check if the value is a nested `router({...})`
     const nestedRouterMatch = /^router\s*\(\{/.exec(block.slice(i));
@@ -244,7 +254,7 @@ function extractKeysFromBlock(
       let depth = 1;
       let nestedContent = "";
       while (i < block.length && depth > 0) {
-        const ch = block[i]!;
+        const ch = block.charAt(i);
         if (ch === "{") depth++;
         else if (ch === "}") {
           depth--;
@@ -274,7 +284,7 @@ function extractKeysFromBlock(
       keys.push(fullKey);
       let depth = 0;
       while (i < block.length) {
-        const ch = block[i]!;
+        const ch = block.charAt(i);
         if (ch === "(" || ch === "{" || ch === "[") depth++;
         else if (ch === ")" || ch === "}" || ch === "]") {
           if (depth === 0) break;

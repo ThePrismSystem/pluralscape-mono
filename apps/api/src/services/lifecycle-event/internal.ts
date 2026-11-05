@@ -5,27 +5,13 @@ import { encryptedBlobToBase64 } from "../../lib/encrypted-blob.js";
 
 import type { ArchivableEntityConfig } from "../../lib/entity-lifecycle.js";
 import type {
+  LifecycleEventResult,
   EncryptedBlob,
   LifecycleEventId,
   LifecycleEventType,
   SystemId,
-  UnixMillis,
 } from "@pluralscape/types";
 import type { PlaintextMetadata } from "@pluralscape/validation";
-
-export interface LifecycleEventResult {
-  readonly id: LifecycleEventId;
-  readonly systemId: SystemId;
-  readonly eventType: LifecycleEventType;
-  readonly occurredAt: UnixMillis;
-  readonly recordedAt: UnixMillis;
-  readonly encryptedData: string;
-  readonly plaintextMetadata: PlaintextMetadata | null;
-  readonly version: number;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-  readonly updatedAt: UnixMillis;
-}
 
 export function toLifecycleEventResult(row: {
   id: string;

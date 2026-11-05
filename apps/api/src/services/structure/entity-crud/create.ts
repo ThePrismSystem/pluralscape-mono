@@ -16,10 +16,10 @@ import { MAX_ENCRYPTED_DATA_BYTES } from "../../../service.constants.js";
 
 import { toStructureEntityResult } from "./internal.js";
 
-import type { StructureEntityResult } from "./internal.js";
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type {
+  SystemStructureEntityResult,
   SystemId,
   SystemStructureEntityId,
   SystemStructureEntityLinkId,
@@ -34,7 +34,7 @@ export async function createStructureEntity(
   body: z.infer<typeof CreateStructureEntityBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
-): Promise<StructureEntityResult> {
+): Promise<SystemStructureEntityResult> {
   assertSystemOwnership(systemId, auth);
 
   const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);

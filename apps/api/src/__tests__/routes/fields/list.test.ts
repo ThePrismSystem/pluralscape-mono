@@ -11,8 +11,8 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { FieldDefinitionResult } from "../../../services/field-definition/internal.js";
 import type {
+  FieldDefinitionResult,
   ApiErrorResponse,
   EncryptedBase64,
   FieldDefinitionId,

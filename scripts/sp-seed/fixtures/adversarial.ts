@@ -1,5 +1,4 @@
 // scripts/sp-seed/fixtures/adversarial.ts
-import type { EntityFixtures } from "./types.js";
 import {
   TWO_MINUTES_MS,
   FIVE_MINUTES_MS,
@@ -10,7 +9,28 @@ import {
   FOUR_DAYS_MS,
   TWO_HOURS_MS,
   THIRTY_DAYS_MS,
+  BOARD_FIRST_AGE_MS,
+  BOARD_LONG_TITLE_CHARS,
+  BOARD_SECOND_AGE_MS,
+  BOARD_THIRD_AGE_MS,
+  CHAT_FIFTH_AGE_MS,
+  CHAT_FIRST_AGE_MS,
+  CHAT_FOURTH_AGE_MS,
+  CHAT_SECOND_AGE_MS,
+  CHAT_THIRD_AGE_MS,
+  COMMENT_FIRST_AGE_MS,
+  COMMENT_LONG_AGE_MS,
+  COMMENT_LONG_TEXT_CHARS,
+  COMMENT_SECOND_AGE_MS,
+  COMMENT_UNICODE_AGE_MS,
+  FRONT_BOUNDARY_END_AGE_MS,
+  FRONT_ENDED_END_AGE_MS,
+  FRONT_ENDED_START_AGE_MS,
+  FRONT_OLD_END_AGE_MS,
+  NOTE_LONG_REPEATS,
 } from "../constants.js";
+
+import type { EntityFixtures } from "./types.js";
 
 const now = Date.now();
 
@@ -145,8 +165,8 @@ export const ADVERSARIAL_FIXTURES: EntityFixtures = {
         live: false,
         // SP enforces startTime < endTime; equal values get startTime = endTime - 1 server-side.
         // Use endTime - 1 to match what SP will actually store.
-        startTime: now - 5_000_001,
-        endTime: now - 5_000_000,
+        startTime: now - FRONT_BOUNDARY_END_AGE_MS - 1,
+        endTime: now - FRONT_BOUNDARY_END_AGE_MS,
         member: "member.bob",
       },
     },
@@ -156,7 +176,7 @@ export const ADVERSARIAL_FIXTURES: EntityFixtures = {
         custom: false,
         live: false,
         startTime: now - THIRTY_DAYS_MS,
-        endTime: now - 2_591_000_000,
+        endTime: now - FRONT_OLD_END_AGE_MS,
         member: "member.elise",
       },
     },
@@ -174,8 +194,8 @@ export const ADVERSARIAL_FIXTURES: EntityFixtures = {
       body: {
         custom: true,
         live: false,
-        startTime: now - 4_000_000,
-        endTime: now - 3_500_000,
+        startTime: now - FRONT_ENDED_START_AGE_MS,
+        endTime: now - FRONT_ENDED_END_AGE_MS,
         member: "front.dissociated",
       },
     },
@@ -194,7 +214,7 @@ export const ADVERSARIAL_FIXTURES: EntityFixtures = {
     {
       ref: "comment.normal",
       body: {
-        time: now - 3_500_000,
+        time: now - COMMENT_FIRST_AGE_MS,
         text: "Normal comment",
         documentId: "front-history.alice-ended",
         collection: "frontHistory",
@@ -203,7 +223,7 @@ export const ADVERSARIAL_FIXTURES: EntityFixtures = {
     {
       ref: "comment.empty",
       body: {
-        time: now - 3_400_000,
+        time: now - COMMENT_SECOND_AGE_MS,
         text: "",
         documentId: "front-history.alice-ended",
         collection: "frontHistory",
@@ -212,8 +232,8 @@ export const ADVERSARIAL_FIXTURES: EntityFixtures = {
     {
       ref: "comment.long",
       body: {
-        time: now - 2_590_000_000,
-        text: "A".repeat(500),
+        time: now - COMMENT_LONG_AGE_MS,
+        text: "A".repeat(COMMENT_LONG_TEXT_CHARS),
         documentId: "front-history.elise-old",
         collection: "frontHistory",
       },
@@ -221,7 +241,7 @@ export const ADVERSARIAL_FIXTURES: EntityFixtures = {
     {
       ref: "comment.unicode",
       body: {
-        time: now - 2_589_000_000,
+        time: now - COMMENT_UNICODE_AGE_MS,
         text: "\u{1F4DD} \u65E5\u672C\u8A9E\u30C6\u30B9\u30C8 \u{1F30F}",
         documentId: "front-history.elise-old",
         collection: "frontHistory",
@@ -264,7 +284,7 @@ export const ADVERSARIAL_FIXTURES: EntityFixtures = {
       ref: "note.long",
       body: {
         title: "Long note",
-        note: "Lorem ipsum ".repeat(200).trim(),
+        note: "Lorem ipsum ".repeat(NOTE_LONG_REPEATS).trim(),
         color: "#cccccc",
         member: "member.xiaoming",
         date: now - FOUR_DAYS_MS,
@@ -352,7 +372,7 @@ export const ADVERSARIAL_FIXTURES: EntityFixtures = {
         message: "Good morning everyone",
         channel: "channel.dailycheckin",
         writer: "member.alice",
-        writtenAt: now - 7_000_000,
+        writtenAt: now - CHAT_FIRST_AGE_MS,
       },
     },
     {
@@ -361,7 +381,7 @@ export const ADVERSARIAL_FIXTURES: EntityFixtures = {
         message: "Hi Alice!",
         channel: "channel.dailycheckin",
         writer: "member.bob",
-        writtenAt: now - 6_900_000,
+        writtenAt: now - CHAT_SECOND_AGE_MS,
       },
     },
     {
@@ -370,7 +390,7 @@ export const ADVERSARIAL_FIXTURES: EntityFixtures = {
         message: "How is everyone feeling?",
         channel: "channel.dailycheckin",
         writer: "member.alice",
-        writtenAt: now - 6_800_000,
+        writtenAt: now - CHAT_THIRD_AGE_MS,
       },
     },
     {
@@ -379,7 +399,7 @@ export const ADVERSARIAL_FIXTURES: EntityFixtures = {
         message: "\u304A\u306F\u3088\u3046\u3054\u3056\u3044\u307E\u3059",
         channel: "channel.gametalk",
         writer: "member.elise",
-        writtenAt: now - 5_000_000,
+        writtenAt: now - CHAT_FOURTH_AGE_MS,
       },
     },
     {
@@ -388,7 +408,7 @@ export const ADVERSARIAL_FIXTURES: EntityFixtures = {
         message: "\u{1F44B} \u4F60\u597D!",
         channel: "channel.gametalk",
         writer: "member.xiaoming",
-        writtenAt: now - 4_900_000,
+        writtenAt: now - CHAT_FIFTH_AGE_MS,
       },
     },
   ],
@@ -402,14 +422,14 @@ export const ADVERSARIAL_FIXTURES: EntityFixtures = {
         writtenBy: "member.alice",
         writtenFor: "member.bob",
         read: false,
-        writtenAt: now - 5_000_000,
+        writtenAt: now - BOARD_FIRST_AGE_MS,
         supportMarkdown: false,
       },
     },
     {
       ref: "board.long",
       body: {
-        title: "A".repeat(70),
+        title: "A".repeat(BOARD_LONG_TITLE_CHARS),
         message: "Testing max title length boundary",
         writtenBy: "member.bob",
         writtenFor: "member.alice",
@@ -417,7 +437,7 @@ export const ADVERSARIAL_FIXTURES: EntityFixtures = {
         // messages can only be created unread. Mutate to read=true via
         // PATCH /v1/board/:id if a test needs the read state.
         read: false,
-        writtenAt: now - 4_000_000,
+        writtenAt: now - BOARD_SECOND_AGE_MS,
         supportMarkdown: false,
       },
     },
@@ -430,7 +450,7 @@ export const ADVERSARIAL_FIXTURES: EntityFixtures = {
         writtenBy: "member.elise",
         writtenFor: "member.xiaoming",
         read: false,
-        writtenAt: now - 3_000_000,
+        writtenAt: now - BOARD_THIRD_AGE_MS,
         supportMarkdown: true,
       },
     },

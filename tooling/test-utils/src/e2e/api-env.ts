@@ -14,6 +14,5 @@
 
 export function inheritEnvWithoutVitest(): NodeJS.ProcessEnv {
   const { VITEST: _dropped, ...inherited } = process.env;
-  void _dropped;
   return inherited;
 }

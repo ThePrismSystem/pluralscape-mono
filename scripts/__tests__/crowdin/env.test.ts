@@ -62,7 +62,9 @@ describe("loadCrowdinEnv — Google credentials", () => {
   beforeEach(() => {
     tmpDir = mkdtempSync(join(tmpdir(), "crowdin-env-"));
   });
-  afterEach(() => rmSync(tmpDir, { recursive: true, force: true }));
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
 
   it("accepts GOOGLE_TRANSLATE_SERVICE_ACCOUNT_JSON directly", () => {
     const env = loadCrowdinEnv({

@@ -97,3 +97,16 @@ export interface FriendBucketAssignment {
   readonly friendConnectionId: FriendConnectionId;
   readonly bucketId: BucketId;
 }
+
+/** Service-layer input for projecting a friend connection into CRDT format. */
+export interface FriendConnectionProjectionSource {
+  readonly id: FriendConnectionId;
+  readonly accountId: AccountId;
+  readonly friendAccountId: AccountId;
+  readonly status: FriendConnectionStatus;
+  /** JSON-serialized FriendVisibilitySettings. */
+  readonly visibility: string;
+  readonly assignedBucketIds: readonly BucketId[];
+  readonly createdAt: number;
+  readonly updatedAt: number;
+}

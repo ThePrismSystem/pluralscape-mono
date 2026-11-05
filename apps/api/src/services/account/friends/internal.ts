@@ -1,27 +1,15 @@
 import { friendConnections } from "@pluralscape/db/pg";
-import { brandId, toUnixMillis } from "@pluralscape/types";
+import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 
 import { encryptedBlobToBase64OrNull } from "../../../lib/encrypted-blob.js";
 
 import type {
+  FriendConnectionResult,
   AccountId,
   BucketId,
   FriendConnectionId,
-  FriendConnectionStatus,
   SystemId,
-  UnixMillis,
 } from "@pluralscape/types";
-
-export interface FriendConnectionResult {
-  readonly id: FriendConnectionId;
-  readonly accountId: AccountId;
-  readonly friendAccountId: AccountId;
-  readonly status: FriendConnectionStatus;
-  readonly encryptedData: string | null;
-  readonly version: number;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
 
 export interface FriendConnectionWithRotations extends FriendConnectionResult {
   readonly pendingRotations: ReadonlyArray<{
@@ -40,6 +28,8 @@ export function toFriendConnectionResult(
     status: row.status,
     encryptedData: encryptedBlobToBase64OrNull(row.encryptedData),
     version: row.version,
+    archived: row.archived,
+    archivedAt: toUnixMillisOrNull(row.archivedAt),
     createdAt: toUnixMillis(row.createdAt),
     updatedAt: toUnixMillis(row.updatedAt),
   };

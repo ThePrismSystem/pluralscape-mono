@@ -12,9 +12,9 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
 
 import { toRelationshipResult } from "./internal.js";
 
-import type { RelationshipResult } from "./internal.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type {
+  RelationshipResult,
   MemberId,
   PaginatedResult,
   RelationshipId,

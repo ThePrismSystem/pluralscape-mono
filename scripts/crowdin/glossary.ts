@@ -1,9 +1,9 @@
-import type { GlossariesModel } from "@crowdin/crowdin-api-client";
+import { getErrorMessage } from "./errors.js";
+import { LIST_PAGE_SIZE, MAX_PAGES } from "./pagination.constants.js";
 
 import type { CrowdinClient } from "./client.js";
-import { getErrorMessage } from "./errors.js";
 import type { GlossaryPos, GlossaryTerm } from "./glossary-schema.js";
-import { LIST_PAGE_SIZE, MAX_PAGES } from "./pagination.constants.js";
+import type { GlossariesModel } from "@crowdin/crowdin-api-client";
 
 export const TERM_STATUS_PREFERRED = "preferred" as const;
 export const TERM_STATUS_NOT_RECOMMENDED = "not recommended" as const;
@@ -26,14 +26,7 @@ const POS_MAPPING: Record<GlossaryPos, GlossariesModel.PartOfSpeech> = {
 
 function mapPos(pos: GlossaryPos | undefined): GlossariesModel.PartOfSpeech | undefined {
   if (!pos) return undefined;
-  const mapped = POS_MAPPING[pos];
-  // Unreachable for schema-validated inputs; retained as defense-in-depth.
-  if (!mapped) {
-    throw new Error(
-      `Unknown glossary pos value "${pos satisfies GlossaryPos}". Valid values: ${Object.keys(POS_MAPPING).join(", ")}.`,
-    );
-  }
-  return mapped;
+  return POS_MAPPING[pos];
 }
 
 interface RemoteTerm {
@@ -112,7 +105,7 @@ export interface GlossaryApplyResult extends GlossaryDiff {
 }
 
 interface GlossaryListEntry {
-  data: { id: number; name: string; projectIds?: number[] };
+  data: { id: number; projectIds?: number[] };
 }
 
 interface GlossaryTermEntry {
@@ -169,16 +162,15 @@ async function listAllTerms(
 
 function buildEditTermOps(
   payload: CrowdinTermPayload,
-): Array<{ op: "replace"; path: string; value: string | GlossariesModel.PartOfSpeech }> {
-  const ops: Array<{ op: "replace"; path: string; value: string | GlossariesModel.PartOfSpeech }> =
-    [
-      { op: "replace", path: "/description", value: payload.description },
-      {
-        op: "replace",
-        path: "/status",
-        value: payload.isDoNotTranslate ? TERM_STATUS_NOT_RECOMMENDED : TERM_STATUS_PREFERRED,
-      },
-    ];
+): Array<{ op: "replace"; path: string; value: string }> {
+  const ops: Array<{ op: "replace"; path: string; value: string }> = [
+    { op: "replace", path: "/description", value: payload.description },
+    {
+      op: "replace",
+      path: "/status",
+      value: payload.isDoNotTranslate ? TERM_STATUS_NOT_RECOMMENDED : TERM_STATUS_PREFERRED,
+    },
+  ];
   // Crowdin rejects a PATCH with value: undefined on /partOfSpeech. Only
   // include the op when we have a mapped value.
   if (payload.partOfSpeech !== undefined) {
@@ -198,8 +190,17 @@ async function tryOp(
   }
 }
 
+/** The parts of the Crowdin client applyGlossary calls, so tests can stub them directly. */
+export interface GlossaryClient {
+  readonly glossariesApi: Pick<
+    CrowdinClient["glossariesApi"],
+    "listGlossaries" | "listTerms" | "addTerm" | "editTerm" | "deleteTerm"
+  >;
+  readonly projectsGroupsApi: Pick<CrowdinClient["projectsGroupsApi"], "editProject">;
+}
+
 export async function applyGlossary(
-  client: CrowdinClient,
+  client: GlossaryClient,
   projectId: number,
   local: readonly GlossaryTerm[],
 ): Promise<GlossaryApplyResult> {
@@ -275,7 +276,7 @@ export async function applyGlossary(
   if (errors.length > 0) {
     throw new AggregateError(
       errors.map((e) => new Error(`${e.operation} ${e.term ?? String(e.id)}: ${e.error}`)),
-      `applyGlossary: ${errors.length} operation(s) failed`,
+      `applyGlossary: ${String(errors.length)} operation(s) failed`,
     );
   }
 

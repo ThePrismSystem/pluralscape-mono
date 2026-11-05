@@ -13,9 +13,9 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
 
 import { toTimerConfigResult } from "./internal.js";
 
-import type { TimerConfigListOptions, TimerConfigResult } from "./internal.js";
+import type { TimerConfigListOptions } from "./internal.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { PaginatedResult, SystemId, TimerId } from "@pluralscape/types";
+import type { TimerConfigResult, PaginatedResult, SystemId, TimerId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function listTimerConfigs(

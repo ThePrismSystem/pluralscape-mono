@@ -7,10 +7,14 @@ import { narrowArchivableRow } from "../../../lib/archivable-row.js";
 import { buildPaginatedResult } from "../../../lib/pagination.js";
 import { withAccountRead } from "../../../lib/rls-context.js";
 
-import { type FriendCodeResult } from "./internal.js";
-
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { AccountId, FriendCode, FriendCodeId, PaginatedResult } from "@pluralscape/types";
+import type {
+  FriendCodeServerMetadata,
+  AccountId,
+  FriendCode,
+  FriendCodeId,
+  PaginatedResult,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** Default page size for friend code listing. */
@@ -29,7 +33,7 @@ export async function listFriendCodes(
   auth: AuthContext,
   cursor?: string,
   limit = FRIEND_CODE_DEFAULT_LIMIT,
-): Promise<PaginatedResult<FriendCodeResult>> {
+): Promise<PaginatedResult<FriendCodeServerMetadata>> {
   assertAccountOwnership(accountId, auth);
 
   const effectiveLimit = Math.min(limit, FRIEND_CODE_MAX_LIMIT);

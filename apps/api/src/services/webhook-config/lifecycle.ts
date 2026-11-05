@@ -13,11 +13,10 @@ import { invalidateWebhookConfigCache } from "../webhook-dispatcher.js";
 
 import { toWebhookConfigResult } from "./internal.js";
 
-import type { WebhookConfigResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { ArchivableEntityConfig } from "../../lib/entity-lifecycle.js";
-import type { SystemId, WebhookId } from "@pluralscape/types";
+import type { WebhookConfigResult, SystemId, WebhookId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function deleteWebhookConfig(

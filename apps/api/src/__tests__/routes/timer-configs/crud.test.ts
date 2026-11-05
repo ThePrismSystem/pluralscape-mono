@@ -71,6 +71,7 @@ const MOCK_TIMER = {
   wakingHoursOnly: false as const,
   wakingStart: null,
   wakingEnd: null,
+  nextCheckInAt: null,
   encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
   archived: false,

@@ -7,9 +7,13 @@ import { tenantCtx } from "../../../lib/tenant-context.js";
 
 import { toResult } from "./internal.js";
 
-import type { ImportEntityRefResult } from "./internal.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { ImportEntityType, ImportSourceFormat, SystemId } from "@pluralscape/types";
+import type {
+  ImportEntityRef,
+  ImportEntityType,
+  ImportSourceFormat,
+  SystemId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export interface LookupImportEntityRefInput {
@@ -29,7 +33,7 @@ export async function lookupImportEntityRef(
   systemId: SystemId,
   input: LookupImportEntityRefInput,
   auth: AuthContext,
-): Promise<ImportEntityRefResult | null> {
+): Promise<ImportEntityRef | null> {
   assertSystemOwnership(systemId, auth);
 
   return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {

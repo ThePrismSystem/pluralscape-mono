@@ -3,16 +3,13 @@ import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { encryptedBlobToBase64 } from "../../lib/encrypted-blob.js";
 
 import type {
+  RelationshipResult,
   EncryptedBlob,
-  EncryptedWire,
   MemberId,
   RelationshipId,
-  RelationshipServerMetadata,
   RelationshipType,
   SystemId,
 } from "@pluralscape/types";
-
-export type RelationshipResult = EncryptedWire<RelationshipServerMetadata>;
 
 export function toRelationshipResult(row: {
   id: string;

@@ -33,7 +33,7 @@ import type { AccountId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 // ---------------------------------------------------------------------------
-// systems — PK with account ownership (db-zy79 / audit H1)
+// systems — PK with account ownership
 // ---------------------------------------------------------------------------
 
 describe("RLS cross-tenant isolation — systems PK with account ownership (PGlite)", () => {
@@ -79,7 +79,7 @@ describe("RLS cross-tenant isolation — systems PK with account ownership (PGli
     expect(result.rows).toHaveLength(1);
   });
 
-  it("system GUC alone does not unlock another account's system (db-zy79 negative)", async () => {
+  it("system GUC alone does not unlock another account's system (negative)", async () => {
     // Attacker scenario: session has been populated with systemIdB (say, via
     // a leaked ID) but the account context is accountIdA. Before the fix the
     // policy was `id = current_system_id()` which would return the row; the

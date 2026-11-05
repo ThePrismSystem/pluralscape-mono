@@ -149,7 +149,7 @@ export function decryptFieldValue(
     createdAt: toUnixMillis(raw.createdAt),
     updatedAt: toUnixMillis(raw.updatedAt),
     ...validated,
-  } as FieldValueDecrypted;
+  };
 }
 
 /**

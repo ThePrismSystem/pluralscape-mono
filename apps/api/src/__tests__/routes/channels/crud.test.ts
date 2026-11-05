@@ -16,8 +16,7 @@ import {
   putJSON,
 } from "../../helpers/route-test-setup.js";
 
-import type { ChannelResult } from "../../../services/channel/internal.js";
-import type { ChannelId, EncryptedBase64 } from "@pluralscape/types";
+import type { ChannelResult, ChannelId, EncryptedBase64 } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -67,7 +66,7 @@ const MOCK_RESULT: ChannelResult = {
   type: "channel",
   parentId: null,
   sortOrder: 0,
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
   createdAt: toUnixMillis(1000),
   updatedAt: toUnixMillis(1000),

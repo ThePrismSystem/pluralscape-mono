@@ -12,7 +12,7 @@ import { listFieldDefinitions } from "../../services/field-definition/list.js";
 import { DEFAULT_FIELD_LIMIT, MAX_FIELD_LIMIT } from "./fields.constants.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
-import type { FieldDefinitionResult } from "../../services/field-definition/internal.js";
+import type { FieldDefinitionResult } from "@pluralscape/types";
 
 const FIELD_DEF_FIELDS = [
   "id",

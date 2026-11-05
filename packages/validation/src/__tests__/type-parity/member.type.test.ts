@@ -2,7 +2,7 @@
  * G3 parity for Member (Domain ↔ Zod encrypted input). G4 (Body Zod ↔
  * Transform output) lives in `packages/data/src/__tests__/type-parity/`
  * because data depends on validation; the inverse import direction would
- * create a workspace cycle. See bean `types-1spw`.
+ * create a workspace cycle.
  */
 
 import { describe, expectTypeOf, it } from "vitest";

@@ -10,8 +10,8 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { GroupResult } from "../../../services/group/queries.js";
 import type {
+  GroupResult,
   ApiErrorResponse,
   EncryptedBase64,
   GroupId,

@@ -17,10 +17,13 @@ import { tenantCtx } from "../../../lib/tenant-context.js";
 
 import { ENTITY_LIFECYCLE, toStructureEntityResult } from "./internal.js";
 
-import type { StructureEntityResult } from "./internal.js";
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { SystemId, SystemStructureEntityId } from "@pluralscape/types";
+import type {
+  SystemStructureEntityResult,
+  SystemId,
+  SystemStructureEntityId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function archiveStructureEntity(
@@ -39,7 +42,7 @@ export async function restoreStructureEntity(
   entityId: SystemStructureEntityId,
   auth: AuthContext,
   audit: AuditWriter,
-): Promise<StructureEntityResult> {
+): Promise<SystemStructureEntityResult> {
   return restoreEntity(db, systemId, entityId, auth, audit, ENTITY_LIFECYCLE, (row) =>
     toStructureEntityResult(row as typeof systemStructureEntities.$inferSelect),
   );

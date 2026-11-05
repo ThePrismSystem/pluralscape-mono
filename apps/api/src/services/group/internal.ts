@@ -5,18 +5,9 @@ import { MAX_GROUPS_PER_SYSTEM } from "../../quota.constants.js";
 import { createHierarchyService } from "../hierarchy-service-factory.js";
 import { mapBaseFields } from "../hierarchy-service-helpers.js";
 
-import type {
-  EncryptedBlob,
-  EncryptedWire,
-  GroupId,
-  GroupServerMetadata,
-} from "@pluralscape/types";
+import type { GroupResult, EncryptedBlob, GroupId } from "@pluralscape/types";
 import type { CreateGroupBodySchema, UpdateGroupBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
-
-// ── Types ───────────────────────────────────────────────────────────
-
-export type GroupResult = EncryptedWire<GroupServerMetadata>;
 type CreateGroupBody = z.infer<typeof CreateGroupBodySchema>;
 type UpdateGroupBody = z.infer<typeof UpdateGroupBodySchema>;
 

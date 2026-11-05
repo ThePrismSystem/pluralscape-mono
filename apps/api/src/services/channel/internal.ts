@@ -5,7 +5,7 @@ import { encryptedBlobToBase64 } from "../../lib/encrypted-blob.js";
 import { dispatchWebhookEvent } from "../webhook-dispatcher.js";
 
 import type { ArchivableEntityConfig } from "../../lib/entity-lifecycle.js";
-import type { ChannelId, SystemId, UnixMillis } from "@pluralscape/types";
+import type { ChannelResult, ChannelId, SystemId, UnixMillis } from "@pluralscape/types";
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -30,8 +30,6 @@ export interface ChannelItemResult extends BaseChannelResult {
   readonly type: "channel";
   readonly parentId: ChannelId | null;
 }
-
-export type ChannelResult = CategoryResult | ChannelItemResult;
 
 // ── Helpers ─────────────────────────────────────────────────────────
 

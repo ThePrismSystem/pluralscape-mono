@@ -8,18 +8,22 @@
     "test": "playwright test --project=api",
     "test:slow": "playwright test --project=api-slow",
     "test:all": "playwright test",
-    "test:report": "playwright show-report"
+    "test:report": "playwright show-report",
+    "lint": "eslint --max-warnings 0 .",
+    "lint:fix": "eslint --fix --max-warnings 0 ."
   },
   "devDependencies": {
     "@playwright/test": "catalog:",
     "@pluralscape/api": "workspace:*",
     "@pluralscape/crypto": "workspace:*",
+    "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/sync": "workspace:*",
     "@pluralscape/test-utils": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
     "@pluralscape/types": "workspace:*",
     "@types/node": "^24.12.3",
     "drizzle-orm": "catalog:",
+    "eslint": "catalog:",
     "postgres": "catalog:",
     "typescript": "catalog:"
   },

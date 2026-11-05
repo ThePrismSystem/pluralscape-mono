@@ -16,10 +16,10 @@ import {
   toFieldValueResult,
 } from "./internal.js";
 
-import type { FieldValueOwner, FieldValueResult } from "./internal.js";
+import type { FieldValueOwner } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { FieldDefinitionId, SystemId } from "@pluralscape/types";
+import type { FieldValueResult, FieldDefinitionId, SystemId } from "@pluralscape/types";
 import type { UpdateFieldValueBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { z } from "zod/v4";

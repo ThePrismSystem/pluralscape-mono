@@ -28,8 +28,7 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { ChannelResult } from "../../services/channel/internal.js";
-import type { AccountId, SystemId, UnixMillis } from "@pluralscape/types";
+import type { ChannelResult, AccountId, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { channels, messages } = schema;

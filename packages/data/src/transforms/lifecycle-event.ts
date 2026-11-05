@@ -73,7 +73,7 @@ export function decryptLifecycleEvent(
     archived: false as const,
   };
 
-  const meta = raw.plaintextMetadata as Record<string, unknown> | null;
+  const meta = raw.plaintextMetadata;
 
   let domain: LifecycleEvent;
 
@@ -265,7 +265,7 @@ export function decryptLifecycleEvent(
       ...domain,
       archived: true as const,
       archivedAt: toUnixMillis(raw.archivedAt),
-    } as Archived<LifecycleEvent>;
+    };
   }
   return domain;
 }

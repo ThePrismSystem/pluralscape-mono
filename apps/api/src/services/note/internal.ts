@@ -3,20 +3,7 @@ import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 
 import { encryptedBlobToBase64 } from "../../lib/encrypted-blob.js";
 
-import type { NoteAuthorEntityType, NoteId, SystemId, UnixMillis } from "@pluralscape/types";
-
-export interface NoteResult {
-  readonly id: NoteId;
-  readonly systemId: SystemId;
-  readonly authorEntityType: NoteAuthorEntityType | null;
-  readonly authorEntityId: string | null;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
+import type { NoteResult, NoteId, SystemId } from "@pluralscape/types";
 
 export function toNoteResult(row: typeof notes.$inferSelect): NoteResult {
   return {

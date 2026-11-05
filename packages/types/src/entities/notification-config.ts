@@ -54,3 +54,14 @@ export interface NotificationPayload {
   readonly data: Readonly<Record<string, string>> | null;
   readonly createdAt: UnixMillis;
 }
+
+/** Service-layer read shape for a notification config. */
+export interface NotificationConfigResult {
+  readonly id: NotificationConfigId;
+  readonly systemId: SystemId;
+  readonly eventType: NotificationEventType;
+  readonly enabled: boolean;
+  readonly pushEnabled: boolean;
+  readonly createdAt: UnixMillis;
+  readonly updatedAt: UnixMillis;
+}

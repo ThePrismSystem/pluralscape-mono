@@ -7,7 +7,13 @@ import { encryptedPayload } from "../../helpers/entity-shape.sqlite.js";
 
 import { systems } from "./systems.js";
 
-import type { Locale, PinHash, SystemId, SystemSettingsId } from "@pluralscape/types";
+import type {
+  Locale,
+  PinHash,
+  ServerInternal,
+  SystemId,
+  SystemSettingsId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 // Carve-out: system_settings is a singleton per system (systemId is UNIQUE),
@@ -22,7 +28,7 @@ export const systemSettings = sqliteTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     locale: text("locale").$type<Locale>(),
     /** Must use Argon2id — PINs are low-entropy (4-6 digits) and trivially reversible with weak hashes. */
-    pinHash: text("pin_hash").$type<PinHash | null>(),
+    pinHash: text("pin_hash").$type<ServerInternal<PinHash> | null>(),
     biometricEnabled: integer("biometric_enabled", { mode: "boolean" }).notNull().default(false),
     ...encryptedPayload(),
     ...timestamps(),

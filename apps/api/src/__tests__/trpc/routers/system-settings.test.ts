@@ -57,7 +57,7 @@ const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
 const MOCK_SETTINGS_RESULT = {
   id: brandId<SystemSettingsId>("sset_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"),
   systemId: MOCK_SYSTEM_ID,
-  locale: "en",
+  locale: "en" as const,
   biometricEnabled: false,
   encryptedData: "base64data==" as EncryptedBase64,
   version: 1,

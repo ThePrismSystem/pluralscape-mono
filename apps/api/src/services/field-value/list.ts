@@ -11,9 +11,9 @@ import {
   toFieldValueResult,
 } from "./internal.js";
 
-import type { FieldValueOwner, FieldValueResult } from "./internal.js";
+import type { FieldValueOwner } from "./internal.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { SystemId } from "@pluralscape/types";
+import type { FieldValueResult, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function listFieldValuesForOwner(

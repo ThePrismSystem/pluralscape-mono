@@ -149,7 +149,7 @@ describe.skipIf(!ctx.available)("BullMQJobQueue — corruption surfacing", () =>
   });
 });
 
-// ── Write-path fail-closed coverage (ps-74xz) ──────────────────────
+// ── Write-path fail-closed coverage ──────────────────────
 //
 // Every method that reads `job.data` from BullMQ must surface a typed
 // QueueCorruptionError when the stored shape fails schema validation —

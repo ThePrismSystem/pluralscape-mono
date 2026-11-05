@@ -7549,6 +7549,13 @@ export interface components {
        * @example 1
        */
       version: number;
+      /** @description Whether the connection is archived */
+      archived: boolean;
+      /**
+       * Format: int64
+       * @description Unix timestamp in milliseconds when archived, null otherwise
+       */
+      archivedAt: number | null;
       /**
        * Format: int64
        * @description Unix timestamp in milliseconds

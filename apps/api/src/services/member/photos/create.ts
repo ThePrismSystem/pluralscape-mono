@@ -13,10 +13,15 @@ import { MAX_PHOTOS_PER_MEMBER, MAX_PHOTOS_PER_SYSTEM } from "../../../quota.con
 
 import { toPhotoResult } from "./internal.js";
 
-import type { MemberPhotoResult } from "./internal.js";
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { EncryptedBlob, MemberId, MemberPhotoId, SystemId } from "@pluralscape/types";
+import type {
+  MemberPhotoResult,
+  EncryptedBlob,
+  MemberId,
+  MemberPhotoId,
+  SystemId,
+} from "@pluralscape/types";
 import type { CreateMemberPhotoBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { z } from "zod/v4";

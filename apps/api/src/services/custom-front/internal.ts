@@ -2,15 +2,7 @@ import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 
 import { encryptedBlobToBase64 } from "../../lib/encrypted-blob.js";
 
-import type {
-  CustomFrontId,
-  CustomFrontServerMetadata,
-  EncryptedBlob,
-  EncryptedWire,
-  SystemId,
-} from "@pluralscape/types";
-
-export type CustomFrontResult = EncryptedWire<CustomFrontServerMetadata>;
+import type { CustomFrontResult, CustomFrontId, EncryptedBlob, SystemId } from "@pluralscape/types";
 
 export function toCustomFrontResult(row: {
   id: string;

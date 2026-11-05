@@ -285,3 +285,21 @@ export const IMPORT_AVATAR_MODES = [
 ] as const satisfies readonly ImportAvatarMode[];
 
 export const IMPORT_CHECKPOINT_SCHEMA_VERSION = 2 as const;
+
+/** Service-layer read shape for an import job. */
+export interface ImportJobResult {
+  readonly id: ImportJobId;
+  readonly accountId: AccountId;
+  readonly systemId: SystemId;
+  readonly source: ImportSourceFormat;
+  readonly status: ImportJobStatus;
+  readonly progressPercent: number;
+  readonly errorLog: readonly ImportError[] | null;
+  readonly warningCount: number;
+  readonly chunksTotal: number | null;
+  readonly chunksCompleted: number;
+  readonly checkpointState: ImportCheckpointState | null;
+  readonly createdAt: UnixMillis;
+  readonly updatedAt: UnixMillis;
+  readonly completedAt: UnixMillis | null;
+}

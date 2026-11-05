@@ -13,6 +13,7 @@ import type {
   ApiErrorResponse,
   AuditLogEntryId,
   PaginationCursor,
+  Plaintext,
   SystemId,
 } from "@pluralscape/types";
 
@@ -45,7 +46,7 @@ const MOCK_ENTRY = {
   eventType: "member.created" as const,
   createdAt: toUnixMillis(1000),
   actor: { kind: "account" as const, id: brandId<AccountId>("acct_test") },
-  detail: "Created member",
+  detail: "Created member" as Plaintext<string>,
   ipAddress: "127.0.0.1",
   userAgent: "test",
 };

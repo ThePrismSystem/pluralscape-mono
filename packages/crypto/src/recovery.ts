@@ -9,7 +9,7 @@ import type { KdfMasterKey } from "./types.js";
 import type { RecoveryKeyDisplay } from "@pluralscape/types";
 
 /** Result of generating a recovery key. */
-export interface RecoveryKeyResult {
+export interface GeneratedRecoveryKey {
   /** Human-readable recovery key (13 groups of 4 base32 chars, e.g. ABCD-EFGH-...). */
   readonly displayKey: RecoveryKeyDisplay;
   /** The master key encrypted under the recovery key bytes. */
@@ -125,7 +125,7 @@ export function toRecoveryKeyDisplay(key: string): RecoveryKeyDisplay {
  * directly as an AEAD key to encrypt the master key. The recovery key bytes
  * are zeroed from memory after use — the caller must store `displayKey` safely.
  */
-export function generateRecoveryKey(masterKey: KdfMasterKey): RecoveryKeyResult {
+export function generateRecoveryKey(masterKey: KdfMasterKey): GeneratedRecoveryKey {
   const adapter = getSodium();
   const recoveryKeyBytes = adapter.randomBytes(RECOVERY_KEY_BYTES);
   try {

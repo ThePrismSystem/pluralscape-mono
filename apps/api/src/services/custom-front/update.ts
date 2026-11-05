@@ -13,10 +13,9 @@ import { dispatchWebhookEvent } from "../webhook-dispatcher.js";
 
 import { toCustomFrontResult } from "./internal.js";
 
-import type { CustomFrontResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { CustomFrontId, SystemId } from "@pluralscape/types";
+import type { CustomFrontResult, CustomFrontId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { z } from "zod/v4";
 

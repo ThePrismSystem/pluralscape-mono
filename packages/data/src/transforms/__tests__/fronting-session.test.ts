@@ -59,7 +59,7 @@ function makeRawSession(
     endTime: overrides.endTime !== undefined ? overrides.endTime : null,
     encryptedData: makeBase64Blob(fields, masterKey),
     version: 1,
-    archived: overrides.archived ?? (false as boolean),
+    archived: overrides.archived ?? false,
     archivedAt: overrides.archivedAt ?? (null as UnixMillis | null),
     createdAt: 1700000000000 as UnixMillis,
     updatedAt: 1700000000000 as UnixMillis,

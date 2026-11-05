@@ -1,8 +1,9 @@
 // scripts/sp-seed/__tests__/fixtures.test.ts
 import { describe, expect, test } from "vitest";
-import { ENTITY_TYPES_IN_ORDER, type EntityFixtures } from "../fixtures/types.js";
-import { MINIMAL_FIXTURES } from "../fixtures/minimal.js";
+
 import { ADVERSARIAL_FIXTURES } from "../fixtures/adversarial.js";
+import { MINIMAL_FIXTURES } from "../fixtures/minimal.js";
+import { ENTITY_TYPES_IN_ORDER, type EntityFixtures } from "../fixtures/types.js";
 
 const FIXTURE_SETS: [string, EntityFixtures][] = [
   ["minimal", MINIMAL_FIXTURES],

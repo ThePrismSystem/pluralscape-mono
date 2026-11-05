@@ -1,5 +1,8 @@
-import type { CrowdinEnv } from "./env.js";
+import { HTTP_METHOD_NOT_ALLOWED } from "../http.constants.js";
+
 import { type TargetLanguageId } from "./languages.js";
+
+import type { CrowdinEnv } from "./env.js";
 
 /**
  * Credential shapes we use with Crowdin MT. DeepL uses `{ apiKey }`; Google
@@ -88,7 +91,7 @@ export class MtCreationForbiddenError extends Error {
 function isMethodNotAllowed(err: unknown): boolean {
   if (err === null || typeof err !== "object") return false;
   const code = (err as { code?: unknown }).code;
-  return code === 405;
+  return code === HTTP_METHOD_NOT_ALLOWED;
 }
 
 function assertUnique(name: string, ids: readonly number[]): void {

@@ -1,4 +1,3 @@
-import { serializeEncryptedBlob } from "@pluralscape/crypto";
 import { systemSettings } from "@pluralscape/db/pg";
 import { brandId, now, toUnixMillis } from "@pluralscape/types";
 import { UpdateSystemSettingsBodySchema } from "@pluralscape/validation";
@@ -7,6 +6,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { SYSTEM_SETTINGS_CACHE_TTL_MS } from "../lib/cache.constants.js";
+import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
 import { validateEncryptedBlob } from "../lib/encrypted-blob.js";
 import { QueryCache } from "../lib/query-cache.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
@@ -15,22 +15,15 @@ import { tenantCtx } from "../lib/tenant-context.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
-import type { EncryptedBlob, SystemId, SystemSettingsId, UnixMillis } from "@pluralscape/types";
+import type {
+  SystemSettingsResult,
+  EncryptedBlob,
+  SystemId,
+  SystemSettingsId,
+} from "@pluralscape/types";
+import type { Locale } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { z } from "zod/v4";
-
-// ── Types ───────────────────────────────────────────────────────────
-
-export interface SystemSettingsResult {
-  readonly id: SystemSettingsId;
-  readonly systemId: SystemId;
-  readonly locale: string | null;
-  readonly biometricEnabled: boolean;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
 
 // ── Cache ───────────────────────────────────────────────────────────
 
@@ -46,7 +39,7 @@ export function clearSettingsCache(): void {
 export function toSystemSettingsResult(row: {
   id: string;
   systemId: string;
-  locale: string | null;
+  locale: Locale | null;
   biometricEnabled: boolean;
   encryptedData: EncryptedBlob;
   version: number;
@@ -58,7 +51,7 @@ export function toSystemSettingsResult(row: {
     systemId: brandId<SystemId>(row.systemId),
     locale: row.locale,
     biometricEnabled: row.biometricEnabled,
-    encryptedData: Buffer.from(serializeEncryptedBlob(row.encryptedData)).toString("base64"),
+    encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
     createdAt: toUnixMillis(row.createdAt),
     updatedAt: toUnixMillis(row.updatedAt),

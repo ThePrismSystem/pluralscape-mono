@@ -3,17 +3,14 @@ import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { encryptedBlobToBase64 } from "../../lib/encrypted-blob.js";
 
 import type {
+  FrontingSessionResult,
   CustomFrontId,
   EncryptedBlob,
-  EncryptedWire,
   FrontingSessionId,
-  FrontingSessionServerMetadata,
   MemberId,
   SystemId,
   SystemStructureEntityId,
 } from "@pluralscape/types";
-
-export type FrontingSessionResult = EncryptedWire<FrontingSessionServerMetadata>;
 
 export function toFrontingSessionResult(row: {
   id: string;

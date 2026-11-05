@@ -33,7 +33,7 @@ export type {
 export { assertPortFree } from "./assert-port-free.js";
 
 // Account registration
-export { registerTestAccount, getSystemId } from "./account.js";
+export { registerTestAccount, getSystemId, pluralscapeAuthHeaders } from "./account.js";
 export type { RegisteredAccount } from "./account.js";
 
 // E2E persister base (crypto + tRPC injected by consumers)

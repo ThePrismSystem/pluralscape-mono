@@ -122,8 +122,7 @@ export function decryptDashboardFrontingSession(
     comment: parsed.comment ?? null,
     positionality: parsed.positionality ?? null,
     outtrigger: parsed.outtrigger ?? null,
-    outtriggerSentiment:
-      (parsed.outtriggerSentiment as OuttriggerSentiment | null | undefined) ?? null,
+    outtriggerSentiment: parsed.outtriggerSentiment ?? null,
   };
 }
 
@@ -139,7 +138,7 @@ export function decryptDashboardCustomFront(
     id: raw.id,
     name: parsed.name,
     description: parsed.description ?? null,
-    color: (parsed.color as HexColor | null | undefined) ?? null,
+    color: parsed.color ?? null,
     emoji: parsed.emoji ?? null,
   };
 }
@@ -157,7 +156,7 @@ export function decryptDashboardStructureEntity(
     name: parsed.name,
     description: parsed.description ?? null,
     emoji: parsed.emoji ?? null,
-    color: (parsed.color as HexColor | null | undefined) ?? null,
+    color: parsed.color ?? null,
     imageSource: parsed.imageSource ?? null,
   };
 }

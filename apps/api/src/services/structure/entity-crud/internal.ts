@@ -4,17 +4,12 @@ import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { encryptedBlobToBase64 } from "../../../lib/encrypted-blob.js";
 
 import type {
+  SystemStructureEntityResult,
   EncryptedBlob,
-  EncryptedWire,
   SystemId,
   SystemStructureEntityId,
-  SystemStructureEntityServerMetadata,
   SystemStructureEntityTypeId,
 } from "@pluralscape/types";
-
-// ── Result types ───────────────────────────────────────────────────
-
-export type StructureEntityResult = EncryptedWire<SystemStructureEntityServerMetadata>;
 
 // ── Row mapper ────────────────────────────────────────────────────
 
@@ -29,7 +24,7 @@ export function toStructureEntityResult(row: {
   archivedAt: number | null;
   createdAt: number;
   updatedAt: number;
-}): StructureEntityResult {
+}): SystemStructureEntityResult {
   return {
     id: brandId<SystemStructureEntityId>(row.id),
     systemId: brandId<SystemId>(row.systemId),

@@ -15,16 +15,11 @@ import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
 
-import {
-  API_KEY_SELECT_COLUMNS,
-  hashApiKeyToken,
-  toApiKeyResult,
-  type ApiKeyResult,
-} from "./internal.js";
+import { API_KEY_SELECT_COLUMNS, hashApiKeyToken, toApiKeyResult } from "./internal.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { ApiKeyId, BucketId, SystemId } from "@pluralscape/types";
+import type { ApiKeyServerVisible, ApiKeyId, BucketId, SystemId } from "@pluralscape/types";
 import type { CreateApiKeyBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { z } from "zod/v4";
@@ -37,7 +32,7 @@ const API_KEY_TOKEN_BYTES = 32;
 // ── Types ──────────────────────────────────────────────────────────
 
 /** Returned from create only -- includes the plaintext token for the caller to store. */
-export interface ApiKeyCreateResult extends ApiKeyResult {
+export interface ApiKeyCreateResult extends ApiKeyServerVisible {
   readonly token: string;
 }
 

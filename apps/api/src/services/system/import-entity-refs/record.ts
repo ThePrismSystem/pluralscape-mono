@@ -14,9 +14,13 @@ import { tenantCtx } from "../../../lib/tenant-context.js";
 
 import { toResult } from "./internal.js";
 
-import type { ImportEntityRefResult } from "./internal.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { ImportEntityType, ImportSourceFormat, SystemId } from "@pluralscape/types";
+import type {
+  ImportEntityRef,
+  ImportEntityType,
+  ImportSourceFormat,
+  SystemId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export interface RecordImportEntityRefInput {
@@ -31,7 +35,7 @@ export async function recordImportEntityRef(
   systemId: SystemId,
   input: RecordImportEntityRefInput,
   auth: AuthContext,
-): Promise<ImportEntityRefResult> {
+): Promise<ImportEntityRef> {
   assertSystemOwnership(systemId, auth);
 
   if (input.sourceEntityId.length === 0 || input.pluralscapeEntityId.length === 0) {

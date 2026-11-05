@@ -19,7 +19,7 @@ const ApprovalReadbackSchema = z
   .object({
     exportApprovedOnly: z.boolean().nullish(),
   })
-  .passthrough();
+  .loose();
 
 /**
  * Flips the project's export-approved-only setting off, so unapproved
@@ -38,7 +38,7 @@ export async function applyApprovalSettings(
   const project = await client.projectsGroupsApi.getProject(projectId);
   const parsed = ApprovalReadbackSchema.parse(project.data);
   const actual = parsed.exportApprovedOnly ?? false;
-  if (actual !== false) {
+  if (actual) {
     throw new Error(
       `exportApprovedOnly did not flip to false on Crowdin (still=${String(actual)}).`,
     );

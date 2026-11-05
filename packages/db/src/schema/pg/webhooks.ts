@@ -63,7 +63,7 @@ export const webhookConfigs = pgTable(
  * partial index supports cleanup queries like:
  *   DELETE FROM webhook_deliveries
  *   WHERE status IN ('success', 'failed') AND created_at < $cutoff
- * Actual cleanup job is blocked by infra-m2t5 (background job infrastructure).
+ * Actual cleanup job is blocked on background job infrastructure.
  *
  * Carve-out: deliveries have no audit columns and `encrypted_data` is a raw
  * pgBinary (not an EncryptedBlob), so encryptedPayload doesn't apply.

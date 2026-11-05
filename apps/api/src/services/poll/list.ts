@@ -12,9 +12,9 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
 
 import { toPollResult } from "./internal.js";
 
-import type { ListPollOpts, PollResult } from "./internal.js";
+import type { ListPollOpts } from "./internal.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { PaginatedResult, PollStatus, SystemId, PollId } from "@pluralscape/types";
+import type { PollResult, PaginatedResult, PollStatus, SystemId, PollId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function listPolls(

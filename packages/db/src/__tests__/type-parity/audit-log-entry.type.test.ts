@@ -4,7 +4,7 @@
  * @pluralscape/types.
  *
  * See `member.type.test.ts` for the rationale behind the brand-stripped
- * comparison. Brand drift is tracked as follow-up `db-drq1`.
+ * comparison. Brand drift is a known follow-up.
  *
  * AuditLogEntry is a plaintext entity (no encryption) so its
  * ServerMetadata carries DB-internal columns (denormalized `accountId`,

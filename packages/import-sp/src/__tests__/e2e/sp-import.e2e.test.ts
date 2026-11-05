@@ -560,7 +560,7 @@ describe.skipIf(!hasExportFixtures())("SP Import E2E — File Source Error Paths
     // Equivalence contract: aborting mid-run and resuming from the captured
     // checkpoint must land on the same entity set as a fresh uninterrupted
     // run. The engine now persists `realPrivacyBucketsMapped` in the
-    // checkpoint (ps-beng), so resumed runs no longer re-synthesize legacy
+    // checkpoint, so resumed runs no longer re-synthesize legacy
     // buckets when the source had real ones. Baseline and resumed entity
     // sets must be byte-identical.
     const manifest = await loadManifest("minimal");

@@ -29,7 +29,7 @@ describe("createRestQueryFactory", () => {
       apiClient: makeApiClient(null),
       getMasterKey: () => null,
     });
-    const opts = factory.queryOptions({ queryKey: ["test"], path: "/health" as never });
+    const opts = factory.queryOptions({ queryKey: ["test"], path: "/systems" });
     expect(opts.queryKey).toEqual(["test"]);
     expect(typeof opts.queryFn).toBe("function");
   });
@@ -40,7 +40,7 @@ describe("createRestQueryFactory", () => {
       apiClient: makeApiClient(payload),
       getMasterKey: () => null,
     });
-    const opts = factory.queryOptions({ queryKey: ["item"], path: "/health" as never });
+    const opts = factory.queryOptions({ queryKey: ["item"], path: "/systems" });
     const result = await opts.queryFn();
     expect(result).toEqual(payload);
   });
@@ -54,11 +54,11 @@ describe("createRestQueryFactory", () => {
     const init = { params: { query: { limit: 10 } } };
     const opts = factory.queryOptions({
       queryKey: ["items"],
-      path: "/health" as never,
-      init: init as never,
+      path: "/systems",
+      init,
     });
     await opts.queryFn();
-    expect(apiClient.GET).toHaveBeenCalledWith("/health", init);
+    expect(apiClient.GET).toHaveBeenCalledWith("/systems", init);
   });
 
   it("queryFn throws when API returns an error", async () => {
@@ -66,7 +66,7 @@ describe("createRestQueryFactory", () => {
       apiClient: makeApiClient(undefined, { code: "NOT_FOUND", message: "Not found" }),
       getMasterKey: () => null,
     });
-    const opts = factory.queryOptions({ queryKey: ["item"], path: "/health" as never });
+    const opts = factory.queryOptions({ queryKey: ["item"], path: "/systems" });
     try {
       await opts.queryFn();
       expect.unreachable("should have thrown");
@@ -74,7 +74,7 @@ describe("createRestQueryFactory", () => {
       expect(err).toBeInstanceOf(ApiClientError);
       expect((err as ApiClientError).code).toBe("NOT_FOUND");
       expect((err as ApiClientError).message).toBe("Not found");
-      expect((err as ApiClientError).path).toBe("/health");
+      expect((err as ApiClientError).path).toBe("/systems");
     }
   });
 
@@ -88,7 +88,7 @@ describe("createRestQueryFactory", () => {
       apiClient: makeApiClient(undefined, sensitiveError),
       getMasterKey: () => null,
     });
-    const opts = factory.queryOptions({ queryKey: ["item"], path: "/health" as never });
+    const opts = factory.queryOptions({ queryKey: ["item"], path: "/systems" });
     try {
       await opts.queryFn();
       expect.unreachable("should have thrown");
@@ -98,7 +98,7 @@ describe("createRestQueryFactory", () => {
       expect((err as ApiClientError).message).toBe("Invalid input");
       expect((err as Error).message).not.toContain("details");
       expect((err as Error).message).not.toContain("required");
-      expect((err as ApiClientError).path).toBe("/health");
+      expect((err as ApiClientError).path).toBe("/systems");
     }
   });
 
@@ -107,7 +107,7 @@ describe("createRestQueryFactory", () => {
       apiClient: makeApiClient(undefined, { unexpected: "shape" }),
       getMasterKey: () => null,
     });
-    const opts = factory.queryOptions({ queryKey: ["item"], path: "/health" as never });
+    const opts = factory.queryOptions({ queryKey: ["item"], path: "/systems" });
     try {
       await opts.queryFn();
       expect.unreachable("should have thrown");
@@ -115,7 +115,7 @@ describe("createRestQueryFactory", () => {
       expect(err).toBeInstanceOf(ApiClientError);
       expect((err as ApiClientError).code).toBe("UNKNOWN");
       expect((err as ApiClientError).message).toBe("Request failed");
-      expect((err as ApiClientError).path).toBe("/health");
+      expect((err as ApiClientError).path).toBe("/systems");
     }
   });
 
@@ -124,7 +124,7 @@ describe("createRestQueryFactory", () => {
       apiClient: makeApiClient(undefined, "plain string error"),
       getMasterKey: () => null,
     });
-    const opts = factory.queryOptions({ queryKey: ["item"], path: "/health" as never });
+    const opts = factory.queryOptions({ queryKey: ["item"], path: "/systems" });
     try {
       await opts.queryFn();
       expect.unreachable("should have thrown");
@@ -132,7 +132,7 @@ describe("createRestQueryFactory", () => {
       expect(err).toBeInstanceOf(ApiClientError);
       expect((err as ApiClientError).code).toBe("UNKNOWN");
       expect((err as ApiClientError).message).toBe("Request failed");
-      expect((err as ApiClientError).path).toBe("/health");
+      expect((err as ApiClientError).path).toBe("/systems");
     }
   });
 
@@ -147,7 +147,7 @@ describe("createRestQueryFactory", () => {
     const decrypt = vi.fn().mockReturnValue(decrypted);
     const opts = factory.queryOptions({
       queryKey: ["item"],
-      path: "/health" as never,
+      path: "/systems",
       decrypt,
     });
     const result = await opts.queryFn();
@@ -162,7 +162,7 @@ describe("createRestQueryFactory", () => {
     });
     const opts = factory.queryOptions({
       queryKey: ["item"],
-      path: "/health" as never,
+      path: "/systems",
       decrypt: (raw: unknown) => raw,
     });
     await expect(opts.queryFn()).rejects.toThrow("Master key not available for decryption");

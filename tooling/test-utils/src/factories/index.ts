@@ -2,7 +2,7 @@
  * Factory stubs for test data generation.
  *
  * These produce plain objects with randomized defaults. They will be
- * updated to insert into the database when the schema epic (db-2je4)
+ * updated to insert into the database when the schema epic
  * defines the corresponding tables.
  */
 

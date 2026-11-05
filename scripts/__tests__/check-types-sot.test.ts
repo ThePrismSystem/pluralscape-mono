@@ -8,16 +8,16 @@ describe("runChecks", () => {
     const steps: CheckStep[] = [
       {
         name: "a",
-        run: async () => {
+        run: () => {
           order.push("a");
-          return { ok: true, output: "" };
+          return Promise.resolve({ ok: true, output: "" });
         },
       },
       {
         name: "b",
-        run: async () => {
+        run: () => {
           order.push("b");
-          return { ok: true, output: "" };
+          return Promise.resolve({ ok: true, output: "" });
         },
       },
     ];
@@ -31,16 +31,16 @@ describe("runChecks", () => {
     const steps: CheckStep[] = [
       {
         name: "a",
-        run: async () => {
+        run: () => {
           order.push("a");
-          return { ok: false, output: "err-a" };
+          return Promise.resolve({ ok: false, output: "err-a" });
         },
       },
       {
         name: "b",
-        run: async () => {
+        run: () => {
           order.push("b");
-          return { ok: true, output: "" };
+          return Promise.resolve({ ok: true, output: "" });
         },
       },
     ];
@@ -54,7 +54,7 @@ describe("runChecks", () => {
     const steps: CheckStep[] = [
       {
         name: "typecheck-types",
-        run: async () => ({ ok: true, output: "" }),
+        run: () => Promise.resolve({ ok: true, output: "" }),
       },
     ];
     await runChecks(steps);

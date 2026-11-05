@@ -8,6 +8,7 @@ import { withAccountRead } from "../lib/rls-context.js";
 
 import type { DbAuditActor } from "@pluralscape/db/pg";
 import type {
+  AuditLogEntry,
   AccountId,
   ApiKeyId,
   AuditActor,
@@ -18,30 +19,8 @@ import type {
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
+import type { Plaintext } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-
-// ── Types ───────────────────────────────────────────────────────────
-
-/**
- * Shape returned by `queryAuditLog`. Mirrors the domain `AuditLogEntry`
- * (and the OpenAPI `AuditLogEntry` schema) so the route response conforms
- * to the plaintext-wire parity contract enforced in
- * `scripts/openapi-wire-parity.type-test.ts`.
- *
- * Note: the DB column is `timestamp` (event-occurred time); the domain /
- * wire field is `createdAt`. The mapping in `toEntryResult` handles the
- * rename.
- */
-export interface AuditLogEntryResult {
-  readonly id: AuditLogEntryId;
-  readonly systemId: SystemId;
-  readonly eventType: AuditEventType;
-  readonly createdAt: UnixMillis;
-  readonly actor: AuditActor;
-  readonly detail: string | null;
-  readonly ipAddress: string | null;
-  readonly userAgent: string | null;
-}
 
 export interface AuditLogQueryParams {
   readonly eventType?: string;
@@ -98,7 +77,7 @@ function brandDbActor(actor: DbAuditActor): AuditActor {
   }
 }
 
-function toEntryResult(row: typeof auditLog.$inferSelect): AuditLogEntryResult {
+function toEntryResult(row: typeof auditLog.$inferSelect): AuditLogEntry {
   return {
     id: brandId<AuditLogEntryId>(row.id),
     // systemId is nullable in the DB (audit rows survive system deletion
@@ -109,7 +88,7 @@ function toEntryResult(row: typeof auditLog.$inferSelect): AuditLogEntryResult {
     eventType: row.eventType,
     createdAt: toUnixMillis(row.timestamp),
     actor: brandDbActor(row.actor),
-    detail: row.detail,
+    detail: row.detail as Plaintext<string> | null,
     ipAddress: row.ipAddress,
     userAgent: row.userAgent,
   };
@@ -119,7 +98,7 @@ export async function queryAuditLog(
   db: PostgresJsDatabase,
   accountId: AccountId,
   params: AuditLogQueryParams,
-): Promise<PaginatedResult<AuditLogEntryResult>> {
+): Promise<PaginatedResult<AuditLogEntry>> {
   const conditions = [
     // The accountId column is branded `ServerInternal<AccountId>` so the
     // wire envelope strips it; tag the lookup value so Drizzle's typed
@@ -167,7 +146,7 @@ export async function queryAuditLog(
           ? (encodeCursor({
               t: lastItem.timestamp,
               i: lastItem.id,
-            }) as PaginatedResult<AuditLogEntryResult>["nextCursor"])
+            }) as PaginatedResult<AuditLogEntry>["nextCursor"])
           : null,
       hasMore,
       totalCount: null,

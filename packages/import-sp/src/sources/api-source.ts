@@ -169,8 +169,8 @@ const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
  * Refuse to send the SP API token to a plaintext-HTTP baseUrl. The only
  * exception is loopback, for local dev against a mock or self-hosted SP
  * instance on the same machine. UX-layer hardening (host allowlisting,
- * explicit opt-in for non-apparyllis.com hosts) is tracked separately in
- * bean ps-aj1j; this check is the last-line safety net that prevents a
+ * explicit opt-in for non-apparyllis.com hosts) is tracked separately;
+ * this check is the last-line safety net that prevents a
  * token from ever leaving the device over cleartext.
  */
 function assertBaseUrlIsSafe(baseUrl: string): void {

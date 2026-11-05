@@ -10,9 +10,9 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../../service.constants.j
 
 import { toResult } from "./internal.js";
 
-import type { ImportEntityRefResult } from "./internal.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type {
+  ImportEntityRef,
   ImportEntityType,
   ImportSourceFormat,
   PaginatedResult,
@@ -33,7 +33,7 @@ export async function listImportEntityRefs(
   systemId: SystemId,
   auth: AuthContext,
   opts: ListImportEntityRefsOpts,
-): Promise<PaginatedResult<ImportEntityRefResult>> {
+): Promise<PaginatedResult<ImportEntityRef>> {
   assertSystemOwnership(systemId, auth);
   const parsedQuery = ImportEntityRefQuerySchema.parse({
     source: opts.source,

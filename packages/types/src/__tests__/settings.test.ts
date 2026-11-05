@@ -7,6 +7,8 @@ import type {
   PrivacyDefaults,
   SyncPreferences,
   SystemSettings,
+  SystemSettingsResult,
+  SystemSettingsWire,
   ThemePreference,
 } from "../entities/system-settings.js";
 import type { Locale } from "../i18n.js";
@@ -159,5 +161,12 @@ describe("SystemSettings", () => {
 
   it("has onboardingComplete boolean", () => {
     expectTypeOf<SystemSettings["onboardingComplete"]>().toEqualTypeOf<boolean>();
+  });
+});
+
+describe("SystemSettings wire exposure", () => {
+  it("strips the PIN hash from the result and wire types", () => {
+    expectTypeOf<SystemSettingsResult>().not.toHaveProperty("pinHash");
+    expectTypeOf<SystemSettingsWire>().not.toHaveProperty("pinHash");
   });
 });

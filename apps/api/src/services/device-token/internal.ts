@@ -2,16 +2,13 @@ import { brandId } from "@pluralscape/types";
 
 import { hashSessionToken } from "../../lib/session-token.js";
 
-import type { DeviceTokenId, DeviceTokenPlatform, SystemId, UnixMillis } from "@pluralscape/types";
-
-export interface DeviceTokenResult {
-  readonly id: DeviceTokenId;
-  readonly systemId: SystemId;
-  readonly platform: DeviceTokenPlatform;
-  readonly tokenHash: string;
-  readonly lastActiveAt: UnixMillis | null;
-  readonly createdAt: UnixMillis;
-}
+import type {
+  DeviceTokenResult,
+  DeviceTokenId,
+  DeviceTokenPlatform,
+  SystemId,
+  UnixMillis,
+} from "@pluralscape/types";
 
 /** Hash a device token using BLAKE2b (same pattern as session tokens). */
 export function hashDeviceToken(token: string): string {
