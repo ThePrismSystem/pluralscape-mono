@@ -45,7 +45,8 @@
   "devDependencies": {
     "@pluralscape/eslint-config": "workspace:*",
     "@types/node": "^25.6.2",
-    "eslint": "catalog:"
+    "eslint": "catalog:",
+    "react": "catalog:"
   },
   "dependencies": {
     "@pluralscape/api-client": "workspace:*",

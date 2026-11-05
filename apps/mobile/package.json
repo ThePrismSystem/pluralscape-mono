@@ -14,8 +14,8 @@
     "clean": "rm -rf .expo dist"
   },
   "dependencies": {
-    "@expo/dom-webview": "~55.0.6",
-    "@expo/metro-runtime": "~55.0.11",
+    "@expo/dom-webview": "~56.0.6",
+    "@expo/metro-runtime": "~56.0.21",
     "@journeyapps/wa-sqlite": "^1.7.0",
     "@microsoft/fetch-event-source": "^2.0.1",
     "@pluralscape/api-client": "workspace:*",
@@ -31,27 +31,27 @@
     "@tanstack/react-query": "catalog:",
     "@trpc/client": "catalog:",
     "@trpc/react-query": "catalog:",
-    "expo": "~55.0.23",
-    "expo-constants": "^55.0.16",
-    "expo-document-picker": "~55.0.13",
-    "expo-font": "~55.0.7",
-    "expo-linking": "~55.0.15",
-    "expo-localization": "~55.0.13",
-    "expo-modules-core": "~55.0.25",
-    "expo-router": "~55.0.14",
-    "expo-secure-store": "~55.0.13",
-    "expo-sqlite": "~55.0.15",
+    "expo": "~56.0.24",
+    "expo-constants": "~56.0.27",
+    "expo-document-picker": "~56.0.4",
+    "expo-font": "~56.0.7",
+    "expo-linking": "~56.0.19",
+    "expo-localization": "~56.0.6",
+    "expo-modules-core": "~56.0.27",
+    "expo-router": "~56.2.22",
+    "expo-secure-store": "~56.0.4",
+    "expo-sqlite": "~56.0.6",
     "i18next-chained-backend": "^5.0.4",
     "i18next-http-backend": "^4.0.0",
     "jszip": "catalog:",
     "lucide-react-native": "catalog:",
-    "react": "^19.2.6",
+    "react": "catalog:",
     "react-dom": "catalog:",
     "react-native": "0.85.3",
-    "react-native-safe-area-context": "^5.7.0",
-    "react-native-screens": "~4.30.0",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0",
     "react-native-svg": "catalog:",
-    "react-native-web": "~0.21.2"
+    "react-native-web": "~0.21.0"
   },
   "devDependencies": {
     "@babel/core": "^7.29.0",
@@ -66,5 +66,13 @@
     "happy-dom": "catalog:",
     "typescript": "catalog:",
     "vitest-mock-extended": "^4.0.0"
+  },
+  "expo": {
+    "install": {
+      "exclude": [
+        "typescript",
+        "@react-native-async-storage/async-storage"
+      ]
+    }
   }
 }

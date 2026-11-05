@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { afterEach, describe, it, expect, vi } from "vitest";
 
 import { loadBundledNamespace, BUNDLED_LOCALES, BUNDLED_NAMESPACES } from "../index.js";
@@ -41,6 +43,16 @@ describe("bundled locale loader", () => {
   it("returns empty object for unknown locale (graceful)", async () => {
     const data = await loadBundledNamespace("xx-UNKNOWN", "common");
     expect(data).toEqual({});
+  });
+
+  it("does not treat Object prototype keys as locales or namespaces", async () => {
+    await expect(loadBundledNamespace("constructor", "common")).resolves.toEqual({});
+    await expect(loadBundledNamespace("en", "constructor")).resolves.toEqual({});
+  });
+
+  it("imports every file by a literal path, since Metro rejects computed imports", () => {
+    const source = readFileSync(new URL("../index.ts", import.meta.url), "utf8");
+    expect(source).not.toMatch(/\bimport\(\s*`/);
   });
 
   it("returns empty object for unknown namespace (graceful)", async () => {
