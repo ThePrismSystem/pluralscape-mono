@@ -91,12 +91,7 @@ async function computeChecksum(file: Blob | ArrayBuffer): Promise<string> {
 }
 
 type BlobUploadStatus =
-  | "idle"
-  | "requesting-url"
-  | "uploading"
-  | "confirming"
-  | "success"
-  | "error";
+  "idle" | "requesting-url" | "uploading" | "confirming" | "success" | "error";
 
 interface BlobUploadInput {
   readonly purpose: BlobPurpose;

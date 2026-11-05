@@ -44,8 +44,7 @@ describe("sqlite-client-cache round-trip", () => {
       .run("sys_round_trip_1", "Round-Trip System", "settings_round_trip_1", 1000, 1000, 0);
 
     const row = client.prepare("SELECT * FROM systems WHERE id = ?").get("sys_round_trip_1") as
-      | Record<string, unknown>
-      | undefined;
+      Record<string, unknown> | undefined;
     expect(row?.id).toBe("sys_round_trip_1");
     expect(row?.name).toBe("Round-Trip System");
     expect(row?.settings_id).toBe("settings_round_trip_1");
@@ -94,8 +93,7 @@ describe("sqlite-client-cache round-trip", () => {
       .run("opt_rt_1", "poll_rt", "Yes", null, "yes");
 
     const row = client.prepare("SELECT * FROM poll_options WHERE id = ?").get("opt_rt_1") as
-      | Record<string, unknown>
-      | undefined;
+      Record<string, unknown> | undefined;
     expect(row?.label).toBe("Yes");
     expect(row?.emoji).toBe("yes");
   });

@@ -126,8 +126,7 @@ interface UseRemoteListArgs<TRaw, TDecrypted> {
   readonly systemId: SystemId;
   readonly enabled: boolean;
   readonly select:
-    | ((data: InfiniteData<RawPage<TRaw>>) => InfiniteData<DecPage<TDecrypted>>)
-    | undefined;
+    ((data: InfiniteData<RawPage<TRaw>>) => InfiniteData<DecPage<TDecrypted>>) | undefined;
 }
 
 interface OfflineFirstInfiniteQueryConfigBase<TRaw, TDecrypted> {

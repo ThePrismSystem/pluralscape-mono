@@ -198,8 +198,7 @@ describe("key-rotation progress/retry/lifecycle (PGlite integration)", () => {
       // should be reset; the 2 completed items must stay untouched.
       const seedItem = async (
         status:
-          | (typeof ROTATION_ITEM_STATUSES)["completed"]
-          | (typeof ROTATION_ITEM_STATUSES)["failed"],
+          (typeof ROTATION_ITEM_STATUSES)["completed"] | (typeof ROTATION_ITEM_STATUSES)["failed"],
         completedAt: UnixMillis | null,
       ): Promise<BucketRotationItemId> => {
         const itemId = brandId<BucketRotationItemId>(`bri_${crypto.randomUUID()}`);

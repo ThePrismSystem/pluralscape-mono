@@ -18,12 +18,7 @@ import type { z } from "zod";
 
 /** BullMQ-side state names, mapped from our {@link JobStatus} discriminated union. */
 export type BullMQJobState =
-  | "waiting"
-  | "active"
-  | "completed"
-  | "failed"
-  | "delayed"
-  | "prioritized";
+  "waiting" | "active" | "completed" | "failed" | "delayed" | "prioritized";
 
 /**
  * Render a Zod error as a compact, operator-readable summary: one

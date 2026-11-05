@@ -47,8 +47,7 @@ vi.mock("@pluralscape/api-client/trpc", async () => {
               rq.useMutation({
                 mutationFn: () => Promise.resolve({}),
                 onSuccess: opts.onSuccess as
-                  | ((data: unknown, variables: unknown) => void)
-                  | undefined,
+                  ((data: unknown, variables: unknown) => void) | undefined,
               }),
           },
           profileStep: {
@@ -56,8 +55,7 @@ vi.mock("@pluralscape/api-client/trpc", async () => {
               rq.useMutation({
                 mutationFn: () => Promise.resolve({}),
                 onSuccess: opts.onSuccess as
-                  | ((data: unknown, variables: unknown) => void)
-                  | undefined,
+                  ((data: unknown, variables: unknown) => void) | undefined,
               }),
           },
           complete: {
@@ -65,8 +63,7 @@ vi.mock("@pluralscape/api-client/trpc", async () => {
               rq.useMutation({
                 mutationFn: () => Promise.resolve({}),
                 onSuccess: opts.onSuccess as
-                  | ((data: unknown, variables: unknown) => void)
-                  | undefined,
+                  ((data: unknown, variables: unknown) => void) | undefined,
               }),
           },
         },

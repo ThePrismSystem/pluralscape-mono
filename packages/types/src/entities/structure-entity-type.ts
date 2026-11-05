@@ -8,13 +8,7 @@ import type { StructureVisualProps } from "./structure-entity.js";
 
 /** Well-known architectural patterns for a system's internal structure. */
 export type KnownArchitectureType =
-  | "orbital"
-  | "spectrum"
-  | "median"
-  | "age-sliding"
-  | "webbed"
-  | "unknown"
-  | "fluid";
+  "orbital" | "spectrum" | "median" | "age-sliding" | "webbed" | "unknown" | "fluid";
 
 /** Architecture type — either a well-known pattern or a user-defined custom type. */
 export type ArchitectureType =
@@ -39,11 +33,7 @@ export interface SystemStructureEntityType extends AuditMetadata, StructureVisua
  * - `SystemStructureEntityTypeServerMetadata` (derived via `Omit`)
  */
 export type SystemStructureEntityTypeEncryptedFields =
-  | "name"
-  | "description"
-  | "color"
-  | "imageSource"
-  | "emoji";
+  "name" | "description" | "color" | "imageSource" | "emoji";
 
 // ── Canonical chain (see ADR-023) ────────────────────────────────────
 // SystemStructureEntityTypeEncryptedInput → SystemStructureEntityTypeServerMetadata

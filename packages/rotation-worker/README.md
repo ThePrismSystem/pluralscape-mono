@@ -86,9 +86,7 @@ import type {
 } from "@pluralscape/rotation-worker";
 
 // Implement RotationApiClient using your app's HTTP layer
-const apiClient: RotationApiClient = {
-  /* ... */
-};
+const apiClient: RotationApiClient = {/* ... */};
 
 // Provide the platform's libsodium binding for key zeroing
 const sodium: RotationSodium = {

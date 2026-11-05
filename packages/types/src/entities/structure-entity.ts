@@ -14,12 +14,7 @@ import type { ArchitectureType } from "./structure-entity-type.js";
 
 /** How a member or the system itself originated. */
 export type OriginType =
-  | "traumagenic"
-  | "endogenic"
-  | "mixed-origin"
-  | "quoigenic"
-  | "prefer-not-to-say"
-  | "custom";
+  "traumagenic" | "endogenic" | "mixed-origin" | "quoigenic" | "prefer-not-to-say" | "custom";
 
 /** How much of the system has been discovered or mapped. */
 export type DiscoveryStatus = "fully-mapped" | "partially-mapped" | "unknown";
@@ -58,11 +53,7 @@ export interface SystemStructureEntity extends AuditMetadata, StructureVisualPro
  * - `SystemStructureEntityServerMetadata` (derived via `Omit`)
  */
 export type SystemStructureEntityEncryptedFields =
-  | "name"
-  | "description"
-  | "color"
-  | "imageSource"
-  | "emoji";
+  "name" | "description" | "color" | "imageSource" | "emoji";
 
 // ── Canonical chain (see ADR-023) ────────────────────────────────────
 // SystemStructureEntityEncryptedInput → SystemStructureEntityServerMetadata

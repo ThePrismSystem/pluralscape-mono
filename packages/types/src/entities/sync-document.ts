@@ -4,13 +4,7 @@ import type { Serialize } from "../type-assertions.js";
 
 /** Sync document types matching the document topology spec. */
 export type SyncDocumentType =
-  | "system-core"
-  | "fronting"
-  | "chat"
-  | "journal"
-  | "note"
-  | "privacy-config"
-  | "bucket";
+  "system-core" | "fronting" | "chat" | "journal" | "note" | "privacy-config" | "bucket";
 
 /** Which encryption key tier a document uses. */
 export type DocumentKeyType = "derived" | "bucket";

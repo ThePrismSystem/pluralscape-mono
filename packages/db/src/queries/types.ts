@@ -11,8 +11,7 @@ export const MS_PER_DAY = 86_400_000;
  */
 export function extractDeletedCount(
   result:
-    | ReadonlyArray<{ deleted_count: string }>
-    | { rows: ReadonlyArray<{ deleted_count: string }> },
+    ReadonlyArray<{ deleted_count: string }> | { rows: ReadonlyArray<{ deleted_count: string }> },
 ): CleanupResult {
   const rows = "rows" in result ? result.rows : result;
   return { deletedCount: Number(rows[0]?.deleted_count ?? 0) };

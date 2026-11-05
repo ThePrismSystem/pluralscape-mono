@@ -22,8 +22,8 @@ function createMockDriver(): SqliteDriver {
   return {
     exec: vi.fn((): Promise<void> => Promise.resolve()),
     prepare: vi.fn(() => stmt) as SqliteDriver["prepare"],
-    transaction: vi.fn(
-      <T,>(fn: () => Promise<T>): Promise<T> => fn(),
+    transaction: vi.fn(<T,>(fn: () => Promise<T>): Promise<T> =>
+      fn(),
     ) as SqliteDriver["transaction"],
     close: vi.fn((): Promise<void> => Promise.resolve()),
   };
@@ -127,9 +127,8 @@ describe("DataLayerProvider", () => {
 
   it("emits data:error when local database initialize() rejects", async () => {
     const initError = new Error("WAL pragma failed");
-    mockDriver.exec = vi.fn(
-      (sql: string): Promise<void> =>
-        sql.includes("journal_mode=WAL") ? Promise.reject(initError) : Promise.resolve(),
+    mockDriver.exec = vi.fn((sql: string): Promise<void> =>
+      sql.includes("journal_mode=WAL") ? Promise.reject(initError) : Promise.resolve(),
     );
 
     const emitted: DataErrorEvent[] = [];

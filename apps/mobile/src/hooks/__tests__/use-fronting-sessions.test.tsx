@@ -91,11 +91,9 @@ vi.mock("@pluralscape/api-client/trpc", async () => {
               mutationFn: () => Promise.resolve({}),
               onMutate: opts.onMutate as ((variables: unknown) => Promise<unknown>) | undefined,
               onError: opts.onError as
-                | ((err: unknown, variables: unknown, context: unknown) => void)
-                | undefined,
+                ((err: unknown, variables: unknown, context: unknown) => void) | undefined,
               onSettled: opts.onSettled as
-                | ((data: unknown, err: unknown, variables: unknown) => void)
-                | undefined,
+                ((data: unknown, err: unknown, variables: unknown) => void) | undefined,
             }),
         },
         update: {
@@ -103,8 +101,7 @@ vi.mock("@pluralscape/api-client/trpc", async () => {
             rq.useMutation({
               mutationFn: () => Promise.resolve({}),
               onSuccess: opts.onSuccess as
-                | ((data: unknown, variables: unknown) => void)
-                | undefined,
+                ((data: unknown, variables: unknown) => void) | undefined,
             }),
         },
       },

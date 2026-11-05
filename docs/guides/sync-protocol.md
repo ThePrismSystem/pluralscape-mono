@@ -220,9 +220,7 @@ The server computes catch-up data per document and responds with:
   "catchup": [
     {
       "docId": "system-core-sys_abc",
-      "changes": [
-        /* envelopes with seq 39..42 */
-      ],
+      "changes": [/* envelopes with seq 39..42 */],
       "snapshot": null
     }
   ],

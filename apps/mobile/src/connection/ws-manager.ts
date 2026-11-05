@@ -15,11 +15,7 @@ const JITTER_MAX = 1.25;
 // ── Types ─────────────────────────────────────────────────────────────
 
 export type ConnectionStatus =
-  | "disconnected"
-  | "connecting"
-  | "connected"
-  | "backoff"
-  | "reconnecting";
+  "disconnected" | "connecting" | "connected" | "backoff" | "reconnecting";
 
 export interface WsManagerConfig {
   readonly url: string;

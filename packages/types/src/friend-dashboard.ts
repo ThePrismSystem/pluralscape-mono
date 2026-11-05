@@ -81,10 +81,7 @@ export interface FriendAccessContext {
 
 /** Entity types that can appear in a friend dashboard sync entry. */
 export type FriendDashboardEntityType =
-  | "member"
-  | "custom-front"
-  | "structure-entity"
-  | "fronting-session";
+  "member" | "custom-front" | "structure-entity" | "fronting-session";
 
 /** Per-entity-type sync state entry for incremental friend dashboard sync. */
 export interface FriendDashboardSyncEntry {
