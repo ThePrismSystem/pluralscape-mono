@@ -1,11 +1,7 @@
 import type { SystemId } from "@pluralscape/types";
 
 export type ConnectionState =
-  | "disconnected"
-  | "connecting"
-  | "connected"
-  | "backoff"
-  | "reconnecting";
+  "disconnected" | "connecting" | "connected" | "backoff" | "reconnecting";
 
 export interface ConnectionConfig {
   readonly baseUrl: string;

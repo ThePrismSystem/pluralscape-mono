@@ -22,9 +22,8 @@ export interface MappedSystemSettings {
 
 export function mapSystemSettings(
   sp: SPPrivate,
-  ctx: MappingContext,
+  _ctx: MappingContext,
 ): MapperResult<MappedSystemSettings> {
-  void ctx;
   const payload: MappedSystemSettings = {
     locale: sp.locale ?? null,
     frontingNotificationsEnabled: sp.frontNotifs ?? false,

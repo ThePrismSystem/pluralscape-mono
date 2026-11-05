@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("hono/bun", () => ({
+vi.mock("@hono/bun", () => ({
   getConnInfo: vi.fn(() => ({ remote: { address: "127.0.0.1" } })),
 }));
 vi.mock("../../ws/bun-adapter.js", () => ({

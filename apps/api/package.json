@@ -18,6 +18,7 @@
     "trpc:parity": "tsx scripts/check-trpc-parity.ts"
   },
   "dependencies": {
+    "@hono/bun": "^1.0.1",
     "@hono/node-server": "^2.0.2",
     "@pluralscape/crypto": "workspace:*",
     "@pluralscape/db": "workspace:*",

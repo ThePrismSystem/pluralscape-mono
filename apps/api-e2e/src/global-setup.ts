@@ -138,7 +138,7 @@ function ensureMinioContainer(): boolean {
       `-p ${String(MINIO_PORT)}:9000`,
       `-e MINIO_ROOT_USER=${MINIO_ROOT_USER}`,
       `-e MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}`,
-      "minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e server /data",
+      "pgsty/minio:RELEASE.2026-08-04T00-00-00Z@sha256:b6bfe7239bfc83fb90d31612d9704d86039dd714f7904b3f1ad68f211e602372 server /data",
     ].join(" "),
     { stdio: "pipe" },
   );

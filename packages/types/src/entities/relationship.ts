@@ -59,12 +59,11 @@ export type RelationshipEncryptedFields = "label";
 // when an entity diverges from the standard pattern.
 
 /**
- * Distributive Pick over the union — `{ label: string }` for the custom
- * variant, `{}` for standard variants (which carry no label key at all).
+ * `{ label: string }` for the custom variant; an empty object for standard
+ * variants, which carry no encrypted keys at all.
  */
-export type RelationshipEncryptedInput = Relationship extends unknown
-  ? Pick<Relationship, Extract<keyof Relationship, RelationshipEncryptedFields>>
-  : never;
+export type RelationshipEncryptedInput =
+  Pick<CustomRelationship, RelationshipEncryptedFields> | Readonly<Record<string, never>>;
 
 export type ArchivedRelationship = Archived<Relationship>;
 

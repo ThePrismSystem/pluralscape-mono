@@ -32,8 +32,9 @@ export const CustomRelationshipEncryptedSchema = z.object({ label: z.string() })
 export const StandardRelationshipEncryptedSchema = z.object({}).strict().readonly();
 
 /**
- * Union of both encrypted-input schemas. `z.infer` yields `{ label: string } | {}`,
- * matching the distributive `RelationshipEncryptedInput` canonical type.
+ * Union of both encrypted-input schemas. `z.infer` yields
+ * `{ label: string } | Record<string, never>`, matching the canonical
+ * `RelationshipEncryptedInput` type.
  * Zod compile-time parity checked in `__tests__/type-parity/relationship.type.test.ts`.
  */
 export const RelationshipEncryptedInputSchema = z.union([

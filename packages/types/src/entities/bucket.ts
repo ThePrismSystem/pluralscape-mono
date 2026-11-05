@@ -2,7 +2,7 @@ import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { BucketId, EntityTypeIdMap, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
-import type { Serialize } from "../type-assertions.js";
+import type { Assert, Serialize } from "../type-assertions.js";
 import type { Archived, AuditMetadata } from "../utility.js";
 
 /** A privacy bucket — a named container for access-controlled content. */
@@ -143,13 +143,12 @@ export type TaggedEntityRef = {
 // Compile-time check: every BucketContentEntityType variant must appear as a
 // key in EntityTypeIdMap. Adding a new tag-eligible entity to the union
 // without a matching EntityTypeIdMap entry is a type error here.
-type _AssertBucketContentEntityTypesMapped = {
+type _BucketContentEntityTypesMapped = {
   [K in BucketContentEntityType]: K extends keyof EntityTypeIdMap
     ? true
     : `Missing EntityTypeIdMap entry for "${K}"`;
 }[BucketContentEntityType];
-const _ASSERT_BUCKET_CONTENT_ENTITY_TYPES_MAPPED: _AssertBucketContentEntityTypesMapped = true;
-void _ASSERT_BUCKET_CONTENT_ENTITY_TYPES_MAPPED;
+export type _BucketContentEntityTypesMappedGuard = Assert<_BucketContentEntityTypesMapped>;
 
 /**
  * Tags an entity as belonging to a privacy bucket.

@@ -9,12 +9,7 @@ export type EncryptionTier = 1 | 2;
 
 /** The intended purpose of a blob. */
 export type BlobPurpose =
-  | "avatar"
-  | "member-photo"
-  | "journal-image"
-  | "attachment"
-  | "export"
-  | "littles-safe-mode";
+  "avatar" | "member-photo" | "journal-image" | "attachment" | "export" | "littles-safe-mode";
 
 /**
  * Metadata about a stored blob.

@@ -62,8 +62,7 @@ vi.mock("@pluralscape/api-client/trpc", async () => {
             rq.useMutation({
               mutationFn: () => Promise.resolve({}),
               onSuccess: opts.onSuccess as
-                | ((data: unknown, variables: unknown) => void)
-                | undefined,
+                ((data: unknown, variables: unknown) => void) | undefined,
             }),
         },
         archive: {
@@ -71,8 +70,7 @@ vi.mock("@pluralscape/api-client/trpc", async () => {
             rq.useMutation({
               mutationFn: () => Promise.resolve({}),
               onSuccess: opts.onSuccess as
-                | ((data: unknown, variables: unknown) => void)
-                | undefined,
+                ((data: unknown, variables: unknown) => void) | undefined,
             }),
         },
         duplicate: {
@@ -80,8 +78,7 @@ vi.mock("@pluralscape/api-client/trpc", async () => {
             rq.useMutation({
               mutationFn: () => Promise.resolve({}),
               onSuccess: opts.onSuccess as
-                | ((data: unknown, variables: unknown) => void)
-                | undefined,
+                ((data: unknown, variables: unknown) => void) | undefined,
             }),
         },
         purge: {

@@ -33,11 +33,12 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../lib/notification-pubsub.js", () => ({
   getNotificationPubSub: vi.fn(() => mockPubSub),
 }));
+const { loggerWarnMock } = vi.hoisted(() => ({ loggerWarnMock: vi.fn() }));
 vi.mock("../../../lib/logger.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../lib/logger.js")>();
   const mock = {
     info: vi.fn(),
-    warn: vi.fn(),
+    warn: loggerWarnMock,
     error: vi.fn(),
     debug: vi.fn(),
   };
@@ -51,7 +52,6 @@ vi.mock("../../../lib/logger.js", async (importOriginal) => {
 
 const { notificationsRoutes, _resetSseStateForTesting, _addMockStreamForTesting } =
   await import("../../../routes/notifications/stream.js");
-const { logger } = await import("../../../lib/logger.js");
 const { SseEventBuffer } = await import("../../../lib/sse-manager.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -102,7 +102,7 @@ describe("GET /notifications/stream", () => {
   it("logs warning once when no pub/sub configured", async () => {
     const app = createApp();
     await app.request("/notifications/stream");
-    expect(vi.mocked(logger)["warn"]).toHaveBeenCalledWith(
+    expect(loggerWarnMock).toHaveBeenCalledWith(
       "SSE: no pub/sub configured, stream will only receive heartbeats",
     );
   });
@@ -151,7 +151,7 @@ describe("GET /notifications/stream", () => {
 
       capturedSubscribeHandler("not valid json {{{");
 
-      expect(vi.mocked(logger)["warn"]).toHaveBeenCalledWith(
+      expect(loggerWarnMock).toHaveBeenCalledWith(
         "SSE: malformed Valkey message",
         expect.objectContaining({ channel: expect.any(String) }),
       );

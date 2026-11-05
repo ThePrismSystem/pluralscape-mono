@@ -138,7 +138,7 @@ describe("pwhash-offload", () => {
       const p1 = hashPinOffload("1111");
       expect(mockWorkers).toHaveLength(2);
 
-      const { worker: crashedWorker, sentMsg: msg1 } = findDispatchedWorker();
+      const { worker: crashedWorker } = findDispatchedWorker();
 
       // Identify the sibling worker (the one that did NOT receive p1).
       const siblingWorker = mockWorkers.find((w) => w !== crashedWorker);
@@ -148,7 +148,7 @@ describe("pwhash-offload", () => {
       getHandler(crashedWorker, "error")(new Error("Worker crashed"));
       await expect(p1).rejects.toThrow("Worker crashed");
 
-      // Verify msg1 was consumed so findDispatchedWorker works for p2.
+      // Clear p1's dispatch record so findDispatchedWorker works for p2.
       crashedWorker.postMessage.mockClear();
 
       // The sibling worker is unaffected — it can still accept and resolve a request.
@@ -157,9 +157,6 @@ describe("pwhash-offload", () => {
       // p2 should be on one of the workers (may be either due to round-robin).
       getHandler(w2, "message")({ id: msg2["id"], ok: true, value: "hash-2222" });
       await expect(p2).resolves.toBe("hash-2222");
-
-      // Suppress unused-variable lint; msg1 id was consumed by the error path.
-      void msg1;
     });
   });
 

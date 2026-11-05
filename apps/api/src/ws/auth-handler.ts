@@ -11,8 +11,7 @@ import type { AuthenticateRequest, AuthenticateResponse, SyncError } from "@plur
 
 /** Result of handling an AuthenticateRequest. */
 export type AuthResult =
-  | { ok: true; response: AuthenticateResponse }
-  | { ok: false; error: SyncError; closeCode: number };
+  { ok: true; response: AuthenticateResponse } | { ok: false; error: SyncError; closeCode: number };
 
 /**
  * Handle an AuthenticateRequest message.

@@ -20,8 +20,8 @@ function makeDb(rows: Record<string, unknown>[] = []): DbFixture {
     queryAll: queryAllMock,
     queryOne: vi.fn().mockResolvedValue(undefined),
     execute: vi.fn(() => Promise.resolve()),
-    transaction: vi.fn(
-      <T>(fn: () => Promise<T>): Promise<T> => fn(),
+    transaction: vi.fn(<T>(fn: () => Promise<T>): Promise<T> =>
+      fn(),
     ) as LocalDatabase["transaction"],
     close: vi.fn(() => Promise.resolve()),
   };
@@ -179,8 +179,8 @@ describe("executeSearch", () => {
         queryAll: queryAllMock,
         queryOne: vi.fn(() => Promise.resolve(undefined)),
         execute: vi.fn(() => Promise.resolve()),
-        transaction: vi.fn(
-          <T>(fn: () => Promise<T>): Promise<T> => fn(),
+        transaction: vi.fn(<T>(fn: () => Promise<T>): Promise<T> =>
+          fn(),
         ) as LocalDatabase["transaction"],
         close: vi.fn(() => Promise.resolve()),
       };

@@ -398,10 +398,8 @@ export async function routeMessage(
     case "DocumentLoadRequest":
       await handleDocumentLoadRequestCase(parsed, state, log, ctx, HELPERS);
       return;
-    default: {
+    default:
       // Compile-time enforcement: all ClientMessageType values handled.
-      const _exhaustive: never = messageType;
-      void _exhaustive;
-    }
+      return messageType satisfies never;
   }
 }

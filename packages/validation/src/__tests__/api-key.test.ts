@@ -141,7 +141,6 @@ describe("CreateApiKeyBodySchema", () => {
 
   it("rejects keyType=crypto without encryptedKeyMaterial", () => {
     const { encryptedKeyMaterial: _omitted, ...withoutKeyMaterial } = validCryptoBody;
-    void _omitted;
     const result = CreateApiKeyBodySchema.safeParse(withoutKeyMaterial);
     expect(result.success).toBe(false);
   });

@@ -94,7 +94,7 @@ export class BullMQJobWorker extends BaseJobWorker {
 
     let bullmqJob: BullMQJob | undefined;
     try {
-      bullmqJob = (await this.worker.getNextJob(this.token)) as BullMQJob | undefined;
+      bullmqJob = await this.worker.getNextJob(this.token);
       this.handlePollSuccess();
     } catch (err) {
       this.handlePollFailure(err);

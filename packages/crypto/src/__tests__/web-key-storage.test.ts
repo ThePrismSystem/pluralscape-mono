@@ -72,7 +72,6 @@ describe("store / retrieve", () => {
 describe("overwrite memzeros old value", () => {
   it("memzeros the old bytes when overwriting an existing key", async () => {
     const key1 = getSodium().randomBytes(32);
-    const key1Copy = new Uint8Array(key1); // copy before storage takes it
     await storage.store("key-1", key1);
 
     const sodium = getSodium();
@@ -81,7 +80,6 @@ describe("overwrite memzeros old value", () => {
     // The stored copy should have been zeroed — check that memzero was called
     expect(memzeroSpy).toHaveBeenCalledTimes(1);
     memzeroSpy.mockRestore();
-    void key1Copy; // suppress unused warning
   });
 });
 

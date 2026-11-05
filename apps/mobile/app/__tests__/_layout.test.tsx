@@ -69,9 +69,7 @@ const { mockCreateChainedBackend } = vi.hoisted(() => ({
 }));
 
 const mockLoadBundledNamespace = vi.fn(
-  (locale: string, namespace: string): Promise<Readonly<Record<string, string>>> => {
-    void locale;
-    void namespace;
+  (_locale: string, _namespace: string): Promise<Readonly<Record<string, string>>> => {
     return Promise.resolve({});
   },
 );

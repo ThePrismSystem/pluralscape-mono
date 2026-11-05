@@ -40,7 +40,7 @@ vi.mock("../../ws/bun-adapter.js", () => ({
   websocket: { open: vi.fn(), close: vi.fn(), message: vi.fn() },
 }));
 
-vi.mock("hono/bun", () => ({
+vi.mock("@hono/bun", () => ({
   getConnInfo: vi.fn(() => ({ remote: { address: "127.0.0.1" } })),
 }));
 
@@ -280,14 +280,13 @@ describe("WS entry point lifecycle", () => {
   describe("upgrade safety timeout", () => {
     it("releases unauth slot when onOpen never fires", () => {
       const countBefore = connectionManager.unauthenticatedCount;
-      const handler = createConnectionHandler();
+      createConnectionHandler();
       expect(connectionManager.unauthenticatedCount).toBe(countBefore + 1);
 
       // Advance past upgrade safety timeout without calling onOpen
       vi.advanceTimersByTime(WS_UPGRADE_SAFETY_TIMEOUT_MS + 1);
 
       expect(connectionManager.unauthenticatedCount).toBe(countBefore);
-      void handler;
     });
   });
 });

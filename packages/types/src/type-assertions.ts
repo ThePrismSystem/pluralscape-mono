@@ -60,12 +60,14 @@ export type Serialize<T> = T extends Date
                 ? Serialize<U>[]
                 : T extends object
                   ? {
-                      [K in keyof T as Extract<
-                        T[K],
-                        { readonly [__serverInternal]: true }
-                      > extends never
-                        ? K
-                        : never]: Serialize<T[K]>;
+                      [
+                        K in keyof T as Extract<
+                          T[K],
+                          { readonly [__serverInternal]: true }
+                        > extends never
+                          ? K
+                          : never
+                      ]: Serialize<T[K]>;
                     }
                   : T;
 

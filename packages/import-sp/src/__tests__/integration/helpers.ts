@@ -103,11 +103,10 @@ export function createApiSource(
 /** Create a file-backed import source from a seeded export fixture. */
 export async function createFileSource(
   mode: "minimal" | "adversarial",
-  manifest: Manifest,
-): Promise<ImportDataSource> {
   // File source does not need the manifest, but the factory signature is
   // shared with `createApiSource` which does — accept and ignore it.
-  void manifest;
+  _manifest: Manifest,
+): Promise<ImportDataSource> {
   const filePath = path.join(MONOREPO_ROOT, `scripts/.sp-test-${mode}-export.json`);
   const contents = await readFile(filePath);
   const stream = new ReadableStream<Uint8Array>({

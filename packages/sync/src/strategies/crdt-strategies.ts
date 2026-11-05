@@ -8,11 +8,7 @@
  * singleton-lww: CrdtEntity at document root   — single instance, LWW per field
  */
 export type CrdtStorageType =
-  | "lww-map"
-  | "append-only"
-  | "append-lww"
-  | "junction-map"
-  | "singleton-lww";
+  "lww-map" | "append-only" | "append-lww" | "junction-map" | "singleton-lww";
 
 import type { SyncDocumentType } from "../document-types.js";
 

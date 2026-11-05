@@ -7030,12 +7030,7 @@ export interface components {
      * @enum {string}
      */
     BlobPurpose:
-      | "avatar"
-      | "member-photo"
-      | "journal-image"
-      | "attachment"
-      | "export"
-      | "littles-safe-mode";
+      "avatar" | "member-photo" | "journal-image" | "attachment" | "export" | "littles-safe-mode";
     CreateUploadUrlRequest: {
       purpose: components["schemas"]["BlobPurpose"];
       /**
@@ -8967,8 +8962,7 @@ export interface components {
       recoverable: boolean;
     };
     ImportError:
-      | components["schemas"]["ImportErrorNonFatal"]
-      | components["schemas"]["ImportErrorFatal"];
+      components["schemas"]["ImportErrorNonFatal"] | components["schemas"]["ImportErrorFatal"];
     /** @enum {string} */
     ImportAvatarMode: "api" | "zip" | "skip";
     ImportCollectionTotals: {
@@ -15211,12 +15205,7 @@ export interface operations {
       query?: {
         /** @description Date range preset */
         preset?:
-          | "last-7-days"
-          | "last-30-days"
-          | "last-90-days"
-          | "last-year"
-          | "all-time"
-          | "custom";
+          "last-7-days" | "last-30-days" | "last-90-days" | "last-year" | "all-time" | "custom";
         /** @description Custom range start (Unix milliseconds). Required when preset is `custom`. */
         startDate?: number;
         /** @description Custom range end (Unix milliseconds). Required when preset is `custom`. */
@@ -15265,12 +15254,7 @@ export interface operations {
     parameters: {
       query?: {
         preset?:
-          | "last-7-days"
-          | "last-30-days"
-          | "last-90-days"
-          | "last-year"
-          | "all-time"
-          | "custom";
+          "last-7-days" | "last-30-days" | "last-90-days" | "last-year" | "all-time" | "custom";
         startDate?: number;
         endDate?: number;
       };

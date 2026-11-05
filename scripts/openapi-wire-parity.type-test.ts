@@ -86,8 +86,7 @@ import type {
   NoteWire,
   PollVoteWire,
   PollWire,
-  Relationship,
-  RelationshipEncryptedFields,
+  RelationshipEncryptedInput,
   Serialize,
   System,
   SystemEncryptedFields,
@@ -389,13 +388,8 @@ expectTypeOf<
 expectTypeOf<
   Equal<
     components["schemas"]["PlaintextRelationship"],
-    // Distributive Pick — `{ label: string }` for custom, `{}` for standard.
-    // Matches `RelationshipEncryptedInput` (see packages/types/src/entities/relationship.ts).
-    Serialize<
-      Relationship extends unknown
-        ? Pick<Relationship, Extract<keyof Relationship, RelationshipEncryptedFields>>
-        : never
-    >
+    // `{ label: string }` for custom, an empty object for standard variants.
+    Serialize<RelationshipEncryptedInput>
   >
 >().toEqualTypeOf<true>();
 

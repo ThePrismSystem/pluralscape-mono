@@ -5,6 +5,7 @@ import { mockDb } from "../helpers/mock-db.js";
 
 import type { PushPayload, PushProvider } from "../../services/push-notification-worker.js";
 import type { AccountId, DeviceTokenId, DeviceTokenPlatform, SystemId } from "@pluralscape/types";
+import type { Mock } from "vitest";
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
@@ -38,10 +39,14 @@ vi.mock("drizzle-orm", async (importOriginal) => {
   };
 });
 
+const { loggerInfoMock, loggerWarnMock } = vi.hoisted(() => ({
+  loggerInfoMock: vi.fn(),
+  loggerWarnMock: vi.fn(),
+}));
 vi.mock("../../lib/logger.js", () => ({
   logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
+    info: loggerInfoMock,
+    warn: loggerWarnMock,
     error: vi.fn(),
     debug: vi.fn(),
   },
@@ -51,7 +56,6 @@ vi.mock("../../lib/logger.js", () => ({
 
 const { processPushNotification, StubPushProvider } =
   await import("../../services/push-notification-worker.js");
-const { logger } = await import("../../lib/logger.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -83,10 +87,9 @@ function makeJobPayload(overrides: Record<string, unknown> = {}): {
   };
 }
 
-function makeMockProvider(): PushProvider & { send: ReturnType<typeof vi.fn> } {
-  return {
-    send: vi.fn().mockResolvedValue(undefined),
-  };
+function makeMockProvider(): { provider: PushProvider; send: Mock<PushProvider["send"]> } {
+  const send = vi.fn<PushProvider["send"]>().mockResolvedValue(undefined);
+  return { provider: { send }, send };
 }
 
 // ── Tests ────────────────────────────────────────────────────────────
@@ -104,7 +107,7 @@ describe("push-notification-worker", () => {
 
       await stub.send(DEVICE_TOKEN_ID, PLATFORM, MOCK_PAYLOAD);
 
-      expect(vi.mocked(logger)["info"]).toHaveBeenCalledWith(
+      expect(loggerInfoMock).toHaveBeenCalledWith(
         "[push-worker] stub delivery",
         expect.objectContaining({
           platform: PLATFORM,
@@ -120,25 +123,25 @@ describe("push-notification-worker", () => {
   describe("processPushNotification", () => {
     it("delivers notification and updates lastActiveAt", async () => {
       const { db, chain } = mockDb();
-      const provider = makeMockProvider();
+      const { provider, send } = makeMockProvider();
       chain.limit.mockResolvedValueOnce([{ id: DEVICE_TOKEN_ID, revokedAt: null }]);
 
       await processPushNotification(db, makeJobPayload(), provider);
 
-      expect(provider.send).toHaveBeenCalledWith(DEVICE_TOKEN_ID, PLATFORM, MOCK_PAYLOAD);
+      expect(send).toHaveBeenCalledWith(DEVICE_TOKEN_ID, PLATFORM, MOCK_PAYLOAD);
       // Should update lastActiveAt
       expect(chain.set).toHaveBeenCalled();
     });
 
     it("skips delivery when device token not found", async () => {
       const { db, chain } = mockDb();
-      const provider = makeMockProvider();
+      const { provider, send } = makeMockProvider();
       chain.limit.mockResolvedValueOnce([]);
 
       await processPushNotification(db, makeJobPayload(), provider);
 
-      expect(provider.send).not.toHaveBeenCalled();
-      expect(vi.mocked(logger)["warn"]).toHaveBeenCalledWith(
+      expect(send).not.toHaveBeenCalled();
+      expect(loggerWarnMock).toHaveBeenCalledWith(
         "[push-worker] device token not found, skipping",
         expect.objectContaining({ deviceTokenId: DEVICE_TOKEN_ID }),
       );
@@ -146,13 +149,13 @@ describe("push-notification-worker", () => {
 
     it("skips delivery when device token is revoked", async () => {
       const { db, chain } = mockDb();
-      const provider = makeMockProvider();
+      const { provider, send } = makeMockProvider();
       chain.limit.mockResolvedValueOnce([{ id: DEVICE_TOKEN_ID, revokedAt: 500 }]);
 
       await processPushNotification(db, makeJobPayload(), provider);
 
-      expect(provider.send).not.toHaveBeenCalled();
-      expect(vi.mocked(logger)["warn"]).toHaveBeenCalledWith(
+      expect(send).not.toHaveBeenCalled();
+      expect(loggerWarnMock).toHaveBeenCalledWith(
         "[push-worker] device token revoked, skipping",
         expect.objectContaining({ deviceTokenId: DEVICE_TOKEN_ID }),
       );
@@ -160,9 +163,9 @@ describe("push-notification-worker", () => {
 
     it("propagates provider errors for queue retry", async () => {
       const { db, chain } = mockDb();
-      const provider = makeMockProvider();
+      const { provider, send } = makeMockProvider();
       const providerError = new Error("APNS delivery failed");
-      provider.send.mockRejectedValueOnce(providerError);
+      send.mockRejectedValueOnce(providerError);
       chain.limit.mockResolvedValueOnce([{ id: DEVICE_TOKEN_ID, revokedAt: null }]);
 
       await expect(processPushNotification(db, makeJobPayload(), provider)).rejects.toThrow(
@@ -177,7 +180,7 @@ describe("push-notification-worker", () => {
       // Should not throw — uses default stub provider
       await processPushNotification(db, makeJobPayload());
 
-      expect(vi.mocked(logger)["info"]).toHaveBeenCalledWith(
+      expect(loggerInfoMock).toHaveBeenCalledWith(
         "[push-worker] stub delivery",
         expect.any(Object),
       );

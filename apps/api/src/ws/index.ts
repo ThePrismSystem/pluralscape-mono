@@ -7,8 +7,8 @@
  * This module exports both the Hono sub-app (for route registration)
  * and the Bun WebSocket handler (for Bun.serve() wiring).
  */
+import { getConnInfo } from "@hono/bun";
 import { Hono } from "hono";
-import { getConnInfo } from "hono/bun";
 import { v7 as uuidv7 } from "uuid";
 
 import { env } from "../env.js";

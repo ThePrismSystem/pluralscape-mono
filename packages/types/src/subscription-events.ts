@@ -13,12 +13,7 @@ export interface MessageChangeEvent extends BaseChangeEvent<"message", MessageCh
 }
 
 export type BoardMessageChangeType =
-  | "created"
-  | "updated"
-  | "archived"
-  | "deleted"
-  | "pinned"
-  | "unpinned";
+  "created" | "updated" | "archived" | "deleted" | "pinned" | "unpinned";
 
 interface BoardMessageEntityEvent extends BaseChangeEvent<"boardMessage", BoardMessageChangeType> {
   readonly boardMessageId: BoardMessageId;
@@ -35,11 +30,7 @@ export interface PollChangeEvent extends BaseChangeEvent<"poll", PollChangeType>
 }
 
 export type AcknowledgementChangeType =
-  | "created"
-  | "updated"
-  | "confirmed"
-  | "archived"
-  | "deleted";
+  "created" | "updated" | "confirmed" | "archived" | "deleted";
 
 export interface AcknowledgementChangeEvent extends BaseChangeEvent<
   "acknowledgement",
@@ -49,7 +40,4 @@ export interface AcknowledgementChangeEvent extends BaseChangeEvent<
 }
 
 export type EntityChangeEvent =
-  | MessageChangeEvent
-  | BoardMessageChangeEvent
-  | PollChangeEvent
-  | AcknowledgementChangeEvent;
+  MessageChangeEvent | BoardMessageChangeEvent | PollChangeEvent | AcknowledgementChangeEvent;

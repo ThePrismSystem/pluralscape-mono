@@ -26,6 +26,16 @@
       "matchPackageNames": ["fast-xml-parser"],
       "allowedVersions": "~5.5.7",
       "description": "Pinned: 5.7.x rejects &#xD; entities in S3 XML responses, breaking @aws-sdk/xml-builder. Revisit when upstream regression is fixed."
+    },
+    {
+      "matchPackageNames": ["react", "react-dom", "@types/react", "@types/react-dom"],
+      "allowedVersions": "~19.2.0",
+      "description": "Held to the React line bundled by react-native 0.85 (Expo SDK 55). Bump together with react-native during an Expo SDK upgrade."
+    },
+    {
+      "matchPackageNames": ["react-native"],
+      "allowedVersions": "~0.85.0",
+      "description": "Held to the react-native version supported by Expo SDK 55. Bump during an Expo SDK upgrade."
     }
   ]
 }

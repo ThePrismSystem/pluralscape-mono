@@ -2,8 +2,7 @@ import type { ApiErrorCode } from "./api-constants/error-codes.js";
 
 /** Discriminated success/error union. */
 export type Result<T, E> =
-  | { readonly ok: true; readonly value: T }
-  | { readonly ok: false; readonly error: E };
+  { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: E };
 
 /** Structured API error. */
 export interface ApiError {

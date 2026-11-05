@@ -5,6 +5,8 @@ import {
   IMPORT_ENTITY_TYPES,
   IMPORT_JOB_STATUSES,
   IMPORT_SOURCES,
+  type Assert,
+  type Extends,
   type ImportError,
 } from "@pluralscape/types";
 import { z } from "zod/v4";
@@ -119,12 +121,11 @@ export const ImportJobQuerySchema = z
   })
   .readonly();
 
-// ── Compile-time parity guards ──────────────────────────────────────
-// These functions do nothing at runtime. Any drift between the Zod
-// schemas and the TypeScript domain types will fail typecheck here.
+// ── Compile-time parity guard ───────────────────────────────────────
+// Type-only. Any drift between the Zod schema and the TypeScript domain
+// type fails typecheck here: each must be assignable to the other.
 
-const _importErrorParity: (x: z.infer<typeof ImportErrorSchema>) => ImportError = (x) => x;
-const _importErrorParityReverse: (x: ImportError) => z.infer<typeof ImportErrorSchema> = (x) => x;
-
-void _importErrorParity;
-void _importErrorParityReverse;
+export type _ImportErrorParityGuard = [
+  Assert<Extends<z.infer<typeof ImportErrorSchema>, ImportError>>,
+  Assert<Extends<ImportError, z.infer<typeof ImportErrorSchema>>>,
+];

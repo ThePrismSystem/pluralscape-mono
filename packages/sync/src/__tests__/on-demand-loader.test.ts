@@ -195,26 +195,20 @@ class MockNetworkAdapter implements SyncNetworkAdapter {
   }
 
   submitChange(
-    docId: string,
-    change: Omit<EncryptedChangeEnvelope, "seq">,
+    _docId: string,
+    _change: Omit<EncryptedChangeEnvelope, "seq">,
   ): Promise<EncryptedChangeEnvelope> {
-    void docId;
-    void change;
     return Promise.reject(new Error("Not implemented in mock"));
   }
 
-  submitSnapshot(docId: string, snapshot: EncryptedSnapshotEnvelope): Promise<void> {
-    void docId;
-    void snapshot;
+  submitSnapshot(_docId: string, _snapshot: EncryptedSnapshotEnvelope): Promise<void> {
     return Promise.reject(new Error("Not implemented in mock"));
   }
 
   subscribe(
-    docId: string,
-    onChanges: (changes: readonly EncryptedChangeEnvelope[]) => void,
+    _docId: string,
+    _onChanges: (changes: readonly EncryptedChangeEnvelope[]) => void,
   ): SyncSubscription {
-    void docId;
-    void onChanges;
     return { unsubscribe: () => undefined };
   }
 

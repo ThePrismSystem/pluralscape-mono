@@ -7,7 +7,7 @@ vi.mock("../../../ws/bun-adapter.js", () => ({
   websocket: { open: vi.fn(), close: vi.fn(), message: vi.fn() },
 }));
 
-vi.mock("hono/bun", () => ({
+vi.mock("@hono/bun", () => ({
   getConnInfo: vi.fn(() => ({ remote: { address: "127.0.0.1" } })),
 }));
 

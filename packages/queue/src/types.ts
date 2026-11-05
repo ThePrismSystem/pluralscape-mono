@@ -35,5 +35,4 @@ export interface JobFilter {
 
 /** Result of checking whether a job with a given idempotency key already exists. */
 export type IdempotencyCheckResult =
-  | { readonly exists: false }
-  | { readonly exists: true; readonly existingJob: JobDefinition };
+  { readonly exists: false } | { readonly exists: true; readonly existingJob: JobDefinition };

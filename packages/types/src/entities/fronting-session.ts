@@ -63,10 +63,7 @@ export type FrontingSession = ActiveFrontingSession | CompletedFrontingSession;
  *   `FrontingSessionServerMetadata`.
  */
 export type FrontingSessionEncryptedFields =
-  | "comment"
-  | "positionality"
-  | "outtrigger"
-  | "outtriggerSentiment";
+  "comment" | "positionality" | "outtrigger" | "outtriggerSentiment";
 
 // ── Canonical chain (see ADR-023) ────────────────────────────────────
 // FrontingSessionEncryptedInput → FrontingSessionServerMetadata

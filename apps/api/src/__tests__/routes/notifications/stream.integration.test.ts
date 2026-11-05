@@ -39,11 +39,12 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../lib/notification-pubsub.js", () => ({
   getNotificationPubSub: vi.fn(() => mockPubSub),
 }));
+const { loggerWarnMock } = vi.hoisted(() => ({ loggerWarnMock: vi.fn() }));
 vi.mock("../../../lib/logger.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../lib/logger.js")>();
   return {
     ...actual,
-    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+    logger: { info: vi.fn(), warn: loggerWarnMock, error: vi.fn(), debug: vi.fn() },
   };
 });
 
@@ -202,13 +203,10 @@ describe("GET /notifications/stream (integration — real HTTP server)", () => {
   });
 
   it("only logs the no-pubsub warning once across multiple connections", async () => {
-    const { logger } = await import("../../../lib/logger.js");
-    const warnMock = vi.mocked(logger)["warn"];
-
     const { controller: c1, responsePromise: p1 } = openSse();
     await p1;
-    await waitFor(() => warnMock.mock.calls.length > 0);
-    const callsBefore = warnMock.mock.calls.length;
+    await waitFor(() => loggerWarnMock.mock.calls.length > 0);
+    const callsBefore = loggerWarnMock.mock.calls.length;
 
     // Second connection — noPubSubWarningLogged is already true, no new warn.
     // We wait out a bounded window polling on the negation: the warn counter
@@ -216,8 +214,8 @@ describe("GET /notifications/stream (integration — real HTTP server)", () => {
     // predicate has held for a quorum period, not merely once after any tick.
     const { controller: c2, responsePromise: p2 } = openSse();
     await p2;
-    await waitForStable(() => warnMock.mock.calls.length === callsBefore, 100);
-    const callsAfter = warnMock.mock.calls.length;
+    await waitForStable(() => loggerWarnMock.mock.calls.length === callsBefore, 100);
+    const callsAfter = loggerWarnMock.mock.calls.length;
 
     expect(callsAfter).toBe(callsBefore);
 

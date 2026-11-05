@@ -81,8 +81,8 @@ describe("createChainedBackend", () => {
   });
 
   it("serves bundled data when OTA fetch and cache both fail", async () => {
-    const loadBundled = vi.fn(
-      (): Promise<Readonly<Record<string, string>>> => Promise.resolve({ hello: "bundled" }),
+    const loadBundled = vi.fn((): Promise<Readonly<Record<string, string>>> =>
+      Promise.resolve({ hello: "bundled" }),
     );
     const backend = createChainedBackend({
       apiBaseUrl: "https://api.test",
@@ -97,13 +97,12 @@ describe("createChainedBackend", () => {
   it("uses fresh cache without hitting network", async () => {
     const fetchImpl = vi.fn<ChainedBackendFetch>();
     const cache = mockCache({
-      read: vi.fn(
-        (): Promise<CacheEntry | null> =>
-          Promise.resolve({
-            etag: asEtag("e"),
-            translations: { hello: "cached" },
-            fetchedAt: Date.now() - ONE_SECOND_MS,
-          }),
+      read: vi.fn((): Promise<CacheEntry | null> =>
+        Promise.resolve({
+          etag: asEtag("e"),
+          translations: { hello: "cached" },
+          fetchedAt: Date.now() - ONE_SECOND_MS,
+        }),
       ),
       isFresh: (): boolean => true,
     });
@@ -139,13 +138,12 @@ describe("createChainedBackend", () => {
 
   it("serves stale cache on 304", async () => {
     const cache = mockCache({
-      read: vi.fn(
-        (): Promise<CacheEntry | null> =>
-          Promise.resolve({
-            etag: asEtag("e"),
-            translations: { hello: "stale" },
-            fetchedAt: Date.now() - STALE_AGE_MS,
-          }),
+      read: vi.fn((): Promise<CacheEntry | null> =>
+        Promise.resolve({
+          etag: asEtag("e"),
+          translations: { hello: "stale" },
+          fetchedAt: Date.now() - STALE_AGE_MS,
+        }),
       ),
       isFresh: (): boolean => false,
     });
@@ -162,13 +160,12 @@ describe("createChainedBackend", () => {
 
   it("sends If-None-Match header when cached etag exists", async () => {
     const cache = mockCache({
-      read: vi.fn(
-        (): Promise<CacheEntry | null> =>
-          Promise.resolve({
-            etag: asEtag("abc123"),
-            translations: { hello: "stale" },
-            fetchedAt: Date.now() - STALE_AGE_MS,
-          }),
+      read: vi.fn((): Promise<CacheEntry | null> =>
+        Promise.resolve({
+          etag: asEtag("abc123"),
+          translations: { hello: "stale" },
+          fetchedAt: Date.now() - STALE_AGE_MS,
+        }),
       ),
       isFresh: (): boolean => false,
     });
@@ -190,13 +187,12 @@ describe("createChainedBackend", () => {
 
   it("falls back to cache when network fails with stale entry", async () => {
     const cache = mockCache({
-      read: vi.fn(
-        (): Promise<CacheEntry | null> =>
-          Promise.resolve({
-            etag: asEtag("e"),
-            translations: { hello: "stale-offline" },
-            fetchedAt: Date.now() - STALE_AGE_MS,
-          }),
+      read: vi.fn((): Promise<CacheEntry | null> =>
+        Promise.resolve({
+          etag: asEtag("e"),
+          translations: { hello: "stale-offline" },
+          fetchedAt: Date.now() - STALE_AGE_MS,
+        }),
       ),
       isFresh: (): boolean => false,
     });
@@ -227,13 +223,12 @@ describe("createChainedBackend", () => {
   it("warns when OTA fetch fails but cached data exists", async () => {
     const warnSpy = vi.spyOn(globalThis.console, "warn").mockImplementation(() => undefined);
     const cache = mockCache({
-      read: vi.fn(
-        (): Promise<CacheEntry | null> =>
-          Promise.resolve({
-            etag: asEtag("e"),
-            translations: { hello: "stale" },
-            fetchedAt: Date.now() - STALE_AGE_MS,
-          }),
+      read: vi.fn((): Promise<CacheEntry | null> =>
+        Promise.resolve({
+          etag: asEtag("e"),
+          translations: { hello: "stale" },
+          fetchedAt: Date.now() - STALE_AGE_MS,
+        }),
       ),
       isFresh: (): boolean => false,
     });
@@ -265,8 +260,8 @@ describe("createChainedBackend", () => {
       { status: 200, headers: { "Content-Type": "application/json", etag: '"abc"' } },
     );
     const fetchImpl: ChainedBackendFetch = () => Promise.resolve(malformedResponse);
-    const loadBundled = vi.fn(
-      (): Promise<Readonly<Record<string, string>>> => Promise.resolve({ fallback: "yes" }),
+    const loadBundled = vi.fn((): Promise<Readonly<Record<string, string>>> =>
+      Promise.resolve({ fallback: "yes" }),
     );
     const backend = createChainedBackend({
       apiBaseUrl: "http://example",
@@ -289,13 +284,12 @@ describe("createChainedBackend", () => {
     const originalFetchedAt = Date.now() - STALE_AGE_MS;
     const writeSpy = vi.fn<ChainedBackendCache["write"]>((): Promise<void> => Promise.resolve());
     const cache = mockCache({
-      read: vi.fn(
-        (): Promise<CacheEntry | null> =>
-          Promise.resolve({
-            etag: asEtag("e"),
-            translations: { hello: "stale" },
-            fetchedAt: originalFetchedAt,
-          }),
+      read: vi.fn((): Promise<CacheEntry | null> =>
+        Promise.resolve({
+          etag: asEtag("e"),
+          translations: { hello: "stale" },
+          fetchedAt: originalFetchedAt,
+        }),
       ),
       isFresh: (): boolean => false,
       write: writeSpy,

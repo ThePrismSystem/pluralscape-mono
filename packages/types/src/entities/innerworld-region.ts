@@ -29,12 +29,7 @@ export interface InnerWorldRegion extends AuditMetadata {
  * - `InnerWorldRegionServerMetadata` (derived via `Omit`)
  */
 export type InnerWorldRegionEncryptedFields =
-  | "name"
-  | "description"
-  | "visual"
-  | "boundaryData"
-  | "accessType"
-  | "gatekeeperMemberIds";
+  "name" | "description" | "visual" | "boundaryData" | "accessType" | "gatekeeperMemberIds";
 
 // ── Canonical chain (see ADR-023) ────────────────────────────────────
 // InnerWorldRegionEncryptedInput → InnerWorldRegionServerMetadata
