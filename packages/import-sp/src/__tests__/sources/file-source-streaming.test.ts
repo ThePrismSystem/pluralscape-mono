@@ -75,8 +75,8 @@ describe("file-source true streaming", () => {
       stream: streamFromChunks(textToChunks(payload, 4)),
     });
     await expect(async () => {
-      for await (const doc of source.iterate("members")) {
-        void doc;
+      for await (const _doc of source.iterate("members")) {
+        // Drain the iterator to surface the parse error.
       }
     }).rejects.toBeInstanceOf(FileSourceParseError);
   });
@@ -87,8 +87,8 @@ describe("file-source true streaming", () => {
       stream: streamFromChunks(textToChunks(payload, 8)),
     });
     await expect(async () => {
-      for await (const doc of source.iterate("members")) {
-        void doc;
+      for await (const _doc of source.iterate("members")) {
+        // Drain the iterator to surface the parse error.
       }
     }).rejects.toBeInstanceOf(FileSourceParseError);
   });
@@ -99,8 +99,8 @@ describe("file-source true streaming", () => {
       stream: streamFromChunks(textToChunks(payload, 10)),
     });
     await expect(async () => {
-      for await (const doc of source.iterate("members")) {
-        void doc;
+      for await (const _doc of source.iterate("members")) {
+        // Drain the iterator to surface the parse error.
       }
     }).rejects.toBeInstanceOf(FileSourceParseError);
   });

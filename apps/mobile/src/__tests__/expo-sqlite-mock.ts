@@ -42,8 +42,7 @@ function newResult<TRow>(rows: unknown[]): MockIterableResult<TRow> {
 function newDb(): MockDatabase {
   return {
     prepareSync: <TRow = Record<string, unknown>>(sql: string): MockStatement<TRow> => ({
-      executeSync: vi.fn((params?: SQLiteBindParams) => {
-        void params;
+      executeSync: vi.fn((_params?: SQLiteBindParams) => {
         return newResult<TRow>(queryRows.get(sql) ?? []);
       }),
       finalizeSync: vi.fn(),

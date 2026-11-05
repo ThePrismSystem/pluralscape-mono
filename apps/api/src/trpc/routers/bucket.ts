@@ -202,7 +202,6 @@ export const bucketRouter = router({
       // Strip systemId (carried on ctx) before forwarding the body — the
       // service's body parameter is `{ entityType, entityId }` only.
       const { bucketId, systemId: _systemId, ...body } = input;
-      void _systemId;
       await untagContent(ctx.db, ctx.systemId, bucketId, body, ctx.auth, audit);
       return { success: true as const };
     }),

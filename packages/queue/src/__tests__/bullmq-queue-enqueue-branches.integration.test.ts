@@ -120,7 +120,6 @@ describe.skipIf(!ctx.available)("BullMQJobQueue — enqueue/idempotency branch c
     tracking.activeQueues.push(q);
     // Spread without priority so the field is absent → hits the `?? 0` branch
     const { priority: _p, ...rest } = makeJobParams();
-    void _p;
     const job = await q.enqueue({ ...rest });
     expect(job.priority).toBe(0);
   });

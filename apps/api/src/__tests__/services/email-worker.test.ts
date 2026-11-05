@@ -31,21 +31,26 @@ vi.mock("../../lib/email-resolve.js", () => ({
   resolveAccountEmail: (...args: unknown[]) => mockResolveAccountEmail(args[0], args[1] as string),
 }));
 
-const mockAdapter: EmailAdapter & { send: ReturnType<typeof vi.fn> } = {
+const mockSend = vi.fn<(params: EmailSendParams) => Promise<EmailSendResult>>().mockResolvedValue({
+  messageId: "test-msg-1",
+});
+const mockAdapter: EmailAdapter = {
   providerName: "test",
-  send: vi.fn<(params: EmailSendParams) => Promise<EmailSendResult>>().mockResolvedValue({
-    messageId: "test-msg-1",
-  }),
+  send: mockSend,
 };
 
 vi.mock("../../lib/email.js", () => ({
   getEmailAdapter: () => mockAdapter,
 }));
 
+const { loggerInfoMock, loggerWarnMock } = vi.hoisted(() => ({
+  loggerInfoMock: vi.fn(),
+  loggerWarnMock: vi.fn(),
+}));
 vi.mock("../../lib/logger.js", () => ({
   logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
+    info: loggerInfoMock,
+    warn: loggerWarnMock,
     error: vi.fn(),
     debug: vi.fn(),
   },
@@ -54,7 +59,6 @@ vi.mock("../../lib/logger.js", () => ({
 // ── Imports after mocks ──────────────────────────────────────────────
 
 const { processEmailJob } = await import("../../services/email-worker.js");
-const { logger } = await import("../../lib/logger.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -90,7 +94,7 @@ function makeMalformedJobPayload(varsOverride: unknown): JobPayloadMap["email-se
 describe("email-worker", () => {
   afterEach(() => {
     mockResolveAccountEmail.mockReset();
-    mockAdapter.send.mockReset().mockResolvedValue({ messageId: "test-msg-1" });
+    mockSend.mockReset().mockResolvedValue({ messageId: "test-msg-1" });
   });
 
   describe("processEmailJob", () => {
@@ -101,7 +105,7 @@ describe("email-worker", () => {
       await processEmailJob(db, makeJobPayload());
 
       expect(mockResolveAccountEmail).toHaveBeenCalledWith(db, ACCOUNT_ID);
-      expect(mockAdapter.send).toHaveBeenCalledWith(
+      expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
           to: "user@example.com",
           subject: expect.any(String),
@@ -109,7 +113,7 @@ describe("email-worker", () => {
           text: expect.any(String),
         }),
       );
-      expect(vi.mocked(logger)["info"]).toHaveBeenCalledWith(
+      expect(loggerInfoMock).toHaveBeenCalledWith(
         "[email-worker] email sent",
         expect.objectContaining({
           accountId: ACCOUNT_ID,
@@ -125,8 +129,8 @@ describe("email-worker", () => {
 
       await processEmailJob(db, makeJobPayload());
 
-      expect(mockAdapter.send).not.toHaveBeenCalled();
-      expect(vi.mocked(logger)["warn"]).toHaveBeenCalledWith(
+      expect(mockSend).not.toHaveBeenCalled();
+      expect(loggerWarnMock).toHaveBeenCalledWith(
         "[email-worker] no email address found for account, skipping",
         expect.objectContaining({ accountId: ACCOUNT_ID }),
       );
@@ -136,7 +140,7 @@ describe("email-worker", () => {
       const { db } = mockDb();
       mockResolveAccountEmail.mockResolvedValueOnce("user@example.com");
       const deliveryError = new Error("SMTP connection refused");
-      mockAdapter.send.mockRejectedValueOnce(deliveryError);
+      mockSend.mockRejectedValueOnce(deliveryError);
 
       await expect(processEmailJob(db, makeJobPayload())).rejects.toThrow(
         "SMTP connection refused",
@@ -199,7 +203,7 @@ describe("email-worker", () => {
         }),
       );
 
-      expect(mockAdapter.send).toHaveBeenCalledWith(
+      expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
           to: "user@example.com",
           subject: expect.any(String),
@@ -224,7 +228,7 @@ describe("email-worker", () => {
       );
 
       expect(mockResolveAccountEmail).not.toHaveBeenCalled();
-      expect(mockAdapter.send).toHaveBeenCalledWith(
+      expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
           to: "old@example.com",
           subject: "Your Pluralscape account email was changed",
@@ -244,9 +248,7 @@ describe("email-worker", () => {
       );
 
       expect(mockResolveAccountEmail).toHaveBeenCalledWith(db, ACCOUNT_ID);
-      expect(mockAdapter.send).toHaveBeenCalledWith(
-        expect.objectContaining({ to: "user@example.com" }),
-      );
+      expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({ to: "user@example.com" }));
     });
   });
 });

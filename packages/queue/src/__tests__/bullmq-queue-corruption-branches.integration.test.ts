@@ -220,9 +220,9 @@ describe.skipIf(!ctx.available)("BullMQJobQueue — write-path corruption surfac
     tracking.activeQueues.push(q);
     if (redis === null) throw new Error("Valkey not available");
 
-    const jobA = await q.enqueue(makeJobParams({ type: "sync-push", timeoutMs: 1 }));
+    await q.enqueue(makeJobParams({ type: "sync-push", timeoutMs: 1 }));
     const jobB = await q.enqueue(makeJobParams({ type: "sync-push", timeoutMs: 1 }));
-    const jobC = await q.enqueue(makeJobParams({ type: "sync-push", timeoutMs: 1 }));
+    await q.enqueue(makeJobParams({ type: "sync-push", timeoutMs: 1 }));
 
     await dequeueOrFail(q);
     await dequeueOrFail(q);
@@ -230,12 +230,9 @@ describe.skipIf(!ctx.available)("BullMQJobQueue — write-path corruption surfac
 
     await corruptJobData(redis, q.name, jobB.id);
 
-    // Even though jobA and jobC parse cleanly and would be reported stalled,
-    // the first corrupt row short-circuits the sweep.
+    // Even though the jobs either side of jobB parse cleanly and would be
+    // reported stalled, the first corrupt row short-circuits the sweep.
     await expect(q.findStalledJobs()).rejects.toBeInstanceOf(QueueCorruptionError);
-
-    void jobA;
-    void jobC;
   });
 
   it("findStalledJobs skips a job whose stored status differs from running", async () => {

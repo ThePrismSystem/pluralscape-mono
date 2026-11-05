@@ -4,8 +4,9 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn(),
 }));
 
+const { loggerWarnMock } = vi.hoisted(() => ({ loggerWarnMock: vi.fn() }));
 vi.mock("../../../lib/logger.js", () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+  logger: { info: vi.fn(), warn: loggerWarnMock, error: vi.fn(), debug: vi.fn() },
 }));
 
 const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
@@ -38,17 +39,16 @@ describe("ipKeyExtractor", () => {
   it("logs a warning when falling back to global key", async () => {
     vi.resetModules();
     vi.mock("../../../lib/logger.js", () => ({
-      logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+      logger: { info: vi.fn(), warn: loggerWarnMock, error: vi.fn(), debug: vi.fn() },
     }));
     vi.mock("../../../middleware/rate-limit.js", () => ({
       checkRateLimit: vi.fn(),
     }));
-    const { logger } = await import("../../../lib/logger.js");
     const { ipKeyExtractor: freshExtractor } =
       await import("../../../trpc/middlewares/rate-limit.js");
 
     freshExtractor({ auth: null, requestMeta: { ipAddress: null, userAgent: null } }, undefined);
-    expect(vi.mocked(logger)["warn"]).toHaveBeenCalledWith(expect.stringContaining("global"));
+    expect(loggerWarnMock).toHaveBeenCalledWith(expect.stringContaining("global"));
   });
 });
 

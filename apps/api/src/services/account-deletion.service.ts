@@ -34,7 +34,9 @@ export async function deleteAccount(
   db: PostgresJsDatabase,
   body: z.infer<typeof DeleteAccountBodySchema>,
   auth: AuthContext,
-  audit: AuditWriter,
+  // Unused: the request-scoped audit writer can't satisfy the dual-tenant RLS
+  // constraint here, so the audit entry goes through writeAuditLog directly.
+  _audit: AuditWriter,
 ): Promise<void> {
   assertAccountOwnership(auth.accountId, auth);
 
@@ -77,8 +79,4 @@ export async function deleteAccount(
     actor: { kind: "account", id: auth.accountId },
     detail: "Account permanently deleted",
   });
-
-  // Suppress unused-variable for the request-scoped audit writer (we use
-  // writeAuditLog directly to bypass the dual-tenant RLS constraint).
-  void audit;
 }

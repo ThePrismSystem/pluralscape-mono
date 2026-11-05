@@ -21,12 +21,14 @@ describe("Archivable<T>", () => {
         expectTypeOf(value).toEqualTypeOf<Sample>();
       }
     };
-    void check;
+    check({ id: "x", name: "n", archived: false });
   });
 
   it("rejects archived: true without archivedAt at the type level", () => {
-    // @ts-expect-error — Archived<T> requires archivedAt
-    const _bad: Archivable<Sample> = { id: "x", name: "n", archived: true };
-    void _bad;
+    expectTypeOf<{
+      readonly id: string;
+      readonly name: string;
+      readonly archived: true;
+    }>().not.toExtend<Archivable<Sample>>();
   });
 });

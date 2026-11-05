@@ -169,7 +169,7 @@ export class BullMQJobQueue implements JobQueue {
     const fetchWorker = this.ensureFetchWorker();
     try {
       for (let i = 0; i < MAX_DEQUEUE_BATCH; i++) {
-        const job = (await fetchWorker.getNextJob(this.token)) as BullMQJob | undefined;
+        const job = await fetchWorker.getNextJob(this.token);
         if (job === undefined) break;
 
         const def = parseJobDataOrThrow(job);

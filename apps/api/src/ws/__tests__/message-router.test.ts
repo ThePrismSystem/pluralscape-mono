@@ -206,8 +206,8 @@ describe("message-router branch coverage", () => {
       const ws1 = mockWs();
       const state1 = makeAuthenticatedState("conn-evict-1", ws1, manager);
       const ws2 = mockWs();
-      const state2 = makeAuthenticatedState("conn-evict-2", ws2, manager);
-      void state2; // registered above for subscription setup
+      // Registers conn-evict-2 with the manager for the subscription setup below.
+      makeAuthenticatedState("conn-evict-2", ws2, manager);
 
       // Subscribe conn-evict-2 to doc-evict-1 so we can confirm it gets cleaned up
       manager.addSubscription("conn-evict-2", "doc-evict-1");

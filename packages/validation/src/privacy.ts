@@ -5,7 +5,7 @@ import { brandedIdQueryParam } from "./branded-id.js";
 import { booleanQueryParam } from "./query-params.js";
 import { MAX_ENCRYPTED_DATA_SIZE } from "./validation.constants.js";
 
-import type { BucketContentEntityType } from "@pluralscape/types";
+import type { Assert, BucketContentEntityType, Equal } from "@pluralscape/types";
 
 /**
  * Runtime validator for the pre-encryption PrivacyBucket input. Every field
@@ -120,20 +120,14 @@ export const UntagContentParamsSchema = z
   .readonly();
 
 /**
- * Compile-time check that {@link TagContentBodySchema} covers every
- * {@link BucketContentEntityType} variant. If a new entity type is
- * added to the union without a matching schema arm, this assignment
- * fails typecheck.
+ * Compile-time check that {@link TagContentBodySchema} covers exactly the
+ * {@link BucketContentEntityType} variants. If a new entity type is
+ * added to the union without a matching schema arm, this guard fails
+ * typecheck.
  */
-type _AssertTagContentEntityTypesCovered = z.infer<
-  typeof TagContentBodySchema
->["entityType"] extends BucketContentEntityType
-  ? BucketContentEntityType extends z.infer<typeof TagContentBodySchema>["entityType"]
-    ? true
-    : never
-  : never;
-const _ASSERT_TAG_CONTENT_ENTITY_TYPES_COVERED: _AssertTagContentEntityTypesCovered = true;
-void _ASSERT_TAG_CONTENT_ENTITY_TYPES_COVERED;
+export type _TagContentEntityTypesCoveredGuard = Assert<
+  Equal<z.infer<typeof TagContentBodySchema>["entityType"], BucketContentEntityType>
+>;
 
 export const BucketContentTagQuerySchema = z.object({
   entityType: z.enum(BUCKET_CONTENT_ENTITY_TYPES).optional(),

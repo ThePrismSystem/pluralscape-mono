@@ -97,8 +97,8 @@ describe("createFileImportSource", () => {
   it("rejects malformed JSON with a FileSourceParseError", async () => {
     const source = createFileImportSource({ stream: stringToStream("{not valid") });
     await expect(async () => {
-      for await (const e of source.iterate("members")) {
-        void e;
+      for await (const _e of source.iterate("members")) {
+        // Drain the iterator to surface the parse error.
       }
     }).rejects.toBeInstanceOf(FileSourceParseError);
   });
@@ -187,8 +187,8 @@ describe("createFileImportSource", () => {
   it("throws FileSourceParseError when root element is an array instead of object", async () => {
     const source = createFileImportSource({ stream: stringToStream("[1, 2, 3]") });
     await expect(async () => {
-      for await (const e of source.iterate("members")) {
-        void e;
+      for await (const _e of source.iterate("members")) {
+        // Drain the iterator to surface the parse error.
       }
     }).rejects.toThrow(FileSourceParseError);
     await source.close();
@@ -197,8 +197,8 @@ describe("createFileImportSource", () => {
   it("throws FileSourceParseError when root element is a scalar (number)", async () => {
     const source = createFileImportSource({ stream: stringToStream("42") });
     await expect(async () => {
-      for await (const e of source.iterate("members")) {
-        void e;
+      for await (const _e of source.iterate("members")) {
+        // Drain the iterator to surface the parse error.
       }
     }).rejects.toThrow(FileSourceParseError);
     await source.close();
@@ -207,8 +207,8 @@ describe("createFileImportSource", () => {
   it("throws FileSourceParseError when root element is a scalar (string)", async () => {
     const source = createFileImportSource({ stream: stringToStream('"hello"') });
     await expect(async () => {
-      for await (const e of source.iterate("members")) {
-        void e;
+      for await (const _e of source.iterate("members")) {
+        // Drain the iterator to surface the parse error.
       }
     }).rejects.toThrow(FileSourceParseError);
     await source.close();
@@ -221,8 +221,8 @@ describe("createFileImportSource", () => {
       stream: stringToStream(JSON.stringify({ members: { _id: "m1", name: "Aria" } })),
     });
     await expect(async () => {
-      for await (const e of source.iterate("members")) {
-        void e;
+      for await (const _e of source.iterate("members")) {
+        // Drain the iterator to surface the parse error.
       }
     }).rejects.toThrow(FileSourceParseError);
     await source.close();
@@ -236,8 +236,8 @@ describe("createFileImportSource", () => {
     });
     const err = await (async () => {
       try {
-        for await (const e of source.iterate("members")) {
-          void e;
+        for await (const _e of source.iterate("members")) {
+          // Drain the iterator to surface the parse error.
         }
         return null;
       } catch (thrown) {
@@ -310,8 +310,8 @@ describe("createFileImportSource", () => {
     });
     const err = await (async () => {
       try {
-        for await (const e of source.iterate("members")) {
-          void e;
+        for await (const _e of source.iterate("members")) {
+          // Drain the iterator to surface the parse error.
         }
         return null;
       } catch (thrown) {
@@ -329,8 +329,8 @@ describe("createFileImportSource", () => {
     });
     const err = await (async () => {
       try {
-        for await (const e of source.iterate("members")) {
-          void e;
+        for await (const _e of source.iterate("members")) {
+          // Drain the iterator to surface the parse error.
         }
         return null;
       } catch (thrown) {
@@ -349,8 +349,8 @@ describe("createFileImportSource", () => {
       });
       const err = await (async () => {
         try {
-          for await (const e of source.iterate("members")) {
-            void e;
+          for await (const _e of source.iterate("members")) {
+            // Drain the iterator to surface the parse error.
           }
           return null;
         } catch (thrown) {
@@ -366,8 +366,8 @@ describe("createFileImportSource", () => {
       });
       const err = await (async () => {
         try {
-          for await (const e of source.iterate("members")) {
-            void e;
+          for await (const _e of source.iterate("members")) {
+            // Drain the iterator to surface the parse error.
           }
           return null;
         } catch (thrown) {

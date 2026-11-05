@@ -327,10 +327,7 @@ describe("rate limiter middleware", () => {
       createRateLimiter({
         limit: 1,
         windowMs: 60_000,
-        keyExtractor: (c) => {
-          void c;
-          return "fixed-key";
-        },
+        keyExtractor: () => "fixed-key",
       }),
     );
     app.onError(errorHandler);
@@ -387,8 +384,7 @@ describe("rate limiter middleware", () => {
     });
 
     it("uses shared store when set", async () => {
-      const incrementFn = vi.fn((key: string, windowMs: number): Promise<RateLimitResult> => {
-        void key;
+      const incrementFn = vi.fn((_key: string, windowMs: number): Promise<RateLimitResult> => {
         return Promise.resolve({ count: 1, resetAt: Date.now() + windowMs });
       });
       const mockStore: RateLimitStore = { increment: incrementFn };

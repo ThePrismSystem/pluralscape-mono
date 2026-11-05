@@ -10,9 +10,7 @@ export class StubEmailAdapter implements EmailAdapter {
   readonly providerName = "stub" as const;
 
   /** Accepts params for interface conformance but does not deliver. */
-  send(params: EmailSendParams): Promise<EmailSendResult> {
-    // Destructure to satisfy the unused-vars rule while keeping the interface contract
-    void params;
+  send(_params: EmailSendParams): Promise<EmailSendResult> {
     return Promise.resolve({ messageId: null });
   }
 }
