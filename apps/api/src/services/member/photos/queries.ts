@@ -12,10 +12,15 @@ import { tenantCtx } from "../../../lib/tenant-context.js";
 
 import { toPhotoResult } from "./internal.js";
 
-import type { MemberPhotoResult } from "./internal.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type { DecodedCompositeCursor } from "../../../lib/pagination.js";
-import type { MemberId, MemberPhotoId, PaginatedResult, SystemId } from "@pluralscape/types";
+import type {
+  MemberPhotoResult,
+  MemberId,
+  MemberPhotoId,
+  PaginatedResult,
+  SystemId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** Default page size for photo list. */

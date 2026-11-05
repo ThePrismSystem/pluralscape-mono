@@ -16,8 +16,7 @@ import {
   putJSON,
 } from "../../helpers/route-test-setup.js";
 
-import type { BoardMessageResult } from "../../../services/board-message/internal.js";
-import type { BoardMessageId, EncryptedBase64 } from "@pluralscape/types";
+import type { BoardMessageResult, BoardMessageId, EncryptedBase64 } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 

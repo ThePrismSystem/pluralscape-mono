@@ -12,9 +12,8 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
 
 import { toChannelResult } from "./internal.js";
 
-import type { ChannelResult } from "./internal.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { ChannelId, PaginatedResult, SystemId } from "@pluralscape/types";
+import type { ChannelResult, ChannelId, PaginatedResult, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 interface ListChannelOpts {

@@ -45,3 +45,17 @@ export type WebhookDeliveryServerMetadata = WebhookDelivery & {
  * time) which the API does not expose.
  */
 export type WebhookDeliveryWire = Serialize<WebhookDelivery>;
+
+/** Service-layer read shape for a webhook delivery. */
+export interface WebhookDeliveryResult {
+  readonly id: WebhookDeliveryId;
+  readonly webhookId: WebhookId;
+  readonly systemId: SystemId;
+  readonly eventType: WebhookEventType;
+  readonly status: WebhookDeliveryStatus;
+  readonly httpStatus: number | null;
+  readonly attemptCount: number;
+  readonly lastAttemptAt: UnixMillis | null;
+  readonly nextRetryAt: UnixMillis | null;
+  readonly createdAt: UnixMillis;
+}

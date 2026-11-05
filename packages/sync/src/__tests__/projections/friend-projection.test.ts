@@ -25,13 +25,11 @@ import {
   asKeyGrantId,
 } from "../test-crypto-helpers.js";
 
-import type {
-  FriendCodeInput,
-  FriendConnectionInput,
-  KeyGrantInput,
-} from "../../projections/friend-projection.js";
 import type { PrivacyConfigDocument } from "../../schemas/privacy-config.js";
 import type {
+  KeyGrantProjectionSource,
+  FriendConnectionProjectionSource,
+  FriendCodeProjectionSource,
   AccountId,
   BucketId,
   FriendCodeId,
@@ -52,7 +50,9 @@ function makePrivacyConfigDoc(): Automerge.Doc<PrivacyConfigDocument> {
   });
 }
 
-function makeFriendCodeInput(overrides?: Partial<FriendCodeInput>): FriendCodeInput {
+function makeFriendCodeInput(
+  overrides?: Partial<FriendCodeProjectionSource>,
+): FriendCodeProjectionSource {
   return {
     id: brandId<FriendCodeId>("fcode_1"),
     accountId: brandId<AccountId>("acc_1"),
@@ -64,8 +64,8 @@ function makeFriendCodeInput(overrides?: Partial<FriendCodeInput>): FriendCodeIn
 }
 
 function makeFriendConnectionInput(
-  overrides?: Partial<FriendConnectionInput>,
-): FriendConnectionInput {
+  overrides?: Partial<FriendConnectionProjectionSource>,
+): FriendConnectionProjectionSource {
   return {
     id: brandId<FriendConnectionId>("fc_1"),
     accountId: brandId<AccountId>("acc_1"),
@@ -84,7 +84,9 @@ function makeFriendConnectionInput(
   };
 }
 
-function makeKeyGrantInput(overrides?: Partial<KeyGrantInput>): KeyGrantInput {
+function makeKeyGrantInput(
+  overrides?: Partial<KeyGrantProjectionSource>,
+): KeyGrantProjectionSource {
   return {
     id: brandId<KeyGrantId>("kg_1"),
     bucketId: brandId<BucketId>("bkt_1"),

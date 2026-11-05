@@ -12,10 +12,9 @@ import { MAX_ENCRYPTED_DATA_BYTES } from "../../service.constants.js";
 
 import { toCheckInRecordResult } from "./internal.js";
 
-import type { CheckInRecordResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { CheckInRecordId, SystemId } from "@pluralscape/types";
+import type { CheckInRecordResult, CheckInRecordId, SystemId } from "@pluralscape/types";
 import type { CreateCheckInRecordBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { z } from "zod/v4";

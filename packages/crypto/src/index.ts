@@ -173,7 +173,7 @@ export {
 } from "./bucket-keys.js";
 
 // ── Recovery key ────────────────────────────────────────────────────
-export type { RecoveryKeyResult } from "./recovery.js";
+export type { GeneratedRecoveryKey } from "./recovery.js";
 export {
   generateRecoveryKey,
   isValidRecoveryKeyFormat,

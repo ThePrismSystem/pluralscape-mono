@@ -7,32 +7,13 @@ import { HTTP_INTERNAL_SERVER_ERROR } from "../../../http.constants.js";
 import { ApiHttpError } from "../../../lib/api-error.js";
 
 import type {
+  ImportJobResult,
   AccountId,
   ImportCheckpointState,
   ImportError,
   ImportJobId,
-  ImportJobStatus,
-  ImportSourceFormat,
   SystemId,
-  UnixMillis,
 } from "@pluralscape/types";
-
-export interface ImportJobResult {
-  readonly id: ImportJobId;
-  readonly accountId: AccountId;
-  readonly systemId: SystemId;
-  readonly source: ImportSourceFormat;
-  readonly status: ImportJobStatus;
-  readonly progressPercent: number;
-  readonly errorLog: readonly ImportError[] | null;
-  readonly warningCount: number;
-  readonly chunksTotal: number | null;
-  readonly chunksCompleted: number;
-  readonly checkpointState: ImportCheckpointState | null;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-  readonly completedAt: UnixMillis | null;
-}
 
 // ── JSONB read validators ────────────────────────────────────────────
 // Every read of a JSONB column goes through these helpers. Corrupt rows

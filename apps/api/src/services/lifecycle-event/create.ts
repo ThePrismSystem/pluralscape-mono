@@ -13,10 +13,9 @@ import { dispatchWebhookEvent } from "../webhook-dispatcher.js";
 
 import { toLifecycleEventResult } from "./internal.js";
 
-import type { LifecycleEventResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { LifecycleEventId, SystemId } from "@pluralscape/types";
+import type { LifecycleEventResult, LifecycleEventId, SystemId } from "@pluralscape/types";
 import type { CreateLifecycleEventBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { z } from "zod/v4";

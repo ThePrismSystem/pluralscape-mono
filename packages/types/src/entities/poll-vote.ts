@@ -84,3 +84,11 @@ export type PollVoteEncryptedInput = Pick<PollVote, PollVoteEncryptedFields>;
 export type PollVoteResult = EncryptedWire<PollVoteServerMetadata>;
 
 export type PollVoteWire = Serialize<PollVoteResult>;
+
+/** Plaintext shape of a poll vote before encryption, as the importers supply it. */
+export interface ImportedPollVote {
+  readonly optionId: string;
+  readonly memberId: string | null;
+  readonly isVeto: boolean;
+  readonly comment: string | null;
+}

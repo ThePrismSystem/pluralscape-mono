@@ -18,10 +18,9 @@ import { dispatchWebhookEvent } from "../webhook-dispatcher.js";
 
 import { toGroupResult } from "./internal.js";
 
-import type { GroupResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { GroupId, SystemId } from "@pluralscape/types";
+import type { GroupResult, GroupId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { z } from "zod/v4";
 

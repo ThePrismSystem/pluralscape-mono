@@ -13,10 +13,15 @@ import { dispatchWebhookEvent } from "../webhook-dispatcher.js";
 
 import { toVoteResult } from "./internal.js";
 
-import type { PollVoteResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { PollId, PollOptionId, PollVoteId, SystemId } from "@pluralscape/types";
+import type {
+  PollVoteResult,
+  PollId,
+  PollOptionId,
+  PollVoteId,
+  SystemId,
+} from "@pluralscape/types";
 import type { UpdatePollVoteBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { z } from "zod/v4";

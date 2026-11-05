@@ -16,6 +16,7 @@ import type {
   VersionedEntityRef,
 } from "./persister.types.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
+import type { ImportedPollVote } from "@pluralscape/types";
 
 /**
  * Resolve the Pluralscape entity ID for a source-side record, if any.
@@ -119,16 +120,6 @@ export async function persistViaChannelsTable(
   });
 }
 
-// ── castPollVotes ────────────────────────────────────────────────────
-
-/** Plaintext shape of a poll vote before encryption. */
-export interface PollVoteInput {
-  readonly optionId: string;
-  readonly memberId: string | null;
-  readonly isVeto: boolean;
-  readonly comment: string | null;
-}
-
 /**
  * Fan out one `poll.castVote` call per vote, sequentially.
  *
@@ -140,7 +131,7 @@ export interface PollVoteInput {
 export async function castPollVotes(
   ctx: PersisterContext,
   pollId: string,
-  votes: readonly PollVoteInput[],
+  votes: readonly ImportedPollVote[],
 ): Promise<void> {
   for (const vote of votes) {
     const encrypted = encryptForCreate(

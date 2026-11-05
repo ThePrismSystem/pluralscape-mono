@@ -7,14 +7,11 @@ import { tenantCtx } from "../../lib/tenant-context.js";
 
 import { groupHierarchy, toGroupResult } from "./internal.js";
 
-import type { GroupResult } from "./internal.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { SystemId } from "@pluralscape/types";
+import type { GroupResult, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
-export type { GroupResult } from "./internal.js";
-
-// Re-exports; TS infers cleanly now (api-5psf).
+// Re-exports; TS infers cleanly now.
 export const listGroups = groupHierarchy.list;
 export const getGroup = groupHierarchy.get;
 

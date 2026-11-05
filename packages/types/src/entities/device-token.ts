@@ -52,3 +52,13 @@ export interface DeviceTokenServerMetadata {
  * token to the client.
  */
 export type DeviceTokenWire = Serialize<DeviceToken>;
+
+/** Service-layer read shape for a device token. */
+export interface DeviceTokenResult {
+  readonly id: DeviceTokenId;
+  readonly systemId: SystemId;
+  readonly platform: DeviceTokenPlatform;
+  readonly tokenHash: string;
+  readonly lastActiveAt: UnixMillis | null;
+  readonly createdAt: UnixMillis;
+}

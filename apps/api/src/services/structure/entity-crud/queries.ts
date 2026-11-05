@@ -12,9 +12,9 @@ import { DEFAULT_PAGE_LIMIT } from "../../../service.constants.js";
 
 import { toStructureEntityResult } from "./internal.js";
 
-import type { StructureEntityResult } from "./internal.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type {
+  SystemStructureEntityResult,
   PaginatedResult,
   SystemId,
   SystemStructureEntityId,
@@ -32,7 +32,7 @@ export async function listStructureEntities(
     includeArchived?: boolean;
     entityTypeId?: SystemStructureEntityTypeId;
   },
-): Promise<PaginatedResult<StructureEntityResult>> {
+): Promise<PaginatedResult<SystemStructureEntityResult>> {
   assertSystemOwnership(systemId, auth);
 
   const limit = opts?.limit ?? DEFAULT_PAGE_LIMIT;
@@ -70,7 +70,7 @@ export async function getStructureEntity(
   systemId: SystemId,
   entityId: SystemStructureEntityId,
   auth: AuthContext,
-): Promise<StructureEntityResult> {
+): Promise<SystemStructureEntityResult> {
   assertSystemOwnership(systemId, auth);
 
   return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {

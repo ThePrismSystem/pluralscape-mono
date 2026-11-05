@@ -11,10 +11,9 @@ import { tenantCtx } from "../../lib/tenant-context.js";
 
 import { toFrontingSessionResult } from "./internal.js";
 
-import type { FrontingSessionResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { FrontingSessionId, SystemId } from "@pluralscape/types";
+import type { FrontingSessionResult, FrontingSessionId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 const FRONTING_SESSION_LIFECYCLE = {

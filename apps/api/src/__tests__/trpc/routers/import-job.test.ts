@@ -3,8 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { assertProcedureRateLimited, makeCallerFactory, MOCK_SYSTEM_ID } from "../test-helpers.js";
 
-import type { ImportJobResult } from "../../../services/system/import-jobs/internal.js";
-import type { AccountId, ImportJobId, UnixMillis } from "@pluralscape/types";
+import type { ImportJobResult, AccountId, ImportJobId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },

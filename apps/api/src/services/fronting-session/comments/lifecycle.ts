@@ -10,10 +10,14 @@ import { tenantCtx } from "../../../lib/tenant-context.js";
 
 import { toFrontingCommentResult } from "./internal.js";
 
-import type { FrontingCommentResult } from "./internal.js";
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { FrontingCommentId, FrontingSessionId, SystemId } from "@pluralscape/types";
+import type {
+  FrontingCommentResult,
+  FrontingCommentId,
+  FrontingSessionId,
+  SystemId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function deleteFrontingComment(

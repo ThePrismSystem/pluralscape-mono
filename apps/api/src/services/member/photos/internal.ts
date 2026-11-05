@@ -3,15 +3,12 @@ import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { encryptedBlobToBase64 } from "../../../lib/encrypted-blob.js";
 
 import type {
+  MemberPhotoResult,
   EncryptedBlob,
-  EncryptedWire,
   MemberId,
   MemberPhotoId,
-  MemberPhotoServerMetadata,
   SystemId,
 } from "@pluralscape/types";
-
-export type MemberPhotoResult = EncryptedWire<MemberPhotoServerMetadata>;
 
 export function toPhotoResult(row: {
   id: string;

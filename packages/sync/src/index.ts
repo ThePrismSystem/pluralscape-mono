@@ -146,11 +146,6 @@ export {
   removeBucketAssignmentProjection,
   revokeKeyGrantProjection,
 } from "./projections/friend-projection.js";
-export type {
-  FriendCodeInput,
-  FriendConnectionInput,
-  KeyGrantInput,
-} from "./projections/friend-projection.js";
 
 export {
   projectDashboardSnapshot,

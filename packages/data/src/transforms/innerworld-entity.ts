@@ -67,7 +67,7 @@ export function decryptInnerWorldEntity(
       ...variant,
       archived: true as const,
       archivedAt: toUnixMillis(raw.archivedAt),
-    } as Archived<InnerWorldEntity>;
+    };
   }
   return variant;
 }

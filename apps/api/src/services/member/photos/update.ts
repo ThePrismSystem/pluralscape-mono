@@ -11,10 +11,9 @@ import { tenantCtx } from "../../../lib/tenant-context.js";
 
 import { toPhotoResult } from "./internal.js";
 
-import type { MemberPhotoResult } from "./internal.js";
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { MemberId, MemberPhotoId, SystemId } from "@pluralscape/types";
+import type { MemberPhotoResult, MemberId, MemberPhotoId, SystemId } from "@pluralscape/types";
 import type { ReorderPhotosBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { z } from "zod/v4";

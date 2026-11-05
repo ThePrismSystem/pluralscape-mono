@@ -16,9 +16,13 @@ import {
   putJSON,
 } from "../../helpers/route-test-setup.js";
 
-import type { PollResult } from "../../../services/poll/internal.js";
-import type { PollVoteResult } from "../../../services/poll-vote/internal.js";
-import type { EncryptedBase64, PollId, PollVoteId } from "@pluralscape/types";
+import type {
+  PollResult,
+  PollVoteResult,
+  EncryptedBase64,
+  PollId,
+  PollVoteId,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -105,7 +109,7 @@ const MOCK_VOTE: PollVoteResult = {
   voter: null,
   isVeto: false,
   votedAt: toUnixMillis(1000),
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
   archived: false,
   archivedAt: null,

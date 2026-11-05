@@ -15,30 +15,15 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
+  WebhookDeliveryResult,
   PaginatedResult,
   SystemId,
-  UnixMillis,
   WebhookDeliveryId,
   WebhookDeliveryStatus,
   WebhookEventType,
   WebhookId,
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-
-// ── Types ───────────────────────────────────────────────────────────
-
-export interface WebhookDeliveryResult {
-  readonly id: WebhookDeliveryId;
-  readonly webhookId: WebhookId;
-  readonly systemId: SystemId;
-  readonly eventType: WebhookEventType;
-  readonly status: WebhookDeliveryStatus;
-  readonly httpStatus: number | null;
-  readonly attemptCount: number;
-  readonly lastAttemptAt: UnixMillis | null;
-  readonly nextRetryAt: UnixMillis | null;
-  readonly createdAt: UnixMillis;
-}
 
 export interface WebhookDeliveryListOptions {
   readonly cursor?: string;

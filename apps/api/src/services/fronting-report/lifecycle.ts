@@ -4,10 +4,9 @@ import { archiveEntity, restoreEntity } from "../../lib/entity-lifecycle.js";
 
 import { toFrontingReportResult } from "./internal.js";
 
-import type { FrontingReportResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { FrontingReportId, SystemId } from "@pluralscape/types";
+import type { FrontingReportResult, FrontingReportId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 const FRONTING_REPORT_LIFECYCLE = {

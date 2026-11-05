@@ -14,9 +14,9 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
 
 import { toNoteResult } from "./internal.js";
 
-import type { NoteResult } from "./internal.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type {
+  NoteResult,
   AnyBrandedId,
   NoteAuthorEntityType,
   NoteId,

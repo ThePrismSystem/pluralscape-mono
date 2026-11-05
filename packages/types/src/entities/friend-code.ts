@@ -35,3 +35,12 @@ export type FriendCodeServerMetadata = Archivable<FriendCode>;
  * stripped at the wire boundary.
  */
 export type FriendCodeWire = Serialize<FriendCodeServerMetadata>;
+
+/** Service-layer input for projecting a friend code into CRDT format. */
+export interface FriendCodeProjectionSource {
+  readonly id: FriendCodeId;
+  readonly accountId: AccountId;
+  readonly code: string;
+  readonly createdAt: number;
+  readonly expiresAt: number | null;
+}

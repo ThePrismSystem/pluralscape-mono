@@ -5,7 +5,7 @@ import { deserializeRecoveryBackup } from "./recovery-backup.js";
 import { generateRecoveryKey, recoverMasterKey } from "./recovery.js";
 import { getSodium } from "./sodium.js";
 
-import type { RecoveryKeyResult } from "./recovery.js";
+import type { GeneratedRecoveryKey } from "./recovery.js";
 import type { EncryptedPayload } from "./symmetric.js";
 import type { AuthKeyMaterial, KdfMasterKey, PwhashSalt } from "./types.js";
 import type { RecoveryKeyDisplay } from "@pluralscape/types";
@@ -29,7 +29,7 @@ export interface PasswordResetResult {
   /** MasterKey re-wrapped under the new password key — store in accounts.encrypted_master_key. */
   readonly wrappedMasterKey: EncryptedPayload;
   /** Fresh recovery key — the old one was consumed and must be replaced. */
-  readonly newRecoveryKey: RecoveryKeyResult;
+  readonly newRecoveryKey: GeneratedRecoveryKey;
   /** Auth key for server-side verification — zeroed automatically after callback completes. */
   readonly authKey: AuthKeyMaterial;
 }

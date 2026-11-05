@@ -15,10 +15,10 @@ import { tenantCtx } from "../../../lib/tenant-context.js";
 
 import { toImportJobResult } from "./internal.js";
 
-import type { ImportJobResult } from "./internal.js";
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type {
+  ImportJobResult,
   ImportCheckpointState,
   ImportCollectionType,
   ImportJobId,

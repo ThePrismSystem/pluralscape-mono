@@ -12,7 +12,7 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
 import { listGroups } from "../../services/group/queries.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
-import type { GroupResult } from "../../services/group/queries.js";
+import type { GroupResult } from "@pluralscape/types";
 
 const GROUP_FIELDS = [
   "id",

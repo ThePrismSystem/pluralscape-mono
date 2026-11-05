@@ -15,13 +15,13 @@ import {
   encryptForUpdate,
 } from "./persister-helpers.js";
 
-import type { PollVoteInput } from "./persister-helpers.js";
 import type {
   EntityPersister,
   PersisterContext,
   PersisterCreateResult,
   PersisterUpdateResult,
 } from "./persister.types.js";
+import type { ImportedPollVote } from "@pluralscape/types";
 
 export interface PollPayload {
   readonly encrypted: {
@@ -40,7 +40,7 @@ export interface PollPayload {
   readonly allowAbstain: boolean;
   readonly allowVeto: boolean;
   readonly endsAt: number | null;
-  readonly votes: readonly PollVoteInput[];
+  readonly votes: readonly ImportedPollVote[];
 }
 
 function isPollPayload(value: unknown): value is PollPayload {

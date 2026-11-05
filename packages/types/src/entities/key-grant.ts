@@ -56,3 +56,14 @@ export interface ReceivedKeyGrant {
 export interface ReceivedKeyGrantsResponse {
   readonly grants: readonly ReceivedKeyGrant[];
 }
+
+/** Service-layer input for projecting a key grant into CRDT format. */
+export interface KeyGrantProjectionSource {
+  readonly id: KeyGrantId;
+  readonly bucketId: BucketId;
+  readonly friendAccountId: AccountId;
+  /** Base64-encoded encrypted bucket key. */
+  readonly encryptedBucketKey: string;
+  readonly keyVersion: number;
+  readonly createdAt: number;
+}

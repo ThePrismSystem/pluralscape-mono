@@ -14,9 +14,8 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
 
 import { WEBHOOK_CONFIG_SELECT_COLUMNS, toWebhookConfigResult } from "./internal.js";
 
-import type { WebhookConfigResult } from "./internal.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { PaginatedResult, SystemId, WebhookId } from "@pluralscape/types";
+import type { WebhookConfigResult, PaginatedResult, SystemId, WebhookId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export interface WebhookConfigListOptions {

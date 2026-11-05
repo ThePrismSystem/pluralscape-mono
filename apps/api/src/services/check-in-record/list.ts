@@ -13,9 +13,14 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
 
 import { toCheckInRecordResult } from "./internal.js";
 
-import type { CheckInRecordListOptions, CheckInRecordResult } from "./internal.js";
+import type { CheckInRecordListOptions } from "./internal.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { CheckInRecordId, PaginatedResult, SystemId } from "@pluralscape/types";
+import type {
+  CheckInRecordResult,
+  CheckInRecordId,
+  PaginatedResult,
+  SystemId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function listCheckInRecords(

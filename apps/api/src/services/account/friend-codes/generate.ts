@@ -12,11 +12,15 @@ import { isUniqueViolation } from "../../../lib/unique-violation.js";
 import { MAX_FRIEND_CODES_PER_ACCOUNT } from "../../../quota.constants.js";
 import { FRIEND_CODE_BYTES, MAX_CODE_GENERATION_RETRIES } from "../../friend-code.constants.js";
 
-import { type FriendCodeResult } from "./internal.js";
-
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { AccountId, AuditEventType, FriendCode, FriendCodeId } from "@pluralscape/types";
+import type {
+  FriendCodeServerMetadata,
+  AccountId,
+  AuditEventType,
+  FriendCode,
+  FriendCodeId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** Audit event: a friend code was generated. */
@@ -60,7 +64,7 @@ export async function generateFriendCode(
   auth: AuthContext,
   audit: AuditWriter,
   opts?: GenerateFriendCodeOpts,
-): Promise<FriendCodeResult> {
+): Promise<FriendCodeServerMetadata> {
   return withAccountTransaction(db, accountId, async (tx) => {
     // Quota check — SELECT FOR UPDATE locks matching rows to prevent concurrent quota bypass.
     // Lock the rows first, then count via application code (FOR UPDATE on aggregates is not valid).

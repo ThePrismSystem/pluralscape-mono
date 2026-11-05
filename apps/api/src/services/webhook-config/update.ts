@@ -18,10 +18,10 @@ import {
   validateWebhookUrl,
 } from "./internal.js";
 
-import type { WebhookConfigCreateResult, WebhookConfigResult } from "./internal.js";
+import type { WebhookConfigCreateResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { SystemId, WebhookId } from "@pluralscape/types";
+import type { WebhookConfigResult, SystemId, WebhookId } from "@pluralscape/types";
 import type {
   RotateWebhookSecretBodySchema,
   UpdateWebhookConfigBodySchema,

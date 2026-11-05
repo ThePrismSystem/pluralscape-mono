@@ -3,14 +3,7 @@ import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 
 import { encryptedBlobToBase64 } from "../../lib/encrypted-blob.js";
 
-import type {
-  BoardMessageId,
-  BoardMessageServerMetadata,
-  EncryptedWire,
-  SystemId,
-} from "@pluralscape/types";
-
-export type BoardMessageResult = EncryptedWire<BoardMessageServerMetadata>;
+import type { BoardMessageResult, BoardMessageId, SystemId } from "@pluralscape/types";
 
 export function toBoardMessageResult(row: typeof boardMessages.$inferSelect): BoardMessageResult {
   return {

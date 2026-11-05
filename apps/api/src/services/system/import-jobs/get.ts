@@ -9,9 +9,8 @@ import { tenantCtx } from "../../../lib/tenant-context.js";
 
 import { toImportJobResult } from "./internal.js";
 
-import type { ImportJobResult } from "./internal.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { ImportJobId, SystemId } from "@pluralscape/types";
+import type { ImportJobResult, ImportJobId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function getImportJob(

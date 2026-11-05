@@ -13,6 +13,7 @@ import { MAX_PAGE_LIMIT } from "../service.constants.js";
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
+  FriendNotificationPreferenceResult,
   AccountId,
   AuditEventType,
   FriendConnectionId,
@@ -29,17 +30,6 @@ const AUDIT_PREFERENCE_UPDATED: AuditEventType = "friend-notification-preference
 
 /** Default enabled event types for new preferences. */
 const DEFAULT_ENABLED_EVENT_TYPES: readonly FriendNotificationEventType[] = ["friend-switch-alert"];
-
-// ── Types ────────────────────────────────────────────────────────────
-
-export interface FriendNotificationPreferenceResult {
-  readonly id: FriendNotificationPreferenceId;
-  readonly accountId: AccountId;
-  readonly friendConnectionId: FriendConnectionId;
-  readonly enabledEventTypes: readonly FriendNotificationEventType[];
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
 
 // ── Helpers ──────────────────────────────────────────────────────────
 

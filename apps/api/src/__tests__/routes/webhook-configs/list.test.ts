@@ -9,8 +9,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { WebhookConfigResult } from "../../../services/webhook-config/internal.js";
-import type { PaginatedResult } from "@pluralscape/types";
+import type { WebhookConfigResult, PaginatedResult } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 

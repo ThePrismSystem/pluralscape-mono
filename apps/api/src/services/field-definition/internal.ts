@@ -12,10 +12,9 @@ import { encryptedBlobToBase64 } from "../../lib/encrypted-blob.js";
 import { QueryCache } from "../../lib/query-cache.js";
 
 import type {
+  FieldDefinitionResult,
   EncryptedBlob,
-  EncryptedWire,
   FieldDefinitionId,
-  FieldDefinitionServerMetadata,
   FieldType,
   PaginatedResult,
   SystemId,
@@ -25,10 +24,6 @@ import type {
 
 /** Maximum size of encrypted field definition data in bytes after base64 decode (32 KiB). */
 const MAX_ENCRYPTED_FIELD_DATA_BYTES = 32_768;
-
-// ── Types ───────────────────────────────────────────────────────────
-
-export type FieldDefinitionResult = EncryptedWire<FieldDefinitionServerMetadata>;
 
 // ── Cache ───────────────────────────────────────────────────────────
 

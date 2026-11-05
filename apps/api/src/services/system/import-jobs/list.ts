@@ -11,9 +11,9 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../../service.constants.j
 
 import { toImportJobResult } from "./internal.js";
 
-import type { ImportJobResult } from "./internal.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type {
+  ImportJobResult,
   ImportJobId,
   ImportJobStatus,
   ImportSourceFormat,

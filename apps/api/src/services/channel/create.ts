@@ -14,10 +14,9 @@ import { dispatchWebhookEvent } from "../webhook-dispatcher.js";
 
 import { toChannelResult } from "./internal.js";
 
-import type { ChannelResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { SystemId, ChannelId } from "@pluralscape/types";
+import type { ChannelResult, SystemId, ChannelId } from "@pluralscape/types";
 import type { CreateChannelBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { z } from "zod/v4";

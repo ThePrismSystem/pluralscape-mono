@@ -1,13 +1,13 @@
 import { serializeRecoveryBackup } from "./recovery-backup.js";
 import { generateRecoveryKey } from "./recovery.js";
 
-import type { RecoveryKeyResult } from "./recovery.js";
+import type { GeneratedRecoveryKey } from "./recovery.js";
 import type { KdfMasterKey } from "./types.js";
 
 /** Result of regenerating a recovery key. */
 export interface RegenerateResult {
   /** New recovery key (displayKey + encryptedMasterKey payload). */
-  readonly newRecoveryKey: RecoveryKeyResult;
+  readonly newRecoveryKey: GeneratedRecoveryKey;
   /** Serialized backup blob ready for server storage. */
   readonly serializedBackup: Uint8Array;
 }

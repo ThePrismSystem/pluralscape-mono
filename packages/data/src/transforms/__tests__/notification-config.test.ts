@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { narrowNotificationConfig, narrowNotificationConfigPage } from "../notification-config.js";
 
-import type { NotificationConfigWire, NotificationEventType } from "@pluralscape/types";
+import type { NotificationConfigWire } from "@pluralscape/types";
 
 const NOW = 1_700_000_000_000;
 const LATER = 1_700_002_000_000;
@@ -14,7 +14,7 @@ function makeLiveRaw(overrides?: Partial<LiveWire>): LiveWire {
   return {
     id: "nc_test0001",
     systemId: "sys_test001",
-    eventType: "switch-reminder" as NotificationEventType,
+    eventType: "switch-reminder",
     enabled: true,
     pushEnabled: false,
     version: 1,
@@ -29,7 +29,7 @@ function makeArchivedRaw(): ArchivedWire {
   return {
     id: "nc_test0001",
     systemId: "sys_test001",
-    eventType: "switch-reminder" as NotificationEventType,
+    eventType: "switch-reminder",
     enabled: true,
     pushEnabled: false,
     version: 1,

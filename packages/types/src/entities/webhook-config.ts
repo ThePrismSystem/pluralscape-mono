@@ -287,3 +287,22 @@ export type WebhookConfigServerMetadata = Omit<WebhookConfig, "archived"> & {
  * carries the `archived: false` literal.
  */
 export type WebhookConfigWire = Serialize<WebhookConfig>;
+
+/** Service-layer read shape for a webhook config. */
+export interface WebhookConfigResult {
+  readonly id: WebhookId;
+  readonly systemId: SystemId;
+  readonly url: string;
+  readonly eventTypes: readonly WebhookEventType[];
+  readonly enabled: boolean;
+  /**
+   * API key that encrypts delivery payloads at rest in the database. Null
+   * when the webhook emits plaintext payloads.
+   */
+  readonly cryptoKeyId: ApiKeyId | null;
+  readonly version: number;
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+  readonly createdAt: UnixMillis;
+  readonly updatedAt: UnixMillis;
+}
