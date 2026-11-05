@@ -35,6 +35,17 @@ codeql database analyze "$DB_DIR/actions" \
   -- codeql/actions-queries
 
 echo ""
+echo "=== Python analysis ==="
+echo "Creating database..."
+codeql database create "$DB_DIR/python" --language=python --overwrite --source-root=.
+
+echo "Running analysis..."
+codeql database analyze "$DB_DIR/python" \
+  --format=sarif-latest \
+  --output="$RESULTS_DIR/python.sarif" \
+  -- codeql/python-queries:codeql-suites/python-security-and-quality.qls
+
+echo ""
 echo "Results written to $RESULTS_DIR/"
 
 if command -v jq &>/dev/null; then

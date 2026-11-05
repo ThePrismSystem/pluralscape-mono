@@ -64,6 +64,7 @@ crash.*.log
 coverage/
 .nyc_output/
 test-results/
+.junit/
 playwright-report/
 
 # Private planning docs (not for public repo)

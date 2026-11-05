@@ -46,6 +46,7 @@
     "prepare": "husky"
   },
   "devDependencies": {
+    "@codecov/bundle-analyzer": "2.0.1",
     "@commitlint/cli": "^21.0.0",
     "@commitlint/config-conventional": "^21.0.0",
     "@crowdin/crowdin-api-client": "^1.55.1",

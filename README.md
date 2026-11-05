@@ -5,7 +5,7 @@
 <p align="center">A community-driven, open-source plurality management platform.</p>
 
 <p align="center">
-  <a href="https://github.com/ThePrismSystem/pluralscape-mono/actions/workflows/ci.yml"><img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/ThePrismSystem/b29472c169f6d431acf2b24a60a33225/raw/coverage.json" alt="Coverage"></a>
+  <a href="https://codecov.io/gh/ThePrismSystem/pluralscape-mono"><img src="https://codecov.io/gh/ThePrismSystem/pluralscape-mono/graph/badge.svg?token=GK5WZ6VWCV" alt="Coverage"></a>
   <a href="https://github.com/ThePrismSystem/pluralscape-mono/actions/workflows/ci.yml"><img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/ThePrismSystem/b29472c169f6d431acf2b24a60a33225/raw/e2e-tests.json" alt="E2E Tests"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="License"></a>
   <img src="https://img.shields.io/badge/TypeScript-strict-blue?logo=typescript&logoColor=white" alt="TypeScript">
