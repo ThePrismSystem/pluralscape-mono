@@ -4,7 +4,7 @@
  * Anchored to `ReturnType<typeof encryptFieldDefinitionInput>`, so a transform
  * return-type drift fails this test mechanically. Lives in `@pluralscape/data`
  * because data depends on validation; the inverse import path would create a
- * workspace cycle. See bean `types-1spw`.
+ * workspace cycle.
  */
 
 import { CreateFieldDefinitionBodySchema } from "@pluralscape/validation";

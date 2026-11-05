@@ -1,4 +1,5 @@
 import path from "node:path";
+
 import { defineConfig } from "vitest/config";
 
 const PACKAGES = [
@@ -355,7 +356,7 @@ export default defineConfig({
       ],
       reportsDirectory: "./coverage",
       // packages/db has only integration tests currently; unit coverage
-      // will be enforced when db schema code (db-2je4) is added
+      // will be enforced when db schema code is added
       thresholds: {
         lines: 89,
         functions: 89,

@@ -8,8 +8,8 @@ import {
 } from "../member.js";
 import { MAX_ENCRYPTED_PHOTO_DATA_SIZE } from "../validation.constants.js";
 
-// Body-schema shape parity (G4) lives in `packages/data/src/__tests__/type-parity/`
-// — see bean `types-1spw`. This file owns the runtime parse-validation tests.
+// Body-schema shape parity (G4) lives in `packages/data/src/__tests__/type-parity/`.
+// This file owns the runtime parse-validation tests.
 
 describe("CreateMemberBodySchema", () => {
   it("parses valid input", () => {

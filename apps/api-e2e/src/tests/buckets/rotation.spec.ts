@@ -15,7 +15,7 @@ import { getSystemId } from "../../fixtures/entity-helpers.js";
  *   - 400 for invalid request body
  *   - 404 for wrong system access
  *
- * Full lifecycle tests tracked in bean api-7spq (blocked on bucket CRUD routes).
+ * Full lifecycle tests are blocked on bucket CRUD routes.
  */
 
 test.describe("Bucket Key Rotation", () => {

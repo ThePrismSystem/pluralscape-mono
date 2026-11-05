@@ -44,7 +44,7 @@ function makeRegion(id: string, parentId?: string): CrdtInnerWorldRegion {
 //
 // After merge, both parentGroupId fields are set, creating a cycle in the
 // group hierarchy. Post-merge DFS cycle detection is application-layer
-// (specified in sync-80bn — not yet implemented).
+// (not yet implemented).
 
 describe("Category 4: concurrent re-parenting creating cycles", () => {
   let relay: EncryptedRelay;

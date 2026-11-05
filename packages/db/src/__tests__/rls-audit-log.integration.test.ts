@@ -1,7 +1,7 @@
 /**
  * RLS audit-log tests.
  *
- * Covers: `audit_log` NULL-aware dual-tenant scope (db-dpp7 / audit C1).
+ * Covers: `audit_log` NULL-aware dual-tenant scope.
  *   - After ON DELETE SET NULL the row remains on disk but tenant columns
  *     become NULL. Regular account/system context MUST NOT match those rows.
  *   - A dedicated forensic role with BYPASSRLS can retrieve them.
@@ -135,7 +135,7 @@ describe("RLS audit_log NULL-aware tenant isolation (PGlite)", () => {
     expect(ids).not.toContain(crossTenantEntryId);
   });
 
-  it("rows with NULL tenant references remain invisible through regular tenant context (db-dpp7)", async () => {
+  it("rows with NULL tenant references remain invisible through regular tenant context", async () => {
     // After ON DELETE SET NULL the row still exists in the table but its
     // tenant columns are NULL. Regular account/system context MUST NOT match.
     await setSessionAccountId(db, accountIdA);

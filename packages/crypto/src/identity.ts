@@ -35,7 +35,7 @@ const KDF_CONTEXT = "identity";
  * Derives X25519 (subkey 1) and Ed25519 (subkey 2) from the "identity" context.
  *
  * WASM-only: `signSeedKeypair` is not available on React Native.
- * The RN-specific KeyLifecycleManager (crypto-inca) handles this differently.
+ * The RN-specific KeyLifecycleManager handles this differently.
  */
 export function generateIdentityKeypair(masterKey: KdfMasterKey): IdentityKeypair {
   const adapter = getSodium();

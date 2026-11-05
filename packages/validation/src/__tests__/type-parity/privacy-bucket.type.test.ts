@@ -5,7 +5,7 @@
  * Note: `@pluralscape/data` depends on `@pluralscape/validation`, so we
  * cannot import from `@pluralscape/data` here without creating a circular
  * dependency. G4 assertions (data-package transform output) live in the
- * data package per follow-up bean `types-1spw`.
+ * data package.
  */
 
 import { describe, expectTypeOf, it } from "vitest";

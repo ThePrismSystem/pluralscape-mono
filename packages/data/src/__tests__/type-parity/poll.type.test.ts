@@ -4,7 +4,7 @@
  * Anchored to `ReturnType<typeof encryptPollInput>` etc., so a transform
  * return-type drift fails this test mechanically. Lives in `@pluralscape/data`
  * because data depends on validation; the inverse import path would create a
- * workspace cycle. See bean `types-1spw`.
+ * workspace cycle.
  */
 
 import { CreatePollBodySchema, UpdatePollBodySchema } from "@pluralscape/validation";

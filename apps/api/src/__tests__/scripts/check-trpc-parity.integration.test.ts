@@ -1,6 +1,7 @@
 import { execSync } from "node:child_process";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
 
 const __dirname = resolve(fileURLToPath(import.meta.url), "..");

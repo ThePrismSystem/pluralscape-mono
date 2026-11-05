@@ -5,8 +5,8 @@
  * FrontingDocument, ChatDocument) work correctly through the full pipeline:
  *   change() → encrypt → relay → decrypt → applyEncryptedChanges()
  *
- * These tests bridge the document schema layer (sync-y3ps) with the existing
- * encrypted sync infrastructure (sync-pl87).
+ * These tests bridge the document schema layer with the existing
+ * encrypted sync infrastructure.
  *
  * Key constraint: both sessions MUST start from the same base document
  * (via Automerge.clone). Independently created documents are separate CRDT

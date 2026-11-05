@@ -140,8 +140,8 @@ export type ApiKeyServerVisible = EncryptedWire<
  * server cannot decrypt the `ApiKeyEncryptedPayload` (`name` plus, for
  * `keyType === "crypto"`, `publicKey`) inside `encryptedData`. The
  * `listApiKeys` / `getApiKey` handlers in
- * `apps/api/src/services/api-key/queries.ts` project to `ApiKeyResult`
- * (`apps/api/src/services/api-key/internal.ts`). The `createApiKey`
+ * `apps/api/src/services/api-key/queries.ts` project to `ApiKeyServerVisible`.
+ * The `createApiKey`
  * handler augments that shape with the plaintext `token` once at creation
  * as `ApiKeyCreateResult` (`apps/api/src/services/api-key/create.ts`).
  *

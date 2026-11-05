@@ -91,7 +91,7 @@ export class BlobQuotaService {
    * either is committed. The API layer should wrap the reserve + upload in a
    * serializable transaction when advisory locks become available.
    *
-   * TODO(ps-wsiw): Acquire a pg_advisory_xact_lock on the system ID before
+   * TODO: Acquire a pg_advisory_xact_lock on the system ID before
    * checking usage, ensuring the quota check and the subsequent blob insert
    * are atomic within the same transaction.
    */

@@ -1,5 +1,5 @@
 /**
- * E2E coverage for the ApiKey encryptedData round-trip wired in client-a0gf.
+ * E2E coverage for the ApiKey encryptedData round-trip.
  *
  * Validates that a crypto-variant payload (`name` + 32-byte X25519 publicKey)
  * survives the encrypt-on-create → list → decrypt flow end-to-end, including
