@@ -1,0 +1,12 @@
+# published test vector
+2d68b38d82a8ead985ecb63fcdfabbf5311b038f:packages/crypto/src/__tests__/test-vectors.test.ts:generic-api-key:265
+# prose in the type alignment ADR
+3d39ae16ef8cd80b8f09d2d0d1ee97625de9a0d8:docs/adr/023-zod-type-alignment.md:generic-api-key:130
+# a type declaration, with no value
+3d39ae16ef8cd80b8f09d2d0d1ee97625de9a0d8:packages/types/src/entities/api-key.ts:generic-api-key:96
+# prose in the self-hosting ADR
+713c1525f9ec5e03dbabfe45f7a968d19e109206:docs/adr/012-self-hosted-tiers.md:generic-api-key:9
+# prose in the self-hosting ADR
+9cffe1efc41d2796a5ade7fea155736b5934d039:docs/adr/012-self-hosted-tiers.md:generic-api-key:9
+# prose in the self-hosting ADR
+a9688130f4cd6627d7a1e0e4825134f6ff89966c:docs/adr/012-self-hosted-tiers.md:generic-api-key:9

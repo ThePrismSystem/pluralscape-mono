@@ -1,0 +1,20 @@
+[files]
+extend-exclude = [
+  # Hashes and package names, not prose.
+  "pnpm-lock.yaml",
+  # Translations aren't English.
+  "apps/mobile/locales/**",
+  # Generated from bean titles by `pnpm roadmap`.
+  "docs/roadmap.md",
+  # Written by the beans CLI.
+  ".beans/**",
+  # Frozen records of past audits.
+  "security/**",
+  "docs/audits/**",
+]
+
+[default.extend-words]
+# Direction suffixes: connectionIdBA is the reverse of connectionIdAB.
+ba = "ba"
+# German text in a relative time formatting test.
+vor = "vor"

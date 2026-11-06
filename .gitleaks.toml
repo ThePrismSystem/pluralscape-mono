@@ -1,0 +1,22 @@
+[extend]
+useDefault = true
+
+# Exact fixture values from tests and API examples. Listing values instead of test
+# folders means a real secret pasted into a test still fails this check.
+[[allowlists]]
+description = "Fixture values"
+regexTarget = "match"
+regexes = [
+  # Base64 of test-encrypted-key-material, test-wrapped-key, test-secret, and test-secret-key.
+  '''dGVzdC[0-9A-Za-z+/=]+''',
+  # Base64 of new-secret-key.
+  '''bmV3LXNlY3JldC1rZXk=''',
+  # Repeating hex fixtures.
+  '''abc123def456abc123def456[0-9a-f]+''',
+  '''abcdef1234567890[0-9a-f]*''',
+  # Example recovery key in tests and the API consumer guide.
+  '''ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRST''',
+  # Prefixed fixture IDs built on the example UUID from RFC 4122.
+  '''(dt|sess)_[56][56]0e8400-e29b-41d4-a716-[0-9]{12}''',
+  '''ps_key_abc123''',
+]

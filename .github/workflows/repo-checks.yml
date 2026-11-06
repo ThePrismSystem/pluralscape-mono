@@ -1,0 +1,162 @@
+name: repo-checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Every job runs one step of scripts/check-repo.sh, so a local run checks the
+# same things.
+jobs:
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # to upload the SARIF results to code scanning
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0 # gitleaks reads the whole history
+          persist-credentials: false
+      # Renovate changes VERSION and SHA256 together, taking the hash from the
+      # release's checksums file.
+      - name: Install gitleaks
+        env:
+          # renovate: datasource=github-release-attachments depName=gitleaks/gitleaks
+          VERSION: v8.30.1
+          SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          curl -sSfL --retry 5 --retry-delay 10 --retry-all-errors -o gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/${VERSION}/gitleaks_${VERSION#v}_linux_x64.tar.gz"
+          echo "${SHA256}  gitleaks.tar.gz" | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/bin"
+          tar -xzf gitleaks.tar.gz -C "$RUNNER_TEMP/bin" gitleaks
+          rm gitleaks.tar.gz
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Scan the history for secrets
+        env:
+          SARIF_DIR: sarif
+        run: scripts/check-repo.sh gitleaks
+      # A pull request from a fork gets a token that can't write to code scanning.
+      - name: Upload gitleaks results
+        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: sarif/gitleaks.sarif
+          category: gitleaks
+
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # to upload the SARIF results to code scanning
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Install zizmor
+        run: python -m pip install --require-hashes -r .github/requirements-ci.txt
+      # With GH_TOKEN set, zizmor also runs its online audits.
+      - name: Audit the workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SARIF_DIR: sarif
+        run: scripts/check-repo.sh zizmor
+      - name: Upload zizmor results
+        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: sarif/zizmor.sarif
+          category: zizmor
+
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Install actionlint
+        env:
+          # renovate: datasource=github-release-attachments depName=rhysd/actionlint
+          VERSION: v1.7.12
+          SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        run: |
+          curl -sSfL --retry 5 --retry-delay 10 --retry-all-errors -o actionlint.tar.gz \
+            "https://github.com/rhysd/actionlint/releases/download/${VERSION}/actionlint_${VERSION#v}_linux_amd64.tar.gz"
+          echo "${SHA256}  actionlint.tar.gz" | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/bin"
+          tar -xzf actionlint.tar.gz -C "$RUNNER_TEMP/bin" actionlint
+          rm actionlint.tar.gz
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      # The runner image's shellcheck checks every run: block too.
+      - name: Lint the workflows
+        run: scripts/check-repo.sh actionlint
+
+  typos:
+    name: typos
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Install typos
+        run: python -m pip install --require-hashes -r .github/requirements-ci.txt
+      - name: Spell check
+        run: scripts/check-repo.sh typos
+
+  markdownlint:
+    name: markdownlint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      # The action bundles markdownlint-cli2, so nothing installs outside a
+      # lockfile. It reads the same .markdownlint-cli2.jsonc that
+      # scripts/check-repo.sh markdownlint uses locally.
+      - name: Lint Markdown
+        uses: DavidAnson/markdownlint-cli2-action@696eb3f2509270d7b882d2aa68347bc676e7af34 # v25.0.0
+        with:
+          globs: "**/*.md"
+
+  conventional-commits:
+    name: conventional-commits
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup-pnpm
+      # A squash merge takes the PR title as its subject, and the branch's commits
+      # stay readable in the PR, so both follow the format.
+      - name: Check the PR title and commit subjects
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: scripts/check-repo.sh commits
