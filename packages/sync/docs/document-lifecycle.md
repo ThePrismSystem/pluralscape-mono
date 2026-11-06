@@ -142,7 +142,7 @@ When the active document exceeds the split threshold:
 
 The **active document** for a given type is the entry in the manifest with the latest `timePeriod` value for that type and system/channel ID.
 
-```
+```text
 active = manifest.documents
   .filter(d => d.docType === type && d.entityId === id)
   .sort by timePeriod descending

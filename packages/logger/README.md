@@ -69,7 +69,7 @@ createMobileLogger({
 
 Case-insensitive substring matches against any key in the payload trigger replacement with `"[redacted]"`:
 
-```
+```text
 password, passwordHash, token, accessToken, refreshToken, apiKey,
 authorization, secret, privateKey, recoveryKey, email, pepper
 ```

@@ -72,7 +72,7 @@ Common tags: `security`, `encryption`, `privacy`, `a11y`, `offline`, `performanc
 
 ### Type hierarchy
 
-```
+```text
 milestone
   └── epic
        ├── feature

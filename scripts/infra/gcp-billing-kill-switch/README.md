@@ -5,7 +5,7 @@ a threshold (default **$1 USD**). Confirms the kill via email.
 
 ## How it works
 
-```
+```text
 Month-to-date spend > threshold
   → GCP Billing evaluates budget (multi-hour cadence — NOT real-time)
   → Budget publishes to Pub/Sub topic

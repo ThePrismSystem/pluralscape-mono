@@ -20,7 +20,7 @@ This is incompatible with a broadcast relay where any client can consume any mes
 
 The POC instead distributes **individual Automerge changes** through the relay:
 
-```
+```text
 Client A                     Relay (append-only log)          Client B
 ────────                     ──────────────────────           ────────
 
@@ -51,7 +51,7 @@ This approach works because:
 
 Each change is wrapped in an `EncryptedChangeEnvelope`:
 
-```
+```text
 ┌──────────────────────────────────────┐
 │ ciphertext   │ AEAD-encrypted change │  XChaCha20-Poly1305
 │ nonce        │ random per envelope   │  24 bytes
@@ -70,7 +70,7 @@ Each change is wrapped in an `EncryptedChangeEnvelope`:
 
 Snapshots use the same pattern but bind `snapshotVersion` into the AD alongside `documentId`:
 
-```
+```text
 AD = documentId bytes ‖ snapshotVersion as BigUint64 (big-endian)
 ```
 

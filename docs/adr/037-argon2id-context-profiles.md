@@ -156,7 +156,7 @@ cross-version transfer sessions spanning a deploy.
 
 ## Consequences
 
-**Positive**
+### Positive
 
 - Call sites read as _intent_ ("use the transfer profile") rather than _magic
   numbers_, and profiles are indivisible.
@@ -164,7 +164,7 @@ cross-version transfer sessions spanning a deploy.
   KDF cost drops meaningfully on mobile.
 - Removing the dead 1 GiB constants eliminates a foot-gun.
 
-**Negative**
+### Negative
 
 - Any third party that happened to consume `PWHASH_OPSLIMIT_UNIFIED` /
   `PWHASH_MEMLIMIT_UNIFIED` from `@pluralscape/crypto` must migrate to the

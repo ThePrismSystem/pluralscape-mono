@@ -24,7 +24,7 @@ This is a major barrier. Even experienced developers may implement the crypto st
 
 Official SDKs reduce this barrier to a few lines of code:
 
-```
+```text
 client = Pluralscape(api_key="ps_crypto_...")
 members = client.members.list()  # automatically decrypted
 ```

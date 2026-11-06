@@ -23,7 +23,7 @@ queryability.
 
 ### Options Considered
 
-**Option A: Client-side validation only**
+#### Option A: Client-side validation only
 
 Keep all type-specific data in `encryptedData`. Rely on the client Zod schemas
 to validate before submission. The server validates only the envelope (event
@@ -34,7 +34,7 @@ type string, occurred-at timestamp, encrypted data blob size).
   referenced member/structure, silent corruption if a client bug skips
   validation
 
-**Option B: Plaintext metadata column with per-type schemas (chosen)**
+#### Option B: Plaintext metadata column with per-type schemas (chosen)
 
 Add a `plaintext_metadata` JSONB column to the `lifecycle_events` table
 containing non-sensitive reference IDs (member IDs, structure IDs, entity IDs,
@@ -47,7 +47,7 @@ Zod schemas that validate the metadata shape matches the declared event type.
 - Cons: slight information leakage (server knows which members are referenced in
   which events), additional schema to maintain
 
-**Option C: DB-layer CHECK constraints**
+#### Option C: DB-layer CHECK constraints
 
 Use PostgreSQL CHECK constraints or triggers to validate the JSONB shape per
 event type.
@@ -57,7 +57,7 @@ event type.
   duplicates application-level validation, no benefit for SQLite self-hosted
   deployments
 
-**Option D: Both API-layer and DB-layer validation**
+#### Option D: Both API-layer and DB-layer validation
 
 Combine Options B and C.
 

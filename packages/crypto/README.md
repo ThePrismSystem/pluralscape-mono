@@ -100,11 +100,11 @@ const grant = createKeyGrant({ bucketKey, bucketId: "bucket-uuid", recipientPubl
 
 ## Dependencies
 
-**Internal**
+### Internal
 
 - `@pluralscape/types` — shared branded types (`BucketId`, `T1EncryptedBlob`, `T2EncryptedBlob`, etc.)
 
-**External**
+### External
 
 - `libsodium-wrappers-sumo` — WASM build of libsodium (Bun/Node/Web)
 - `react-native-libsodium` _(optional peer dependency)_ — native libsodium bindings for React Native

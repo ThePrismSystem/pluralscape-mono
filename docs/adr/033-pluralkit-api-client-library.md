@@ -15,7 +15,7 @@ PluralKit enforces stricter rate limits than Simply Plural (GET: 10/sec, POST/PA
 
 ## Decision
 
-Adopt pkapi.js (BSD 2-Clause license, https://github.com/greys-tools/pkapi.js).
+Adopt pkapi.js (BSD 2-Clause license, <https://github.com/greys-tools/pkapi.js>).
 
 Rationale:
 

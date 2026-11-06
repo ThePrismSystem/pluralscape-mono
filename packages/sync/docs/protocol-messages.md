@@ -331,7 +331,7 @@ interface SyncError extends SyncMessageBase {
 
 ## 6. Handshake Flow
 
-```
+```text
 Client                           Server
   │                                │
   │── AuthenticateRequest ─────────▶│  present session token
@@ -364,7 +364,7 @@ Client                           Server
 
 ### Change submission cycle
 
-```
+```text
 Client                           Server                       Other clients
   │── SubmitChangeRequest ────────▶│                              │
   │◀─ ChangeAccepted (seq=N) ──────│                              │
@@ -378,7 +378,7 @@ Client                           Server                       Other clients
 
 ### Compaction submission
 
-```
+```text
 Client                           Server
   │── SubmitSnapshotRequest ──────▶│
   │◀─ SnapshotAccepted ────────────│  server prunes changes ≤ snapshotVersion

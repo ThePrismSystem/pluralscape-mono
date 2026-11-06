@@ -219,9 +219,9 @@ This is architecturally challenging because the server must facilitate _access c
 
 The fundamental insight from Proton Drive, Etebase, and Keeper is the same pattern:
 
-**Per-Bucket Symmetric Key + Asymmetric Key Distribution**
+#### Per-Bucket Symmetric Key + Asymmetric Key Distribution
 
-```
+```text
 User creates Privacy Bucket "Trusted Friends"
   -> Client generates a random 256-bit symmetric key (BucketKey_TF)
   -> All content tagged with "Trusted Friends" is encrypted with BucketKey_TF
@@ -239,7 +239,7 @@ The server stores: encrypted content, encrypted key grants, public keys, and buc
 
 ### 4.2 Key Hierarchy
 
-```
+```text
 User's Password
   |
   v (Argon2id, 256MB memory, 3 iterations)
@@ -275,7 +275,7 @@ Master Key (256-bit)
 
 ### 4.4 Privacy Bucket Access Control Flow
 
-```
+```text
 1. System owner creates bucket "Partner Only"
    -> Client generates BucketKey_PO (random 256-bit)
    -> BucketKey_PO encrypted with owner's Master Key -> stored on server
@@ -310,7 +310,7 @@ Master Key (256-bit)
 
 **Adding a new device:**
 
-```
+```text
 1. User logs in on new device with password
 2. Password -> Argon2id -> Master Key (deterministic, same on every device)
 3. Client fetches encrypted private key from server
@@ -344,7 +344,7 @@ The encryption architecture is **inherently self-hosting compatible** because:
 
 ### 4.7 Data Export
 
-```
+```text
 1. User requests export on client
 2. Client fetches all encrypted data from server
 3. Client decrypts everything using Master Key + Bucket Keys
@@ -359,7 +359,7 @@ This is straightforward because all keys are derived from the password. Any devi
 
 The friend's read-only dashboard showing current fronters requires:
 
-```
+```text
 1. When a switch happens, the system owner's client:
    a. Encrypts the fronting status update with each relevant BucketKey
    b. Pushes encrypted blobs to server, tagged with bucket IDs

@@ -124,23 +124,23 @@ an appropriate HTTP error when exceeded (typically 409 Conflict or 413 Content T
 
 | Category               | Limit       | Window     | Notes                                                            |
 | ---------------------- | ----------- | ---------- | ---------------------------------------------------------------- |
-| Global                 | 100 req     | 60s        |
-| Auth (heavy)           | 5 req       | 60s        |
-| Auth (light)           | 20 req      | 60s        |
-| Device transfer        | 10 req      | 60s        |
-| Write operations       | 60 req      | 60s        |
-| Read (default)         | 60 req      | 60s        |
-| Read (heavy)           | 30 req      | 60s        |
-| Blob upload            | 20 req      | 60s        |
-| Webhook management     | 20 req      | 60s        |
-| Data export            | 2 req       | 3600s      |
-| Data import            | 2 req       | 3600s      |
-| Account purge          | 1 req       | 86400s     |
-| Audit query            | 30 req      | 60s        |
-| Friend code (generate) | 10 req      | 60s        |
-| Friend code (redeem)   | 5 req       | 60s        |
-| Public API             | 60 req      | 60s        |
-| SSE stream             | 5 req       | 60s        |
+| Global                 | 100 req     | 60s        |                                                                  |
+| Auth (heavy)           | 5 req       | 60s        |                                                                  |
+| Auth (light)           | 20 req      | 60s        |                                                                  |
+| Device transfer        | 10 req      | 60s        |                                                                  |
+| Write operations       | 60 req      | 60s        |                                                                  |
+| Read (default)         | 60 req      | 60s        |                                                                  |
+| Read (heavy)           | 30 req      | 60s        |                                                                  |
+| Blob upload            | 20 req      | 60s        |                                                                  |
+| Webhook management     | 20 req      | 60s        |                                                                  |
+| Data export            | 2 req       | 3600s      |                                                                  |
+| Data import            | 2 req       | 3600s      |                                                                  |
+| Account purge          | 1 req       | 86400s     |                                                                  |
+| Audit query            | 30 req      | 60s        |                                                                  |
+| Friend code (generate) | 10 req      | 60s        |                                                                  |
+| Friend code (redeem)   | 5 req       | 60s        |                                                                  |
+| Public API             | 60 req      | 60s        |                                                                  |
+| SSE stream             | 5 req       | 60s        |                                                                  |
 | Login (per account)    | 10 attempts | per window | Tracked separately from rate limits; triggers `LOGIN_THROTTLED`. |
 
 Rate limits are applied per-category via middleware. See `packages/types/src/api-constants.ts` for authoritative values.

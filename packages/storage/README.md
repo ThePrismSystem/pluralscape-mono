@@ -14,7 +14,7 @@ Quota management and orphan-blob cleanup are provided via the `/quota` sub-entry
 
 ### Root entry point (`@pluralscape/storage`)
 
-**Interface and types**
+#### Interface and types
 
 | Export                    | Description                                                                          |
 | ------------------------- | ------------------------------------------------------------------------------------ |
@@ -25,7 +25,7 @@ Quota management and orphan-blob cleanup are provided via the `/quota` sub-entry
 | `PresignedUrlResult`      | Discriminated union: `{ supported: true; url; expiresAt }` or `{ supported: false }` |
 | `StoredBlobMetadata`      | Metadata returned after a successful upload                                          |
 
-**Error classes**
+#### Error classes
 
 | Export                   | Thrown when                                              |
 | ------------------------ | -------------------------------------------------------- |
@@ -35,7 +35,7 @@ Quota management and orphan-blob cleanup are provided via the `/quota` sub-entry
 | `QuotaExceededError`     | Upload would exceed a system's storage quota             |
 | `StorageBackendError`    | Unexpected backend error                                 |
 
-**Utilities**
+#### Utilities
 
 | Export                                 | Description                                                                 |
 | -------------------------------------- | --------------------------------------------------------------------------- |
