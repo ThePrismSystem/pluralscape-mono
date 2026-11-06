@@ -86,7 +86,7 @@ const FRACTIONAL_INDEX_RADIX = 36;
  *  - Modern fractional indices (e.g. `"a00000"`) — first
  *    {@link FRACTIONAL_INDEX_PREFIX_LEN} characters decoded in base 36.
  *
- * Returns `{ ok: false, order: 0 }` on unparseable input so the caller can
+ * Returns `{ ok: false, order: 0 }` on unparsable input so the caller can
  * emit a warning — users can re-order manually post-import.
  */
 function fractionalIndexToOrder(index: string): { readonly order: number; readonly ok: boolean } {
@@ -120,7 +120,7 @@ export function mapFieldDefinition(
     ctx.addWarning({
       entityType: "field-definition",
       entityId: sp._id,
-      message: `unparseable SP custom-field order "${sp.order}"; defaulting to 0 — reorder manually after import`,
+      message: `unparsable SP custom-field order "${sp.order}"; defaulting to 0 — reorder manually after import`,
     });
   }
   const encrypted: FieldDefinitionEncryptedInput = {

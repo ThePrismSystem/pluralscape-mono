@@ -84,7 +84,7 @@ export function mapSwitchBatch(
       ctx.addWarning({
         entityType: "fronting-session",
         entityId: doc.sourceId,
-        message: `Switch has unparseable timestamp "${sw.timestamp}" — skipping`,
+        message: `Switch has unparsable timestamp "${sw.timestamp}" — skipping`,
       });
       continue;
     }

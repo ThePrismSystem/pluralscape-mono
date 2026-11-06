@@ -66,7 +66,7 @@ export class ValkeyCache {
       return JSON.parse(raw) as T;
     } catch (error: unknown) {
       // Evict the corrupt entry so subsequent reads don't re-hit the same
-      // unparseable payload indefinitely — a poisoned cache value must not
+      // unparsable payload indefinitely — a poisoned cache value must not
       // outlive a single failed parse.
       logger.warn("valkey-cache: failed to parse JSON; evicting corrupt entry", {
         key: prefixed,

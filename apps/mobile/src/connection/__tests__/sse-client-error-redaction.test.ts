@@ -25,7 +25,7 @@ describe("SseClient error payload redaction (MOBILE-S-L2)", () => {
 
     // Distinctive marker to prove the raw payload does not leak through the
     // error message. Represents an attacker-controlled or secret-bearing
-    // payload the server might mis-emit.
+    // payload the server might wrongly emit.
     const sensitivePayload = "super-secret-token-abc123-DO-NOT-LEAK";
 
     mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {

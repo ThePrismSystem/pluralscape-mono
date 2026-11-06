@@ -51,8 +51,8 @@ describe("FrontingDocument schema", () => {
   it("sets and updates outtrigger and outtriggerSentiment fields", () => {
     let doc = makeFrontingDoc();
     doc = Automerge.change(doc, (d) => {
-      d.sessions[asFrontingSessionId("fs_ot")] = {
-        id: s("fs_ot"),
+      d.sessions[asFrontingSessionId("fs_outtrigger")] = {
+        id: s("fs_outtrigger"),
         systemId: s("sys_test"),
         memberId: s("mem_1"),
         startTime: 3000,
@@ -68,28 +68,34 @@ describe("FrontingDocument schema", () => {
         updatedAt: 3000,
       };
     });
-    expect(doc.sessions[asFrontingSessionId("fs_ot")]?.outtrigger).toBeNull();
-    expect(doc.sessions[asFrontingSessionId("fs_ot")]?.outtriggerSentiment).toBeNull();
+    expect(doc.sessions[asFrontingSessionId("fs_outtrigger")]?.outtrigger).toBeNull();
+    expect(doc.sessions[asFrontingSessionId("fs_outtrigger")]?.outtriggerSentiment).toBeNull();
 
     doc = Automerge.change(doc, (d) => {
-      const session = d.sessions[asFrontingSessionId("fs_ot")];
+      const session = d.sessions[asFrontingSessionId("fs_outtrigger")];
       if (session) {
         session.outtrigger = s("stress from work");
         session.outtriggerSentiment = s("negative");
         session.updatedAt = 3500;
       }
     });
-    expect(doc.sessions[asFrontingSessionId("fs_ot")]?.outtrigger?.val).toBe("stress from work");
-    expect(doc.sessions[asFrontingSessionId("fs_ot")]?.outtriggerSentiment?.val).toBe("negative");
+    expect(doc.sessions[asFrontingSessionId("fs_outtrigger")]?.outtrigger?.val).toBe(
+      "stress from work",
+    );
+    expect(doc.sessions[asFrontingSessionId("fs_outtrigger")]?.outtriggerSentiment?.val).toBe(
+      "negative",
+    );
 
     doc = Automerge.change(doc, (d) => {
-      const session = d.sessions[asFrontingSessionId("fs_ot")];
+      const session = d.sessions[asFrontingSessionId("fs_outtrigger")];
       if (session) {
         session.outtriggerSentiment = s("neutral");
         session.updatedAt = 4000;
       }
     });
-    expect(doc.sessions[asFrontingSessionId("fs_ot")]?.outtriggerSentiment?.val).toBe("neutral");
+    expect(doc.sessions[asFrontingSessionId("fs_outtrigger")]?.outtriggerSentiment?.val).toBe(
+      "neutral",
+    );
   });
 
   it("adds and responds to a check-in record (mutable fields)", () => {

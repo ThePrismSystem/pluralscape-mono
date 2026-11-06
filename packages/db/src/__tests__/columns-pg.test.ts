@@ -54,7 +54,7 @@ describe("pgTimestamp mapping", () => {
     );
   });
 
-  it("throws on unparseable date string", () => {
+  it("throws on unparsable date string", () => {
     expect(() => timestampFromDriver("not-a-date")).toThrow("could not be parsed");
   });
 });
