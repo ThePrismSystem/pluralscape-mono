@@ -79,7 +79,27 @@ jobs:
       - name: Run all tests with coverage
         env:
           TEST_VALKEY_PORT: "6379"
-        run: pnpm test:coverage
+        run: pnpm test:coverage --reporter=default --reporter=junit --outputFile.junit=.junit/vitest.junit.xml
+
+      - name: Upload coverage to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: unit-integration
+          files: coverage/lcov.info
+          disable_search: true
+          fail_ci_if_error: true
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          report_type: test_results
+          flags: unit-integration
+          directory: .junit
+          fail_ci_if_error: true
 
       - name: Upload coverage report
         if: always()
@@ -88,27 +108,6 @@ jobs:
           name: coverage-report
           path: coverage/
           retention-days: 14
-
-      - name: Extract coverage data
-        if: github.ref == 'refs/heads/main'
-        id: coverage-data
-        run: |
-          PCT=$(jq '.total.lines.pct' coverage/coverage-summary.json)
-          echo "pct=$PCT" >> "$GITHUB_OUTPUT"
-          echo "message=${PCT}%" >> "$GITHUB_OUTPUT"
-
-      - name: Update coverage badge
-        if: github.ref == 'refs/heads/main'
-        uses: schneegans/dynamic-badges-action@28b0fa8bdeb46170ac397105ece0c1fe58f68910 # v1.9.0
-        with:
-          auth: ${{ secrets.GIST_TOKEN }}
-          gistID: b29472c169f6d431acf2b24a60a33225
-          filename: coverage.json
-          label: coverage
-          message: ${{ steps.coverage-data.outputs.message }}
-          valColorRange: ${{ steps.coverage-data.outputs.pct }}
-          minColorRange: 50
-          maxColorRange: 89
 
   mobile-bundle:
     name: Mobile Bundle
@@ -126,6 +125,16 @@ jobs:
 
       - name: Bundle web, iOS, and Android
         run: pnpm --filter @pluralscape/mobile bundle
+
+      - name: Upload bundle sizes to Codecov
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          for platform in web ios android; do
+            pnpm exec bundle-analyzer "apps/mobile/dist/_expo/static/js/${platform}" \
+              --bundle-name="mobile-${platform}" \
+              --upload-token="${CODECOV_TOKEN}"
+          done
 
   migrations:
     name: Migration Freshness
@@ -237,24 +246,37 @@ jobs:
       - name: Run E2E tests
         env:
           E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/pluralscape_e2e
+          PLAYWRIGHT_JUNIT_OUTPUT_FILE: ${{ github.workspace }}/.junit/e2e-api.junit.xml
         run: set -o pipefail && pnpm test:e2e | tee e2e-output.txt
 
       - name: Run slow E2E tests
         env:
           E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/pluralscape_e2e
           E2E_WORKERS: "1"
+          PLAYWRIGHT_JUNIT_OUTPUT_FILE: ${{ github.workspace }}/.junit/e2e-slow.junit.xml
         run: set -o pipefail && pnpm test:e2e:slow | tee e2e-slow-output.txt
 
       - name: Run SP import E2E tests
-        run: set -o pipefail && pnpm test:e2e:sp-import | tee e2e-sp-import-output.txt
+        run: set -o pipefail && pnpm test:e2e:sp-import --reporter=default --reporter=junit --outputFile.junit=.junit/e2e-sp-import.junit.xml | tee e2e-sp-import-output.txt
 
       - name: Run PK import E2E tests
-        run: set -o pipefail && pnpm test:e2e:pk-import | tee e2e-pk-import-output.txt
+        run: set -o pipefail && pnpm test:e2e:pk-import --reporter=default --reporter=junit --outputFile.junit=.junit/e2e-pk-import.junit.xml | tee e2e-pk-import-output.txt
 
       - name: Run mobile web E2E tests (OPFS driver)
         env:
           CI: "true"
+          PLAYWRIGHT_JUNIT_OUTPUT_FILE: ${{ github.workspace }}/.junit/e2e-web.junit.xml
         run: set -o pipefail && pnpm test:e2e:web | tee e2e-web-output.txt
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          report_type: test_results
+          flags: e2e
+          directory: .junit
+          fail_ci_if_error: true
 
       - name: Extract E2E test count
         if: github.ref == 'refs/heads/main'

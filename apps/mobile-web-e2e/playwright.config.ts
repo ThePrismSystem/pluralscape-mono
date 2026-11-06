@@ -10,7 +10,12 @@ export default defineConfig({
   fullyParallel: false,
   workers: E2E_WORKERS,
   retries: 0,
-  reporter: [["list"], ["html", { open: "never" }]],
+  reporter: [
+    ["list"],
+    ["html", { open: "never" }],
+    // CI sets the path to send results to Codecov. Local runs write no JUnit file.
+    ...(process.env.PLAYWRIGHT_JUNIT_OUTPUT_FILE ? ([["junit"]] as const) : []),
+  ],
   use: {
     baseURL: `http://localhost:${String(E2E_PORT)}`,
     browserName: "chromium",

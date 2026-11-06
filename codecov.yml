@@ -1,0 +1,42 @@
+# Codecov holds the lines a pull request changes to 90%. Vitest's thresholds hold
+# the whole repo to 89% in the Tests job.
+coverage:
+  status:
+    project: off
+    patch:
+      default:
+        target: 90%
+
+# The status and comment wait for the coverage upload, so neither is worked out
+# from a partial run.
+codecov:
+  notify:
+    after_n_builds: 1
+comment:
+  after_n_builds: 1
+
+# An upload that doesn't arrive keeps the last commit's numbers instead of counting
+# as no coverage.
+flag_management:
+  default_rules:
+    carryforward: true
+
+component_management:
+  individual_components:
+    - component_id: api
+      name: API
+      paths:
+        - "apps/api/**"
+    - component_id: mobile
+      name: Mobile
+      paths:
+        - "apps/mobile/**"
+    - component_id: packages
+      name: Packages
+      paths:
+        - "packages/**"
+
+# Bundle size changes warn at 5% and never fail the check.
+bundle_analysis:
+  warning_threshold: "5%"
+  status: "informational"
