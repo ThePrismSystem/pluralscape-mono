@@ -42,7 +42,7 @@
     "expo-secure-store": "~56.0.4",
     "expo-sqlite": "~56.0.6",
     "i18next-chained-backend": "^5.0.4",
-    "i18next-http-backend": "^4.0.0",
+    "i18next-http-backend": "^4.0.4",
     "jszip": "catalog:",
     "lucide-react-native": "catalog:",
     "react": "catalog:",
