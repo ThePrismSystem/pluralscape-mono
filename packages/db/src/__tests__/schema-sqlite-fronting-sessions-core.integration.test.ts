@@ -1,7 +1,7 @@
 /**
  * SQLite fronting schema — fronting_sessions core constraints.
  *
- * Covers: fronting_sessions — basic lifecycle, time CHECKs, T3 metadata,
+ * Covers: fronting_sessions — basic lifecycle, time CHECK constraints, T3 metadata,
  *   member/customFront FK constraints = 14 tests.
  *
  * Companion: schema-sqlite-fronting-sessions-archival.integration.test.ts (tests 15–22)

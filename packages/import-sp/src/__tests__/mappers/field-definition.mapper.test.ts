@@ -102,7 +102,7 @@ describe("mapFieldDefinition", () => {
     }
   });
 
-  it("unparseable order emits a warning and returns 0", () => {
+  it("unparsable order emits a warning and returns 0", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     const sp: SPCustomField = { _id: "f4", name: "Bad", type: 0, order: "!!!" };
     const result = mapFieldDefinition(sp, ctx);

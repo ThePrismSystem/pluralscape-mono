@@ -1,3 +1,6 @@
+<!-- markdownlint-disable-file MD033 MD041 -->
+<!-- The centered logo and badges need HTML. -->
+
 <p align="center">
   <img src="packages/design-system/assets/logo/pluralscape-wordmark-dark.svg" alt="Pluralscape" width="480">
 </p>
@@ -51,7 +54,7 @@ Read the full [Values](VALUES.md).
 
 This is a **pnpm monorepo** orchestrated by [Turborepo](https://turbo.build).
 
-```
+```text
 apps/
   api/             Hono on Bun — tRPC (internal) + REST (public)
   api-e2e/         E2E test suite (Playwright)

@@ -9,7 +9,7 @@ Community terminology is used throughout: "system" (not patient), "member" (not 
 
 ### Hosted Deployment
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │  Expo Client (iOS / Android / Web)                          │
 │  React Native + expo-router                                 │
@@ -33,7 +33,7 @@ On iOS and Android the client uses `expo-sqlite` with SQLCipher. On web, the cli
 
 ### Self-Hosted Deployment
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │  Expo Client                                                │
 │  Local SQLite/SQLCipher                                     │
@@ -51,7 +51,7 @@ On iOS and Android the client uses `expo-sqlite` with SQLCipher. On web, the cli
 
 ### Offline-First Model
 
-```
+```text
 Local SQLite  ──── source of truth ────▶  UI / React Query
      │
      │  background sync
@@ -84,7 +84,7 @@ A shared mixin layer (`packages/db/src/helpers/entity-shape.{sqlite,pg}.ts`) sup
 
 Tooling packages (`eslint-config`, `prettier-config`, `tsconfig`, `test-utils`) are omitted — every package depends on them as devDependencies.
 
-```
+```text
                        ┌─────────┐
                        │  types  │  (leaf — no @pluralscape deps)
                        └────┬────┘
@@ -166,7 +166,7 @@ Tooling packages (`eslint-config`, `prettier-config`, `tsconfig`, `test-utils`) 
 
 ### Request Lifecycle (Online)
 
-```
+```text
 Client                          Server
   │                               │
   │  1. encrypt payload           │
@@ -192,7 +192,7 @@ Client                          Server
 
 ### Sync Flow
 
-```
+```text
 Local mutation
      │
      ▼

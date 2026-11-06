@@ -75,7 +75,7 @@ This metadata leakage is low-severity given the opaque ID requirement and zero-k
 
 Before production, verify document ownership against the `sync_documents` table on subscribe and read operations. The relay should reject subscriptions for documents that belong to a different system than the authenticated connection's system ID. This converts the TOFU model to a verified ownership model:
 
-```
+```text
 subscribe(docId) → query sync_documents WHERE document_id = docId AND system_id = auth.systemId → allow/deny
 ```
 

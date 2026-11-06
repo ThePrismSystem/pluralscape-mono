@@ -75,7 +75,7 @@ Custom lifecycle events use the existing `LifecycleEvent` structure with two add
 
 The `LifecycleEvent` union type gains a new `CustomLifecycleEvent` variant:
 
-```
+```text
 CustomLifecycleEvent {
   eventType: "custom"
   definitionId: string

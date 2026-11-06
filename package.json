@@ -42,6 +42,7 @@
     "crowdin:setup": "tsx scripts/crowdin-setup-project.ts",
     "crowdin:pretranslate": "tsx scripts/crowdin-pretranslate.ts",
     "crowdin:upload-context": "tsx scripts/crowdin-upload-context.ts",
+    "crowdin:commit-translations": "tsx scripts/crowdin-commit-translations.ts",
     "crowdin:schema": "tsx scripts/generate-crowdin-glossary-schema.ts",
     "prepare": "husky"
   },
@@ -60,6 +61,7 @@
     "husky": "^9.1.7",
     "knip": "^6.12.2",
     "lint-staged": "^17.0.3",
+    "node-gyp": "13.1.0",
     "prettier": "^3.8.3",
     "tsx": "^4.21.0",
     "turbo": "^2.9.12",

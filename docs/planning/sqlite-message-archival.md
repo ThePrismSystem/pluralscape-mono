@@ -108,7 +108,7 @@ The archive file accumulates all historical rows. It uses the same schema, so Dr
 
 Self-hosters configure retention through environment variables or a config file section. Sensible defaults:
 
-```
+```text
 SQLITE_MESSAGE_RETENTION_DAYS=365
 SQLITE_ARCHIVAL_SCHEDULE="0 3 * * *"   # cron expression, default: 3 AM daily
 SQLITE_ARCHIVAL_FILE="pluralscape-archive.db"

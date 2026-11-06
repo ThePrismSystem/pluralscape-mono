@@ -22,7 +22,7 @@ The core insight: **revocation** (security-critical, must be instant) and **re-e
 
 ### Rotation State Machine
 
-```
+```text
 revoke_friend → [initiated] → first chunk claimed → [migrating]
   → all items done → [sealing] → old key purged → [completed]
                                                  → [failed] (7-day timeout or exhausted retries)

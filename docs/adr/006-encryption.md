@@ -55,7 +55,7 @@ Per-bucket symmetric keys distributed via asymmetric encryption (same pattern as
 
 A single Argon2id pass over the password produces a 64-byte output split into two independent 32-byte keys:
 
-```
+```text
 User Password + KDF Salt
   → Argon2id (64 MiB, 4 iterations) → 64 bytes
       ├── auth_key   (bytes 0–31)  → BLAKE2B hash → stored on server for verification
@@ -66,7 +66,7 @@ This is the **zero-knowledge guarantee**: the server stores only a BLAKE2B hash 
 
 ### Key Hierarchy
 
-```
+```text
 User Password + KDF Salt
   → Argon2id → auth_key (sent to server, BLAKE2B-hashed for storage)
              → password_key (client-only, wraps master key)
@@ -111,7 +111,7 @@ The key hierarchy diagram shows "Identity Key Pair (X25519 + Ed25519)" derived f
 
 This approach is **not used**. Instead, both keypairs are derived independently via KDF sub-key derivation:
 
-```
+```text
 Master Key → KDF(subkeyId=1, ctx="identity") → 32-byte seed → Ed25519 keypair (signing)
 Master Key → KDF(subkeyId=2, ctx="identity") → 32-byte seed → X25519 keypair (encryption)
 ```

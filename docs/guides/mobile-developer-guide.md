@@ -48,7 +48,7 @@ Local SQLite is the source of truth once sync has bootstrapped. The dual-observe
 3. When offline (or before bootstrap), local SQLite queries serve reads. When the sync engine has not yet bootstrapped and no SQLite driver is available, tRPC serves reads directly.
 4. Writes always go through tRPC mutations. The sync engine propagates changes back to local SQLite via CRDT documents.
 
-```
+```text
                           useQuerySource()
                           /            \
                      "local"          "remote"
@@ -241,7 +241,7 @@ The connection layer (`apps/mobile/src/connection/`) manages two real-time chann
 
 States and transitions:
 
-```
+```text
 disconnected --CONNECT--> connecting --CONNECTED--> connected
                               |                         |
                         CONNECTION_LOST           CONNECTION_LOST
@@ -297,7 +297,7 @@ The REST client (`RestClientProvider`) exists for operations not covered by tRPC
 
 ### Auth Flow
 
-```
+```text
 Login screen
     |
     v

@@ -36,7 +36,7 @@ This Code of Conduct covers every space the project touches. That means GitHub r
 
 ## Enforcement
 
-If you need to report unacceptable behavior, write to the project maintainers at **pluralscape@proton.me**.
+If you need to report unacceptable behavior, write to the project maintainers at **<pluralscape@proton.me>**.
 
 We review every report promptly and in confidence. Maintainers are obligated to protect the privacy of the reporter. Enforcement actions may include:
 

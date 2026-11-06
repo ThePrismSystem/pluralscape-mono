@@ -40,7 +40,7 @@ Pluralscape is pre-production. Remove deprecated code outright. No backwards-com
 
 We use [Conventional Commits](https://www.conventionalcommits.org/):
 
-```
+```text
 type(scope): description
 ```
 

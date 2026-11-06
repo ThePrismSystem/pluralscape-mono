@@ -27,9 +27,9 @@ The MasterKey is derived from the user's password exactly **once** during initia
 
 **Parameter justification**: `ARGON2ID_PROFILE_MASTER_KEY` (64 MiB / 4 iterations) exceeds the OWASP high-memory recommendation for Argon2id and is used for every long-lived derivation: auth-key split derivation and PIN hashing. Device-transfer uses the lighter `ARGON2ID_PROFILE_TRANSFER` (32 MiB / 3 iterations) because the input is a one-shot code guarded by a 5-minute session. Both profiles are defined in `packages/crypto/src/crypto.constants.ts` and rationale lives in `docs/adr/037-argon2id-context-profiles.md`.
 
-2. **Cold start with biometric** — Retrieve from expo-secure-store via biometric prompt. No derivation.
-3. **Password change** — Re-wrap the same MasterKey under a new password-derived key. Update expo-secure-store entry. The MasterKey itself does not change.
-4. **Recovery key restore** — Decrypt the MasterKey backup blob using the recovery key (ADR 011, Path 1). Set a new password, store in expo-secure-store.
+1. **Cold start with biometric** — Retrieve from expo-secure-store via biometric prompt. No derivation.
+2. **Password change** — Re-wrap the same MasterKey under a new password-derived key. Update expo-secure-store entry. The MasterKey itself does not change.
+3. **Recovery key restore** — Decrypt the MasterKey backup blob using the recovery key (ADR 011, Path 1). Set a new password, store in expo-secure-store.
 
 After initial login, MasterKey is **never re-derived from password** during normal operation.
 
@@ -55,7 +55,7 @@ The crypto package uses the abstract `SecureKeyStorage` interface (`packages/cry
 
 ## App State Machine
 
-```
+```text
 TERMINATED ──cold start──▶ LOCKED ──biometric/password──▶ UNLOCKED
      │                                                         │
      └──────── first login (password) ──────────────────────▶ │
@@ -165,7 +165,7 @@ The privacy overlay prevents the iOS app switcher from displaying sensitive cont
 
 ## Biometric Authentication Flow
 
-```
+```text
 biometric available + enrolled?
   ├─ yes → prompt biometric
   │         ├─ success → retrieve MasterKey from secure store → UNLOCKED
@@ -204,7 +204,7 @@ biometric available + enrolled?
 
 ### Transfer Flow
 
-```
+```text
 Source device                         Target device
 ─────────────────────────────────────────────────────
 generateTransferCode()

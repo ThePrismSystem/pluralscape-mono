@@ -52,7 +52,7 @@ All factories return an `ImportDataSource` implementing `iterate(collection)`,
 ### SP API auth quirk
 
 Simply Plural's API authenticates with the raw API key sent as the
-`Authorization` header value, with no `Bearer ` prefix. The api-source issues
+`Authorization` header value, with no `Bearer` prefix. The api-source issues
 `Authorization: <token>` directly. Using the `Bearer` scheme will get a 401
 rejection.
 
@@ -149,7 +149,7 @@ Error classes thrown by the API source:
 - `ApiSourceTokenRejectedError` — HTTP 401, fatal + recoverable (user re-enters token)
 - `ApiSourceTransientError` — 429/5xx exhausted retries, fatal + recoverable
 - `ApiSourcePermanentError` — non-array body / missing `_id`, fatal + non-recoverable
-- `FileSourceParseError` — unparseable JSON export, fatal + non-recoverable
+- `FileSourceParseError` — unparsable JSON export, fatal + non-recoverable
 - `ResumeCutoffNotFoundError` — checkpointed source ID disappeared between runs
 
 ---
@@ -238,9 +238,11 @@ SP import E2E tests run against a real Simply Plural API instance with seeded te
 2. Fill in the SP API credentials in `.env.sp-test`
 
 3. Seed test data (creates deterministic SP entities, triggers export, writes manifest):
+
    ```bash
    source .env.sp-test && pnpm seed:sp-test
    ```
+
    The seed script is idempotent; it probes SP for existing entities and reuses them.
    After seeding, manually download the JSON export from the email SP sends.
 

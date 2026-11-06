@@ -30,7 +30,7 @@
 
 Pluralscape exposes a REST API built on **Hono** running on **Bun**. All versioned endpoints live under the `/v1/` prefix. The route tree is:
 
-```
+```text
 /v1/auth/*           Authentication (register, login, sessions, biometric, recovery, password reset)
 /v1/account/*        Account management (profile, email, password, device transfer, friends, audit log)
 /v1/systems/*        System and member CRUD, fronting, groups, custom fields, innerworld, etc.
@@ -74,7 +74,7 @@ Registration uses a two-phase protocol where the server never sees the password.
 
 #### Phase 1: Initiate
 
-```
+```text
 POST /v1/auth/register/initiate
 ```
 
@@ -103,7 +103,7 @@ The client uses the `kdfSalt` to derive auth and password keys from the user's p
 
 #### Phase 2: Commit
 
-```
+```text
 POST /v1/auth/register/commit
 ```
 
@@ -157,7 +157,7 @@ The recovery key is generated and stored client-side. The client must present it
 
 Login uses the zero-knowledge protocol where the server never sees the password.
 
-```
+```text
 POST /v1/auth/login
 ```
 
@@ -202,7 +202,7 @@ The client decrypts the master key client-side using the password-derived key (t
 
 Sessions are bearer-token authenticated. Include the token in the `Authorization` header:
 
-```
+```text
 Authorization: Bearer ps_sess_...
 ```
 
@@ -220,7 +220,7 @@ The client signals its platform via the `X-Client-Platform` header (`web` or `mo
 
 **Endpoints:**
 
-```
+```text
 GET  /v1/auth/sessions                List active sessions (paginated, default 25, max 100)
 DELETE /v1/auth/sessions/:id          Revoke a specific session (cannot revoke current -- use logout)
 POST /v1/auth/logout                  Revoke the current session
@@ -231,7 +231,7 @@ POST /v1/auth/sessions/revoke-all     Revoke all sessions except current
 
 Requires an active session.
 
-```
+```text
 POST /v1/auth/biometric/enroll     Enroll a biometric credential (201 Created)
 POST /v1/auth/biometric/verify     Verify a biometric credential
 ```
@@ -242,7 +242,7 @@ On mobile, the master key is cached in the OS secure store (Keychain/Keystore) b
 
 There is no email-based password reset. Because the server is zero-knowledge, it cannot verify account ownership without the password-derived key. The only reset path is the recovery key the user stored at registration.
 
-```
+```text
 POST /v1/auth/password-reset/recovery-key
 ```
 
@@ -292,7 +292,7 @@ Requires an active session.
 
 **Get status:**
 
-```
+```text
 GET /v1/auth/recovery-key/status
 ```
 
@@ -300,7 +300,7 @@ Returns whether an active recovery key exists (used to determine if the user can
 
 **Regenerate recovery key:**
 
-```
+```text
 POST /v1/auth/recovery-key/regenerate
 ```
 
@@ -340,7 +340,7 @@ Device transfer moves the encrypted master key from an existing device to a new 
 
 1. **Source device initiates** (authenticated):
 
-   ```
+   ```text
    POST /v1/account/device-transfer
    ```
 
@@ -368,22 +368,26 @@ Device transfer moves the encrypted master key from an existing device to a new 
 
 2. **Source device approves** (from the same session that initiated):
 
-   ```
+   ```text
    POST /v1/account/device-transfer/:id/approve
    ```
 
    Returns `204 No Content`.
 
 3. **Target device completes** (authenticated on the target device):
-   ```
+
+   ```text
    POST /v1/account/device-transfer/:id/complete
    ```
+
    Request body:
+
    ```json
    {
      "code": "1234567890"
    }
    ```
+
    The server returns the encrypted key material. The target device derives the same transfer key from the code + salt (via Argon2id) and decrypts the master key.
 
 **Security controls:**
@@ -405,7 +409,7 @@ This section describes the full key hierarchy and encryption operations a client
 
 The system uses a **KEK/DEK** (Key Encryption Key / Data Encryption Key) pattern:
 
-```
+```text
 Password + Salt
   --> Argon2id --> Password Key (KEK, 256-bit)
                      |
@@ -520,7 +524,7 @@ Key rotation follows the **lazy rotation protocol** defined in ADR 014. Security
 
 **Rotation state machine:**
 
-```
+```text
 revoke_friend --> [initiated] --> first chunk claimed --> [migrating]
   --> all items done --> [sealing] --> old key purged --> [completed]
                                                       --> [failed] (7-day timeout)
@@ -673,7 +677,7 @@ The full set of error codes is defined in `@pluralscape/types` (`API_ERROR_CODES
 
 **Mutating endpoints** (POST for creation) support idempotency via the `Idempotency-Key` header. The key is scoped per-account.
 
-```
+```text
 Idempotency-Key: 550e8400-e29b-41d4-a716-446655440000
 ```
 
@@ -691,7 +695,7 @@ Idempotency-Key: 550e8400-e29b-41d4-a716-446655440000
 
 Export and manifest endpoints return an `ETag` header (weak validator):
 
-```
+```text
 ETag: W/"a1b2c3d4e5f67890"
 ```
 
@@ -710,7 +714,7 @@ This is used primarily on bucket export and friend export endpoints to avoid re-
 
 Rate limits use a **fixed-window** algorithm keyed by client IP (when behind a reverse proxy with `TRUST_PROXY=1`). Every response includes rate limit headers:
 
-```
+```text
 X-RateLimit-Limit: 60
 X-RateLimit-Remaining: 42
 X-RateLimit-Reset: 1711843260
@@ -732,7 +736,7 @@ Values are defined in `@pluralscape/types` (`RATE_LIMITS`).
 
 Most entities follow a consistent lifecycle:
 
-```
+```text
 create --> read --> list --> update --> archive --> restore --> delete
 ```
 
@@ -742,7 +746,7 @@ Not all entities support every operation. Archival is always permitted. Permanen
 
 All entity routes are scoped under a system:
 
-```
+```text
 POST   /v1/systems/:systemId/{resource}                Create
 GET    /v1/systems/:systemId/{resource}                 List (paginated)
 GET    /v1/systems/:systemId/{resource}/:id             Get single
@@ -778,7 +782,7 @@ Pluralscape uses a **fail-closed deletion** model:
 
 2. **Permanent deletion** checks for dependents. If the entity has dependent records (e.g., a member referenced by fronting sessions), the server returns:
 
-   ```
+   ```text
    409 Conflict
    ```
 
@@ -802,7 +806,7 @@ Pluralscape uses a **fail-closed deletion** model:
 
 Blob uploads use a **presigned URL** flow to keep binary data off the API server:
 
-```
+```text
 1. Request upload URL     POST /v1/systems/:systemId/blobs/upload-url
 2. Upload to storage      PUT  <presignedUrl>  (direct to S3/MinIO)
 3. Confirm upload         POST /v1/systems/:systemId/blobs/:blobId/confirm
@@ -928,7 +932,7 @@ A separate Server-Sent Events (SSE) stream delivers real-time notifications outs
 
 **Endpoint:**
 
-```
+```text
 GET /v1/notifications/stream
 ```
 
@@ -940,7 +944,7 @@ GET /v1/notifications/stream
 
 **Reconnect replay:** include the `Last-Event-ID` header when reconnecting. The server replays missed events from a ring buffer (100 events, 5-minute max age). If the requested event ID is outside the replay window, the server sends a `full-sync` event:
 
-```
+```text
 event: full-sync
 data: {"reason":"replay-window-exceeded"}
 id: 42
@@ -948,7 +952,7 @@ id: 42
 
 **Event delivery:** events arrive via Valkey pub/sub on channel `ps:notify:{accountId}`. Each event has an `event` type, JSON `data`, and a monotonically increasing `id`:
 
-```
+```text
 event: notification
 data: {"type":"fronting.started","sessionId":"fs_abc"}
 id: 15
@@ -966,7 +970,7 @@ Webhooks deliver event notifications to external HTTP endpoints. The server disp
 
 Webhook configs are scoped to a system and follow the standard entity lifecycle:
 
-```
+```text
 POST   /v1/systems/:systemId/webhook-configs                Create
 GET    /v1/systems/:systemId/webhook-configs                 List (paginated)
 GET    /v1/systems/:systemId/webhook-configs/:webhookId      Get single
@@ -1052,7 +1056,7 @@ For complete code examples in Node.js, Python, and Go, see [`docs/guides/webhook
 
 ### 7.4 Secret Rotation
 
-```
+```text
 POST /v1/systems/:systemId/webhook-configs/:webhookId/rotate-secret
 ```
 
@@ -1077,7 +1081,7 @@ The `version` field is required for optimistic concurrency (same as update).
 
 ### 7.5 Test / Ping
 
-```
+```text
 POST /v1/systems/:systemId/webhook-configs/:webhookId/test
 ```
 
@@ -1177,7 +1181,7 @@ Fronting tracks which members, custom fronts, or structure entities currently ha
 
 **Fronting comments** are nested under sessions:
 
-```
+```text
 POST   /fronting-sessions/:sessionId/comments
 GET    /fronting-sessions/:sessionId/comments
 PATCH  /fronting-sessions/:sessionId/comments/:commentId
@@ -1215,7 +1219,7 @@ The communication domain covers internal messaging, board posts, notes, polls, a
 
 Channels have a `type` field: `"category"` or `"channel"`. Categories are containers that hold channels via `parentId`. A channel with `parentId: null` is uncategorized. Messages are nested under channels:
 
-```
+```text
 POST   /channels                              Create channel or category
 GET    /channels                              List channels
 GET    /channels/:channelId                   Get channel
@@ -1233,7 +1237,7 @@ DELETE /channels/:channelId/messages/:msgId    Delete message
 
 **Board messages:** longer-form posts with `pinned` flag and `sortOrder`. Additional operations:
 
-```
+```text
 POST   /board-messages/:id/pin      Pin a message
 POST   /board-messages/:id/unpin    Unpin a message
 POST   /board-messages/reorder      Bulk reorder (accepts array of IDs with new sort orders, returns 204)
@@ -1252,7 +1256,7 @@ Poll votes use an `EntityReference<"member" | "structure-entity">` for the voter
 
 **Acknowledgements:** a request-confirm pattern for system-internal accountability:
 
-```
+```text
 POST   /acknowledgements                     Create (sets createdByMemberId, targetMemberId, message)
 POST   /acknowledgements/:id/confirm         Target member confirms (idempotent -- re-confirming returns current state)
 GET    /acknowledgements                     List (filterable by confirmed status)
@@ -1266,7 +1270,7 @@ Privacy buckets control what friends can see. They use tag-based intersection lo
 
 **Bucket CRUD:**
 
-```
+```text
 POST   /buckets              Create bucket
 GET    /buckets               List buckets
 GET    /buckets/:id           Get bucket
@@ -1276,7 +1280,7 @@ DELETE /buckets/:id           Delete bucket (409 if has content tags or friend a
 
 **Content tagging**: tag and untag entities into buckets:
 
-```
+```text
 POST   /buckets/:id/tags        Tag an entity (body: { entityType, entityId })
 DELETE /buckets/:id/tags/:tagId  Untag an entity
 GET    /buckets/:id/tags         List tags for a bucket
@@ -1288,7 +1292,7 @@ Supported entity types (21 total): `member`, `group`, `channel`, `message`, `not
 
 **Field-level bucket visibility:** custom field definitions can be assigned bucket visibility, controlling which fields a friend can see on an entity even if they can see the entity itself. These routes are nested under the field, not the bucket, and require `read:fields`/`write:fields`/`delete:fields` scopes:
 
-```
+```text
 GET    /fields/:fieldDefinitionId/bucket-visibility              List bucket visibilities for a field
 POST   /fields/:fieldDefinitionId/bucket-visibility              Set field visible in a bucket (body: { bucketId })
 DELETE /fields/:fieldDefinitionId/bucket-visibility/:bucketId    Remove field visibility for a bucket
@@ -1296,7 +1300,7 @@ DELETE /fields/:fieldDefinitionId/bucket-visibility/:bucketId    Remove field vi
 
 **Friend assignment**: assign or unassign buckets to friends:
 
-```
+```text
 POST   /buckets/:id/friends       Assign bucket to friend (body: { connectionId, encryptedBucketKey, keyVersion })
 DELETE /buckets/:id/friends/:id   Unassign bucket from friend
 ```
@@ -1305,13 +1309,13 @@ Note that assigning a bucket requires providing an `encryptedBucketKey`: the cli
 
 **Key rotation** is managed per-bucket:
 
-```
+```text
 GET    /buckets/:id/rotations     List rotation history
 ```
 
 **Data export:**
 
-```
+```text
 GET    /buckets/:id/export        Export all content tagged with this bucket
 ```
 
@@ -1330,7 +1334,7 @@ Friend connections are managed under `/v1/account/` (account-scoped, not system-
 
 **Friend management:**
 
-```
+```text
 GET    /v1/account/friends                         List friends
 GET    /v1/account/friends/:connectionId           Get friend connection
 POST   /v1/account/friends/:connectionId/remove    Remove friend
@@ -1340,7 +1344,7 @@ GET    /v1/account/friends/:connectionId/visibility Get visibility settings
 
 **Friend dashboard** -- read-only view of a friend's shared data, filtered by bucket visibility:
 
-```
+```text
 GET    /v1/account/friends/:connectionId/dashboard       Full dashboard snapshot
 GET    /v1/account/friends/:connectionId/dashboard/sync   Incremental sync (cursor-based)
 ```
@@ -1349,13 +1353,13 @@ The dashboard returns only data that the viewing friend has bucket access to see
 
 **Friend data export:**
 
-```
+```text
 GET    /v1/account/friends/export    Export friend data with cursor pagination
 ```
 
 **Per-friend notification preferences:**
 
-```
+```text
 GET    /v1/account/friends/:connectionId/notifications       Get notification prefs
 PATCH  /v1/account/friends/:connectionId/notifications       Update notification prefs
 ```
@@ -1368,7 +1372,7 @@ Push notifications are system-scoped (a system registers its devices and configs
 
 **Device token registration:**
 
-```
+```text
 POST   /v1/systems/:systemId/device-tokens          Register token (body: { platform, token })
 GET    /v1/systems/:systemId/device-tokens           List registered tokens
 PATCH  /v1/systems/:systemId/device-tokens/:id       Update token
@@ -1380,7 +1384,7 @@ Supported platforms: `"ios"`, `"android"`, `"web"`. Token registration validates
 
 **Notification config** -- per-event-type toggle:
 
-```
+```text
 GET    /v1/systems/:systemId/notification-configs              List all configs
 PATCH  /v1/systems/:systemId/notification-configs/:eventType   Update config
 ```
@@ -1420,7 +1424,7 @@ Import jobs drive bulk data import from other plural-tracking systems (Simply Pl
 
 API keys provide programmatic access to system-scoped endpoints without requiring a session. Keys are prefixed with `ps_` and authenticated via the `Authorization` header:
 
-```
+```text
 Authorization: Bearer ps_<token>
 ```
 
@@ -1447,7 +1451,7 @@ For the complete scope reference, domain list, and hierarchy resolution rules, s
 
 API key scopes are immutable after creation. To change scopes, revoke the existing key and create a new one.
 
-```
+```text
 POST   /v1/systems/:systemId/api-keys                    Create key (returns token once)
 GET    /v1/systems/:systemId/api-keys                     List keys (paginated)
 GET    /v1/systems/:systemId/api-keys/:apiKeyId           Get key details

@@ -4,6 +4,21 @@
   "schedule": ["on monday"],
   "labels": ["domain: infra"],
   "prConcurrentLimit": 10,
+  "platformCommit": "enabled",
+  "vulnerabilityAlerts": {
+    "labels": ["security"],
+    "minimumReleaseAge": null
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Tools downloaded from a GitHub release and checked against their SHA-256. Renovate reads the new hash from the release's checksums file, so the version and hash always change together.",
+      "managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>github-release-attachments) depName=(?<depName>\\S+)\\s+VERSION: (?<currentValue>v?\\S+)\\s+SHA256: (?<currentDigest>[0-9a-f]{64})"
+      ]
+    }
+  ],
   "packageRules": [
     {
       "matchDepTypes": ["devDependencies"],

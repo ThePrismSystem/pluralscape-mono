@@ -56,7 +56,7 @@ The entire migration must execute inside a single transaction. If any step fails
 
 This step must be performed in application code (not raw SQL) because it requires the system's master key. The migration runner fetches each row, merges `littlesSafeModeEnabled` into the plaintext payload, re-encrypts, and writes the updated blob back.
 
-```
+```text
 for each row in system_settings:
   plaintext = decrypt(row.encrypted_data, masterKey[row.system_id])
   plaintext.littlesSafeModeEnabled = row.littles_safe_mode_enabled

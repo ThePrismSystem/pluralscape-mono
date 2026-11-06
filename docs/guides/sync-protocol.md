@@ -12,7 +12,7 @@ The protocol is transport-agnostic. The primary transport is WebSocket, with HTT
 
 **Endpoint:**
 
-```
+```text
 wss://{host}/v1/sync/ws
 ```
 
@@ -28,7 +28,7 @@ wss://{host}/v1/sync/ws
 
 The sync session follows a strict handshake sequence:
 
-```
+```text
 Client                                Server
   |                                     |
   |-- AuthenticateRequest ------------->|  session token + systemId + profileType

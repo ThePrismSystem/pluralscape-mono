@@ -48,7 +48,7 @@ export function nullPairCheck(colA: AnyColumn, colB: AnyColumn): SQL {
 
 /**
  * CHECK constraint: column must match HH:MM 24-hour format (00:00–23:59).
- * Allows NULL (SQL CHECKs pass on NULL by default; explicit IS NULL for clarity).
+ * Allows NULL (SQL CHECK constraints pass on NULL by default; explicit IS NULL for clarity).
  * PG variant uses the `~` regex operator.
  */
 export function pgTimeFormatCheck(column: AnyColumn): SQL {
@@ -57,7 +57,7 @@ export function pgTimeFormatCheck(column: AnyColumn): SQL {
 
 /**
  * CHECK constraint: column must match HH:MM 24-hour format (00:00–23:59).
- * Allows NULL (SQL CHECKs pass on NULL by default; explicit IS NULL for clarity).
+ * Allows NULL (SQL CHECK constraints pass on NULL by default; explicit IS NULL for clarity).
  * SQLite variant uses length/substr checks (no regex engine).
  */
 /**

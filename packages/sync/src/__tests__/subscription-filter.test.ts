@@ -290,7 +290,7 @@ describe("filterManifest — friend", () => {
 });
 
 describe("filterManifest — malformed docIds", () => {
-  it("owner-lite skips entries with unparseable docIds", () => {
+  it("owner-lite skips entries with unparsable docIds", () => {
     const profile: OwnerLiteProfile = { profileType: "owner-lite", activeChannelWindowDays: 30 };
     const manifest = {
       documents: [

@@ -81,24 +81,24 @@ When an endpoint requires a scope, the server checks in this order:
 
 **Read-only integration** (dashboards, monitoring):
 
-```
+```text
 ["read:members", "read:fronting", "read:groups"]
 ```
 
 **Fronting tracker** (read system data, manage fronting):
 
-```
+```text
 ["read:members", "read:groups", "write:fronting"]
 ```
 
 **Full automation** (CI/CD, backup tooling):
 
-```
+```text
 ["full"]
 ```
 
 **Broad read with selective write:**
 
-```
+```text
 ["read-all", "write:members", "write:fronting"]
 ```

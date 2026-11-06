@@ -159,7 +159,7 @@ Bucket documents contain projections (filtered copies) of entities from master-k
 
 ### SystemCoreDocument
 
-```
+```text
 SystemCoreDocument {
   system: CrdtSystem                                  // singleton LWW
   systemSettings: CrdtSystemSettings                  // singleton LWW
@@ -187,7 +187,7 @@ SystemCoreDocument {
 
 ### FrontingDocument
 
-```
+```text
 FrontingDocument {
   sessions: Record<id, CrdtFrontingSession>           // append-lww
   comments: Record<id, CrdtFrontingComment>           // lww-map
@@ -197,7 +197,7 @@ FrontingDocument {
 
 ### ChatDocument
 
-```
+```text
 ChatDocument {
   channel: CrdtChannel                                // singleton LWW
   boardMessages: Record<id, CrdtBoardMessage>         // append-lww (correction)
@@ -211,7 +211,7 @@ ChatDocument {
 
 ### JournalDocument
 
-```
+```text
 JournalDocument {
   entries: Record<id, CrdtJournalEntry>               // append-lww
   wikiPages: Record<id, CrdtWikiPage>                 // lww-map
@@ -222,7 +222,7 @@ JournalDocument {
 
 Notes are stored in a dedicated `note` document, separate from `journal`. This enables independent sync and growth management.
 
-```
+```text
 NoteDocument {
   notes: Record<id, CrdtNote>                         // lww-map
 }
@@ -230,7 +230,7 @@ NoteDocument {
 
 ### PrivacyConfigDocument
 
-```
+```text
 PrivacyConfigDocument {
   buckets: Record<id, CrdtPrivacyBucket>                          // lww-map
   contentTags: Record<"type_eid_bid", CrdtBucketContentTag>       // lww-map

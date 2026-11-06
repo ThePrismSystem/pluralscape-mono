@@ -152,6 +152,7 @@ data.
 2. Fill in the PK API credentials in `.env.pk-test`
 
 3. Seed test data (creates deterministic PK entities and writes a manifest):
+
    ```bash
    source .env.pk-test && npx tsx scripts/pk-seed/seed.ts
    ```

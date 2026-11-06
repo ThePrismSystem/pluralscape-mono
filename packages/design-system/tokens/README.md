@@ -4,7 +4,7 @@ This folder is the **single source of truth** for Pluralscape design tokens. The
 
 ## Layout
 
-```
+```text
 tokens/
   breakpoints.json   Responsive breakpoints (sm/md/lg/xl) consumed by responsive scales
   build.mjs          Style Dictionary build — emits tokens.generated.ts + themes.generated.ts

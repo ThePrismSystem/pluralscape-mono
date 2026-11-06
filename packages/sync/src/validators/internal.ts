@@ -55,13 +55,13 @@ export function getParentId(
 
 /** Maps CRDT entity type names to their field names in Automerge documents. */
 export const ENTITY_FIELD_MAP: ReadonlyMap<string, string> = new Map(
-  Object.entries(ENTITY_CRDT_STRATEGIES).map(([type, strat]) => [type, strat.fieldName]),
+  Object.entries(ENTITY_CRDT_STRATEGIES).map(([type, strategy]) => [type, strategy.fieldName]),
 );
 
 /** Reverse map: document field name → entity type. */
 const FIELD_TO_ENTITY_TYPE: ReadonlyMap<string, SyncedEntityType> = new Map(
   Object.entries(ENTITY_CRDT_STRATEGIES).map(
-    ([type, strat]) => [strat.fieldName, type as SyncedEntityType] as const,
+    ([type, strategy]) => [strategy.fieldName, type as SyncedEntityType] as const,
   ),
 );
 

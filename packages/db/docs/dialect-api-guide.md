@@ -6,7 +6,7 @@ How to write API code that works across both PostgreSQL and SQLite without scatt
 
 When writing code that touches the database, follow this flow:
 
-```
+```text
 Is the query a common access pattern (active fronters, pending requests, etc.)?
 ├── Yes → Use pgViews.* or sqliteViews.* (see views table below)
 │

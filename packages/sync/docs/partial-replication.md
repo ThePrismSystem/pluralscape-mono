@@ -67,7 +67,7 @@ For friend dashboard clients. Strict: no master-key documents.
 
 Subscription filtering is a pure function that maps a manifest to a subscription set:
 
-```
+```text
 filterManifest(manifest: SyncManifest, profile: ReplicationProfile) => SubscriptionSet
 ```
 

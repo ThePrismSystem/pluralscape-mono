@@ -18,44 +18,44 @@ Incoming changes are materialised into the local-cache SQLite schema through per
 
 All imports below are from `@pluralscape/sync` unless noted.
 
-**Engine**
+### Engine
 
 - `SyncEngine` / `SyncEngineConfig` — top-level orchestrator; manages sessions, compaction, and the offline queue
 
-**Sessions**
+### Sessions
 
 - `EncryptedSyncSession` — single-device sync session over a transport
 - `syncThroughRelay` — convenience function for one-shot relay sync
 
-**Document factories**
+### Document factories
 
 - `createDocument`, `createSystemCoreDocument`, `createFrontingDocument`, `createChatDocument`, `createJournalDocument`, `createNoteDocument`, `createPrivacyConfigDocument`, `createBucketDocument`, `fromDoc`
 
-**Encryption**
+### Encryption
 
 - `encryptChange` / `decryptChange`, `encryptSnapshot` / `decryptSnapshot`, `verifyEnvelopeSignature`
 - `SignatureVerificationError`, `KeyBindingMismatchError`, `EncryptionKeyMismatchError` — distinguish signature forgery, author-key binding mismatch, and benign key-desync decrypt failures
 
-**Conflict resolution**
+### Conflict resolution
 
 - `runAllValidations` — post-merge validation returning `PostMergeValidationResult`
 - `ConflictNotification`, `ConflictResolutionStrategy`, `ConflictPersistenceAdapter`
 
-**Offline queue**
+### Offline queue
 
 - `replayOfflineQueue` / `ReplayOfflineQueueConfig` / `ReplayResult`
 
-**Document lifecycle**
+### Document lifecycle
 
 - `checkCompactionEligibility`, `LazyDocumentSizeTracker`
 - `splitDocument`, `checkTimeSplitEligibility`, `computeNewDocumentId`
 - `checkStorageBudget`, `selectEvictionCandidates`
 
-**Events**
+### Events
 
 - `createEventBus` — typed event bus (`DataLayerEvent`, `SyncChangesMergedEvent`, `WsSyncMessageEvent`, etc.)
 
-**Sub-entry points**
+### Sub-entry points
 
 | Import path                      | Contents                                                                                                                                                                                                 |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -66,7 +66,7 @@ All imports below are from `@pluralscape/sync` unless noted.
 
 ## Usage
 
-**Bootstrapping the sync engine**
+### Bootstrapping the sync engine
 
 ```ts
 import { SyncEngine } from "@pluralscape/sync";
@@ -93,7 +93,7 @@ const engine = new SyncEngine({
 await engine.start();
 ```
 
-**Encrypting and submitting a change**
+### Encrypting and submitting a change
 
 ```ts
 import { encryptChange, encryptSnapshot } from "@pluralscape/sync";
@@ -117,14 +117,14 @@ Nested transactions are rejected synchronously at the driver level; callers must
 
 ## Dependencies
 
-**Internal**
+### Internal
 
 - `@pluralscape/crypto` — XChaCha20-Poly1305 encryption, Argon2id key derivation
 - `@pluralscape/db` — local-cache SQLite schema definitions (consumed by materializer DDL)
 - `@pluralscape/types` — canonical branded domain types (`SystemId`, `SyncDocumentId`, etc.)
 - `@pluralscape/validation` — input validation schemas
 
-**External**
+### External
 
 - [`@automerge/automerge`](https://automerge.org/) ^3 — CRDT library (MIT)
 - `drizzle-orm` — schema bridge for materializer DDL generation

@@ -1,7 +1,7 @@
 /**
  * SQLite custom fields schema — field_values structureEntityId and groupId columns.
  *
- * Covers: field_values extended (structureEntityId, groupId, exclusivity CHECKs,
+ * Covers: field_values extended (structureEntityId, groupId, exclusivity CHECK constraints,
  *   FK restrictions, uniqueness) = 11 tests.
  *
  * Source: schema-sqlite-custom-fields.integration.test.ts (lines 1007-1386)

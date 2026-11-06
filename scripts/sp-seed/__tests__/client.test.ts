@@ -186,7 +186,7 @@ describe("SpClient.request", () => {
     expect(result).toEqual({ id: "abc", name: "x" });
   });
 
-  test("throws NonJsonResponseError on unparseable body", async () => {
+  test("throws NonJsonResponseError on unparsable body", async () => {
     mockFetch.mockResolvedValueOnce(new Response("not json at all", { status: 200 }));
     const client = new SpClient("https://sp.example.com", "k");
     await expect(client.request("/v1/me", {})).rejects.toBeInstanceOf(NonJsonResponseError);

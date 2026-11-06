@@ -24,31 +24,31 @@ Outtrigger reasons capture why a switch happened -- what external or internal ev
 
 A dedicated analytics view (accessible from the fronting section) presents outtrigger data through several lenses:
 
-**Frequency Analysis**
+#### Frequency Analysis
 
 - Bar chart or word cloud of most common outtrigger reasons.
 - Grouped by similarity (NLP-lite clustering: "work stress", "stressed at work", and "work was stressful" are grouped together).
 - Filterable by date range and member.
 
-**Per-Member Patterns**
+#### Per-Member Patterns
 
 - Each member has an outtrigger profile showing their most common triggers.
 - Comparison view: side-by-side outtrigger profiles for two or more members.
 - Highlights members with highly specific triggers vs. members who front for diverse reasons.
 
-**Sentiment Distribution**
+#### Sentiment Distribution
 
 - Outtrigger reasons categorized by sentiment (positive, negative, neutral).
 - Distribution pie chart showing overall sentiment balance.
 - Sentiment trend line over time (are switches becoming more or less stress-driven?).
 
-**Temporal Correlations**
+#### Temporal Correlations
 
 - Heatmap: outtrigger frequency by hour-of-day and day-of-week.
 - Per-reason temporal patterns (e.g., "nightmares" clusters in early morning hours).
 - Seasonal/monthly trend charts.
 
-**Trend Charts**
+#### Trend Charts
 
 - Line charts showing outtrigger category frequency over weeks/months.
 - Ability to overlay multiple categories on the same chart.

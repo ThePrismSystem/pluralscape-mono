@@ -66,7 +66,7 @@ The `FrontingSnapshot` is an array stored within the journal entry's encrypted b
 
 The fallback query runs against the local decrypted fronting data:
 
-```
+```text
 SELECT * FROM fronting_sessions
 WHERE startTime <= :entryCreatedAt
 AND (endTime IS NULL OR endTime >= :entryCreatedAt)

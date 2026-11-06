@@ -114,7 +114,7 @@ UI — the next sync pulls it.
 
 DeepL Free is capped at 500K characters/month. Pre-translate consumes quota
 only on _new or changed_ source strings, so typical monthly usage is well
-below the cap. Monitor at https://www.deepl.com/pro-account/usage. If usage
+below the cap. Monitor at <https://www.deepl.com/pro-account/usage>. If usage
 trends above 400K/month, upgrade to DeepL Pro or narrow the pre-translate
 language scope with `--languages de,es-ES,fr`. The sync workflow does not
 currently alert on quota exhaustion; a quota-exceeded request fails the

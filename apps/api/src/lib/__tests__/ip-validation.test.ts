@@ -225,7 +225,7 @@ describe("expandIpv6 v4-mapped branch via non-::ffff prefix", () => {
 // ── ipv6InRange exact match — invalid expandIpv6 ────────────────────
 // L211 branch 0 — !ipGroups || !rangeGroups on exact-match path
 
-describe("ipv6InRange exact-match with unparseable addresses", () => {
+describe("ipv6InRange exact-match with unparsable addresses", () => {
   it("treats invalid IPv6 that isn't caught by isIP() as private (fail-closed)", () => {
     // Node's isIP() returns 6 for "::1", but for garbage it returns 0 → goes to fail-closed
     expect(isPrivateIp("not-an-ip-at-all")).toBe(true);

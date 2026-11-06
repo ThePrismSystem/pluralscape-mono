@@ -33,7 +33,7 @@ with `JobPayloadMap` so new job types cannot be added without a matching schema.
 
 ### Root (`@pluralscape/queue`)
 
-**Interfaces**
+#### Interfaces
 
 - `JobQueue` — enqueue, dequeue, acknowledge, bury, and query jobs
 - `JobWorker` — register handlers and manage the worker lifecycle
@@ -41,11 +41,11 @@ with `JobPayloadMap` so new job types cannot be added without a matching schema.
 - `JobEventHooks` — lifecycle callbacks (enqueue, start, complete, fail, bury)
 - `HeartbeatHandle` — token returned by long-running jobs to emit liveness signals
 
-**Base class**
+#### Base class
 
 - `BaseJobWorker` — shared worker logic (handler registry, shutdown, heartbeat dispatch)
 
-**Errors**
+#### Errors
 
 - `DuplicateHandlerError` — handler registered twice for the same job type
 - `IdempotencyConflictError` — job with this idempotency key already completed or in-flight
@@ -55,12 +55,12 @@ with `JobPayloadMap` so new job types cannot be added without a matching schema.
 - `QueueCorruptionError` — stored job data failed payload-schema validation at the deserialization boundary
 - `WorkerAlreadyRunningError` — `start()` called on an already-running worker
 
-**Types and schemas**
+#### Types and schemas
 
 - `JobEnqueueParams`, `JobFilter`, `IdempotencyCheckResult`
 - `PayloadSchemaByType` — per-`JobType` Zod schemas used by adapters to validate deserialized payloads
 
-**Constants (exported from root)**
+#### Constants (exported from root)
 
 - `DEFAULT_TIMEOUT_MS` (30 000 ms)
 - `DEFAULT_POLL_INTERVAL_MS` (100 ms)

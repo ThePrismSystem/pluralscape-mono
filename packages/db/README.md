@@ -123,18 +123,18 @@ const rows = await db.drizzle.select().from(members).where(eq(members.systemId, 
 
 ## Dependencies
 
-**Internal**
+### Internal
 
 - `@pluralscape/crypto` — encryption utilities used in SQLCipher key handling
 - `@pluralscape/types` — shared TypeScript types including `Logger`, `BucketContentEntityType`
 
-**External**
+### External
 
 - `drizzle-orm` — query builder and schema definition
 - `postgres` — PostgreSQL driver (postgres.js)
 - `better-sqlite3-multiple-ciphers` — SQLite driver with SQLCipher encryption support
 
-**Dev**
+### Dev
 
 - `drizzle-kit` — migration generation CLI
 - `@electric-sql/pglite` — in-process PostgreSQL for integration tests

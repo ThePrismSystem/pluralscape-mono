@@ -4,16 +4,12 @@ description: Install pnpm, install Node 24 with pnpm store caching, and run `pnp
 runs:
   using: composite
   steps:
-    - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+    - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
 
     - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
       with:
         node-version: 24
         cache: pnpm
-
-    - name: Ensure node-gyp on PATH
-      shell: bash
-      run: npm install -g node-gyp
 
     - shell: bash
       run: pnpm install --frozen-lockfile

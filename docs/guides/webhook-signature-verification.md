@@ -15,7 +15,7 @@ Pluralscape signs every outgoing webhook delivery with an HMAC-SHA256 signature 
 
 The signature is computed over the string:
 
-```
+```text
 {timestamp}.{payload}
 ```
 
@@ -151,84 +151,84 @@ def handle_webhook():
 package main
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/hex"
-	"fmt"
-	"io"
-	"math"
-	"net/http"
-	"os"
-	"strconv"
-	"time"
+ "crypto/hmac"
+ "crypto/sha256"
+ "encoding/base64"
+ "encoding/hex"
+ "fmt"
+ "io"
+ "math"
+ "net/http"
+ "os"
+ "strconv"
+ "time"
 )
 
 const replayToleranceSeconds = 300 // 5 minutes
 
 func verifyWebhookSignature(secret, signature, timestamp, body string) error {
-	// Replay protection
-	ts, err := strconv.ParseInt(timestamp, 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid timestamp: %w", err)
-	}
-	age := math.Abs(float64(time.Now().Unix() - ts))
-	if age > replayToleranceSeconds {
-		return fmt.Errorf("webhook timestamp too old or too far in the future")
-	}
+ // Replay protection
+ ts, err := strconv.ParseInt(timestamp, 10, 64)
+ if err != nil {
+  return fmt.Errorf("invalid timestamp: %w", err)
+ }
+ age := math.Abs(float64(time.Now().Unix() - ts))
+ if age > replayToleranceSeconds {
+  return fmt.Errorf("webhook timestamp too old or too far in the future")
+ }
 
-	secretBytes, err := base64.StdEncoding.DecodeString(secret)
-	if err != nil {
-		return fmt.Errorf("invalid secret encoding: %w", err)
-	}
+ secretBytes, err := base64.StdEncoding.DecodeString(secret)
+ if err != nil {
+  return fmt.Errorf("invalid secret encoding: %w", err)
+ }
 
-	signedContent := fmt.Sprintf("%s.%s", timestamp, body)
-	mac := hmac.New(sha256.New, secretBytes)
-	mac.Write([]byte(signedContent))
-	expected := hex.EncodeToString(mac.Sum(nil))
+ signedContent := fmt.Sprintf("%s.%s", timestamp, body)
+ mac := hmac.New(sha256.New, secretBytes)
+ mac.Write([]byte(signedContent))
+ expected := hex.EncodeToString(mac.Sum(nil))
 
-	if !hmac.Equal([]byte(expected), []byte(signature)) {
-		return fmt.Errorf("invalid webhook signature")
-	}
-	return nil
+ if !hmac.Equal([]byte(expected), []byte(signature)) {
+  return fmt.Errorf("invalid webhook signature")
+ }
+ return nil
 }
 
 func webhookHandler(w http.ResponseWriter, r *http.Request) {
-	signature := r.Header.Get("X-Pluralscape-Signature")
-	timestamp := r.Header.Get("X-Pluralscape-Timestamp")
+ signature := r.Header.Get("X-Pluralscape-Signature")
+ timestamp := r.Header.Get("X-Pluralscape-Timestamp")
 
-	bodyBytes, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "Failed to read body", http.StatusBadRequest)
-		return
-	}
-	body := string(bodyBytes)
+ bodyBytes, err := io.ReadAll(r.Body)
+ if err != nil {
+  http.Error(w, "Failed to read body", http.StatusBadRequest)
+  return
+ }
+ body := string(bodyBytes)
 
-	secrets := []string{os.Getenv("WEBHOOK_SECRET")}
-	if old := os.Getenv("WEBHOOK_SECRET_OLD"); old != "" {
-		secrets = append(secrets, old)
-	}
+ secrets := []string{os.Getenv("WEBHOOK_SECRET")}
+ if old := os.Getenv("WEBHOOK_SECRET_OLD"); old != "" {
+  secrets = append(secrets, old)
+ }
 
-	verified := false
-	for _, secret := range secrets {
-		if err := verifyWebhookSignature(secret, signature, timestamp, body); err == nil {
-			verified = true
-			break
-		}
-	}
+ verified := false
+ for _, secret := range secrets {
+  if err := verifyWebhookSignature(secret, signature, timestamp, body); err == nil {
+   verified = true
+   break
+  }
+ }
 
-	if !verified {
-		http.Error(w, "Signature verification failed", http.StatusUnauthorized)
-		return
-	}
+ if !verified {
+  http.Error(w, "Signature verification failed", http.StatusUnauthorized)
+  return
+ }
 
-	// Process the webhook
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "OK")
+ // Process the webhook
+ w.WriteHeader(http.StatusOK)
+ fmt.Fprint(w, "OK")
 }
 
 func main() {
-	http.HandleFunc("/webhooks/pluralscape", webhookHandler)
-	http.ListenAndServe(":8080", nil)
+ http.HandleFunc("/webhooks/pluralscape", webhookHandler)
+ http.ListenAndServe(":8080", nil)
 }
 ```

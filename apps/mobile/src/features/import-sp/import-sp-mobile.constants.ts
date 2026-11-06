@@ -36,7 +36,7 @@ export const AVATAR_REQUEST_TIMEOUT_MS = 30_000;
  * Hard cap on avatar payload size in bytes.
  *
  * Five megabytes is well above SP's documented avatar size ceiling and
- * prevents a malicious or mis-served payload from exhausting mobile memory.
+ * prevents a malicious or wrongly served payload from exhausting mobile memory.
  */
 export const AVATAR_MAX_BYTES = 5_000_000;
 

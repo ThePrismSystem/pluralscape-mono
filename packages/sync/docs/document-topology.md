@@ -392,7 +392,7 @@ The server maintains a per-system **manifest** — a plaintext metadata index of
 
 ### Manifest Structure
 
-```
+```text
 Manifest (per system):
   documents[]:
     - docId: string          # unique document identifier

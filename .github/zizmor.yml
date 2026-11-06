@@ -1,0 +1,6 @@
+rules:
+  # This audit wants `uses: $/...` for local actions, but actionlint 1.7.12 (its
+  # latest release) rejects that syntax. `./...` runs the same action. Revisit once
+  # actionlint accepts it.
+  self-repository:
+    disable: true

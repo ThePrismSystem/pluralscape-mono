@@ -312,7 +312,7 @@ describe("encryptStreamAsync", () => {
     const plaintext = new Uint8Array(CHUNK * 3 + 17);
     plaintext.set(adapter.randomBytes(plaintext.length));
 
-    // Deliberately emit mis-aligned slices to exercise the re-chunker.
+    // Deliberately emit misaligned slices to exercise the re-chunker.
     const parts: readonly Uint8Array[] = [
       plaintext.subarray(0, 31),
       plaintext.subarray(31, 31 + CHUNK + 3),

@@ -19,7 +19,7 @@ const KNOWN_VALUE = 100;
  * sweep) without crashing, losing the underlying DB handle, or corrupting
  * committed data. To make that check non-trivial we write a known row
  * BEFORE filling the cache and read it back AFTER the eviction sweep — if
- * the worker had dropped the DB or mis-managed statement lifetimes, the
+ * the worker had dropped the DB or mismanaged statement lifetimes, the
  * round-trip would fail or return the wrong value.
  */
 test("prepared statements remain correct after the worker cache fills + evicts", async ({
